@@ -1,24 +1,19 @@
-import { NextRequest } from 'next/server';
-import { AuthorizationCode } from 'simple-oauth2';
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(req: NextRequest) {
-  const client = new AuthorizationCode({
-    client: {
-      id: process.env.QBO_CLIENT_ID!,
-      secret: process.env.QBO_CLIENT_SECRET!,
-    },
-    auth: {
-      tokenHost: 'https://oauth.platform.intuit.com',
-      authorizePath: '/oauth2/v1/tokens/bearer',
-      tokenPath: '/oauth2/v1/tokens/bearer',
-    },
-  });
-
-  const authorizationUri = client.authorizeURL({
-    redirect_uri: process.env.QBO_REDIRECT_URI!,
-    scope: 'com.intuit.quickbooks.accounting openid profile email',
-    state: 'randomstate123',
-  });
-
-  return Response.redirect(authorizationUri);
+export async function GET(request: NextRequest) {
+  try {
+    const authUrl = `https://appcenter.intuit.com/connect/oauth2?` +
+      `client_id=${process.env.QBO_CLIENT_ID}&` +
+      `scope=com.intuit.quickbooks.accounting&` +
+      `redirect_uri=${encodeURIComponent(process.env.QBO_REDIRECT_URI!)}&` +
+      `response_type=code&` +
+      `access_type=offline&` +
+      `state=randomstate123`
+    
+    console.log('Redirecting to:', authUrl)
+    return NextResponse.redirect(authUrl)
+  } catch (error) {
+    console.error('Login error:', error)
+    return NextResponse.json({ error: 'Failed to initiate OAuth' }, { status: 500 })
+  }
 }

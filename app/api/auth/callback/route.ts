@@ -1,34 +1,33 @@
-import { NextRequest } from 'next/server';
-import { AuthorizationCode } from 'simple-oauth2';
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
-  const code = url.searchParams.get('code');
-
-  const client = new AuthorizationCode({
-    client: {
-      id: process.env.QBO_CLIENT_ID!,
-      secret: process.env.QBO_CLIENT_SECRET!,
-    },
-    auth: {
-      tokenHost: 'https://oauth.platform.intuit.com',
-      tokenPath: '/oauth2/v1/tokens/bearer',
-    },
-  });
-
+export async function GET(request: NextRequest) {
   try {
-    const tokenParams = {
-      code: code!,
-      redirect_uri: process.env.QBO_REDIRECT_URI!,
-    };
+    const searchParams = request.nextUrl.searchParams
+    const code = searchParams.get('code')
+    const state = searchParams.get('state')
+    const realmId = searchParams.get('realmId')
 
-    const accessToken = await client.getToken(tokenParams);
-    console.log('Access Token:', accessToken.token);
+    console.log('OAuth Callback received:', { code, state, realmId })
 
-    return new Response('Success! You can close this tab.');
-  } catch (err) {
-    console.error('Callback Error:', err);
-    return new Response('Auth failed.', { status: 500 });
+    if (!code || !realmId) {
+      return NextResponse.json(
+        { error: 'Missing authorization code or realm ID' },
+        { status: 400 }
+      )
+    }
+
+    const dashboardUrl = new URL('/admin/dashboard', request.url)
+    dashboardUrl.searchParams.set('connected', 'true')
+    dashboardUrl.searchParams.set('company', realmId)
+
+    return NextResponse.redirect(dashboardUrl)
+
+  } catch (error) {
+    console.error('Error in auth callback:', error)
+    
+    const dashboardUrl = new URL('/admin/dashboard', request.url)
+    dashboardUrl.searchParams.set('error', 'connection_failed')
+    
+    return NextResponse.redirect(dashboardUrl)
   }
 }
-
