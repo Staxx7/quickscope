@@ -3,8 +3,21 @@ import React, { useState, useCallback } from 'react';
 import { Download, RefreshCw, Calendar, Database, TrendingUp, AlertCircle, CheckCircle, Clock, Settings } from 'lucide-react';
 import { qbService } from '../lib/quickbooksService';
 
+// Add this at the top of QuickBooksDataExtractor.tsx file 
+// After the imports but before any existing interfaces
+
+interface QBAccount {
+  id: string;
+  name: string;
+  type: string;
+  subType: string;
+  balance: number;
+  isActive: boolean;
+}
+
+// Then FIND the existing AdvancedFinancialData interface and UPDATE the accounts line:
 interface AdvancedFinancialData {
-  accounts: any[];
+  accounts: QBAccount[];  // ← Change this line from 'any[]' to 'QBAccount[]'
   transactions: any[];
   customers: any[];
   vendors: any[];
@@ -18,7 +31,27 @@ interface AdvancedFinancialData {
     budgetVsActual: any;
     inventoryReports: any;
   };
-  analytics: any;
+  analytics: {
+    totalRevenue: number;
+    totalExpenses: number;
+    netIncome: number;
+    cashPosition: number;
+    accountsReceivable: number;
+    accountsPayable: number;
+    workingCapital: number;
+    debtToEquity: number;
+    currentRatio: number;
+    quickRatio: number;
+    grossMargin: number;
+    operatingMargin: number;
+    netMargin: number;
+    roa: number;
+    roe: number;
+    inventoryTurnover: number;
+    receivablesTurnover: number;
+    payablesTurnover: number;
+    cashConversionCycle: number;
+  };
 }
 
 interface Connection {
@@ -238,30 +271,27 @@ const QuickBooksDataExtractor: React.FC = () => {
     const { profitLoss, balanceSheet, cashFlow } = financialData;
     
     return {
-      monthlyRevenueTrend: [
-        {
-          month: 'Current Period',
-          revenue: profitLoss?.totalRevenue || 0,
-          profit: profitLoss?.netIncome || 0
-        }
-      ],
-      customerSegmentation: [
-        { segment: 'Enterprise', count: 5, revenue: (profitLoss?.totalRevenue || 0) * 0.6 },
-        { segment: 'Mid-Market', count: 15, revenue: (profitLoss?.totalRevenue || 0) * 0.3 },
-        { segment: 'Small Business', count: 30, revenue: (profitLoss?.totalRevenue || 0) * 0.1 }
-      ],
-      expenseBreakdown: profitLoss?.expenseItems?.map((item: any, index: number) => ({
-        category: item.name,
-        amount: item.amount,
-        percentage: ((item.amount / profitLoss.totalExpenses) * 100) || 0
-      })) || [
-        { category: 'Total Expenses', amount: profitLoss?.totalExpenses || 0, percentage: 100 }
-      ],
-      cashFlowForecast: Array.from({length: 12}, (_, i) => ({
-        date: new Date(Date.now() + i * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        projected: (cashFlow?.operatingCashFlow || 0) + (Math.random() - 0.5) * 50000,
-        actual: i < 1 ? cashFlow?.operatingCashFlow : undefined
-      }))
+      totalRevenue: profitLoss?.totalRevenue || 0,
+      totalExpenses: profitLoss?.totalExpenses || 0,
+      netIncome: profitLoss?.netIncome || 0,
+      cashPosition: balanceSheet?.cashAndEquivalents || 0,
+      accountsReceivable: balanceSheet?.accountsReceivable || 0,
+      accountsPayable: balanceSheet?.accountsPayable || 0,
+      workingCapital: (balanceSheet?.currentAssets || 0) - (balanceSheet?.currentLiabilities || 0),
+      debtToEquity: (balanceSheet?.totalLiabilities || 0) / (balanceSheet?.totalEquity || 1),
+      currentRatio: (balanceSheet?.currentAssets || 0) / (balanceSheet?.currentLiabilities || 1),
+      quickRatio: ((balanceSheet?.currentAssets || 0) - (balanceSheet?.inventory || 0)) / (balanceSheet?.currentLiabilities || 1),
+      grossMargin: ((profitLoss?.totalRevenue || 0) - (profitLoss?.costOfGoodsSold || 0)) / (profitLoss?.totalRevenue || 1),
+      operatingMargin: (profitLoss?.operatingIncome || 0) / (profitLoss?.totalRevenue || 1),
+      netMargin: (profitLoss?.netIncome || 0) / (profitLoss?.totalRevenue || 1),
+      roa: (profitLoss?.netIncome || 0) / (balanceSheet?.totalAssets || 1),
+      roe: (profitLoss?.netIncome || 0) / (balanceSheet?.totalEquity || 1),
+      inventoryTurnover: (profitLoss?.costOfGoodsSold || 0) / (balanceSheet?.inventory || 1),
+      receivablesTurnover: (profitLoss?.totalRevenue || 0) / (balanceSheet?.accountsReceivable || 1),
+      payablesTurnover: (profitLoss?.costOfGoodsSold || 0) / (balanceSheet?.accountsPayable || 1),
+      cashConversionCycle: ((balanceSheet?.inventory || 0) / (profitLoss?.costOfGoodsSold || 1) * 365) +
+                          ((balanceSheet?.accountsReceivable || 0) / (profitLoss?.totalRevenue || 1) * 365) -
+                          ((balanceSheet?.accountsPayable || 0) / (profitLoss?.costOfGoodsSold || 1) * 365)
     };
   }
 
