@@ -1,71 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseClient'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const companyId = searchParams.get('companyId')
+    const accessToken = searchParams.get('accessToken')
     
-    if (!companyId) {
-      return NextResponse.json({ error: 'Company ID required' }, { status: 400 })
-    }
-
-    // Get the stored token for this company
-    const { data: tokenRecord, error: tokenError } = await supabase
-      .from('qbo_tokens')
-      .select('*')
-      .eq('company_id', companyId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    if (tokenError || !tokenRecord) {
-      return NextResponse.json({ error: 'No valid token found for this company' }, { status: 404 })
-    }
-
-    // Check if token is expired
-    if (new Date(tokenRecord.expires_at) < new Date()) {
-      return NextResponse.json({ error: 'Token expired' }, { status: 401 })
-    }
-
-    // Use production API endpoint since you're using production keys
-    const apiUrl = `https://quickbooks.api.intuit.com/v3/company/${companyId}/companyinfo/${companyId}`
-    
-    console.log('Making QBO API call with:')
-    console.log('URL:', apiUrl)
-    console.log('Token (first 20 chars):', tokenRecord.access_token.substring(0, 20) + '...')
-    
-    const qboResponse = await fetch(apiUrl, {
-      headers: {
-        'Authorization': `Bearer ${tokenRecord.access_token}`,
-        'Accept': 'application/json'
-      }
-    })
-
-    console.log('QBO Response Status:', qboResponse.status)
-
-    if (!qboResponse.ok) {
-      const errorText = await qboResponse.text()
-      console.error('QBO API Error Status:', qboResponse.status)
-      console.error('QBO API Error Response:', errorText)
+    if (!companyId || !accessToken) {
       return NextResponse.json({ 
-        error: 'Failed to fetch company info from QuickBooks',
-        details: errorText,
-        status: qboResponse.status 
-      }, { status: 500 })
+        error: 'Company ID and access token required' 
+      }, { status: 400 })
     }
 
-    const companyData = await qboResponse.json()
-    console.log('✅ Company info retrieved:', companyData)
+    const baseUrl = process.env.QB_SANDBOX_BASE_URL || 'https://sandbox-quickbooks.api.intuit.com'
+    
+    // Fetch company information from QuickBooks API
+    const response = await fetch(
+      `${baseUrl}/v3/company/${companyId}/companyinfo/${companyId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      }
+    )
 
-    return NextResponse.json({
-      success: true,
-      companyId: companyId,
-      data: companyData
-    })
+    if (!response.ok) {
+      throw new Error(`QB API Error: ${response.status}`)
+    }
 
+    const data = await response.json()
+    const companyInfo = data.QueryResponse?.CompanyInfo?.[0]
+
+    if (!companyInfo) {
+      throw new Error('No company information found')
+    }
+
+    // Transform to our format
+    const transformedData = {
+      companyName: companyInfo.CompanyName || 'Unknown Company',
+      legalName: companyInfo.LegalName || companyInfo.CompanyName,
+      address: {
+        line1: companyInfo.CompanyAddr?.Line1 || '',
+        city: companyInfo.CompanyAddr?.City || '',
+        state: companyInfo.CompanyAddr?.CountrySubDivisionCode || '',
+        postalCode: companyInfo.CompanyAddr?.PostalCode || '',
+        country: companyInfo.CompanyAddr?.Country || 'US'
+      },
+      phone: companyInfo.PrimaryPhone?.FreeFormNumber || '',
+      email: companyInfo.Email?.Address || '',
+      website: companyInfo.WebAddr?.URI || '',
+      fiscalYearStart: companyInfo.FiscalYearStartMonth || 1,
+      industry: companyInfo.NameValue?.find((nv: { Name: string; Value: string }) => nv.Name === 'QBOIndustryType')?.Value || 'Other',
+      employeeCount: companyInfo.EmployeeCount || 0,
+      taxId: companyInfo.EIN || '',
+      lastUpdated: new Date().toISOString()
+    }
+
+    return NextResponse.json(transformedData)
+    
   } catch (error) {
-    console.error('Company info fetch error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Error fetching company info:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch company information' }, 
+      { status: 500 }
+    )
   }
 }

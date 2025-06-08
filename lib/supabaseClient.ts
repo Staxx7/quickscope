@@ -1,6 +1,12 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Temporary mock client - replace with real Supabase later
+export const supabase = {
+    from: (table: string) => ({
+      select: () => Promise.resolve({ data: [], error: null }),
+      insert: (data: any) => Promise.resolve({ data, error: null }),
+      update: (data: any) => ({
+        eq: () => Promise.resolve({ data, error: null })
+      }),
+      upsert: (data: any) => Promise.resolve({ data, error: null })
+    })
+  }
+  

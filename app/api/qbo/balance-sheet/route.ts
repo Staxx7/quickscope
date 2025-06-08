@@ -1,288 +1,148 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const companyId = searchParams.get('companyId')
-  const startDate = searchParams.get('startDate')
-  const endDate = searchParams.get('endDate')
-
-  if (!companyId) {
-    return NextResponse.json({ error: 'Company ID is required' }, { status: 400 })
-  }
-
-  console.log(`🏦 Fetching Balance Sheet for company: ${companyId}`)
-  console.log(`📅 Date range: ${startDate || 'null'} to ${endDate || 'null'}`)
-
   try {
-    // Build the QuickBooks API URL
-    let qboUrl = `https://quickbooks.api.intuit.com/v3/company/${companyId}/reports/BalanceSheet`
+    const { searchParams } = new URL(request.url)
+    const companyId = searchParams.get('companyId')
+    const accessToken = searchParams.get('accessToken')
+    const asOfDate = searchParams.get('asOfDate') || new Date().toISOString().split('T')[0]
     
-    // Add date parameters if provided
-    const params = new URLSearchParams()
-    if (startDate && endDate) {
-      params.append('start_date', startDate)
-      params.append('end_date', endDate)
-      console.log(`📅 Adding date parameters to Balance Sheet API call`)
-    }
-    
-    if (params.toString()) {
-      qboUrl += `?${params.toString()}`
+    if (!companyId || !accessToken) {
+      return NextResponse.json({ 
+        error: 'Company ID and access token required' 
+      }, { status: 400 })
     }
 
-    console.log(`📊 Making Balance Sheet API call to: ${qboUrl}`)
-
-    // Make the API call to QuickBooks
-    const response = await fetch(qboUrl, {
+    const baseUrl = process.env.QB_SANDBOX_BASE_URL || 'https://sandbox-quickbooks.api.intuit.com'
+    
+    // Fetch Balance Sheet report from QuickBooks API
+    const reportUrl = new URL(`${baseUrl}/v3/company/${companyId}/reports/BalanceSheet`)
+    reportUrl.searchParams.set('date', asOfDate)
+    reportUrl.searchParams.set('summarize_column_by', 'Total')
+    
+    const response = await fetch(reportUrl.toString(), {
       headers: {
-        'Authorization': `Bearer ${process.env.QB_ACCESS_TOKEN}`,
+        'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json',
       },
     })
 
-    console.log(`📈 Balance Sheet Response Status: ${response.status}`)
-
     if (!response.ok) {
-      console.error(`❌ QB API Error: ${response.status} ${response.statusText}`)
-      
-      // If 401 (token expired), return mock data for testing
-      if (response.status === 401) {
-        console.log(`🔄 Token expired - returning mock Balance Sheet data for testing`)
-        return NextResponse.json({
-          totalAssets: 789542.18,
-          totalLiabilities: 156789.33,
-          totalEquity: 632752.85,
-          assetItems: [
-            { name: "Checking Account", amount: 234567.89 },
-            { name: "Savings Account", amount: 156789.12 },
-            { name: "Accounts Receivable", amount: 89234.56 },
-            { name: "Inventory", amount: 67890.23 },
-            { name: "Equipment", amount: 145670.89 },
-            { name: "Prepaid Expenses", amount: 23456.78 },
-            { name: "Other Current Assets", amount: 71932.71 }
-          ],
-          liabilityItems: [
-            { name: "Accounts Payable", amount: 89234.56 },
-            { name: "Credit Cards", amount: 34567.89 },
-            { name: "Accrued Expenses", amount: 23456.78 },
-            { name: "Short-term Loans", amount: 9530.10 }
-          ],
-          equityItems: [
-            { name: "Owner's Equity", amount: 500000.00 },
-            { name: "Retained Earnings", amount: 95779.39 },
-            { name: "Current Year Earnings", amount: 36973.46 }
-          ]
-        })
-      }
-      
-      // For other errors, throw the error
-      throw new Error(`QuickBooks API error: ${response.status}`)
+      throw new Error(`QB API Error: ${response.status}`)
     }
 
-    const balanceSheetData = await response.json()
-    console.log(`✅ Balance Sheet data retrieved successfully`)
+    const data = await response.json()
+    const report = data.QueryResponse || data
 
-    // Extract metrics from the QuickBooks response
-    const extractedMetrics = extractBalanceSheetMetrics(balanceSheetData)
+    // Parse the Balance Sheet report structure
+    const rows = report.Rows || []
     
-    return NextResponse.json(extractedMetrics)
+    let totalAssets = 0
+    let totalLiabilities = 0
+    let totalEquity = 0
+    const assetItems = []
+    const liabilityItems = []
+    const equityItems = []
 
+    // Parse QB report rows
+    for (const row of rows) {
+      if (row.group === 'Assets' || row.Header?.Name?.includes('ASSETS') || row.Header?.Name?.includes('Assets')) {
+        const items = extractBalanceSheetItems(row, 'Assets')
+        assetItems.push(...items)
+        totalAssets += items.reduce((sum, item) => sum + item.amount, 0)
+      } else if (row.group === 'Liabilities' || row.Header?.Name?.includes('LIABILITIES') || row.Header?.Name?.includes('Liabilities')) {
+        const items = extractBalanceSheetItems(row, 'Liabilities')
+        liabilityItems.push(...items)
+        totalLiabilities += items.reduce((sum, item) => sum + item.amount, 0)
+      } else if (row.group === 'Equity' || row.Header?.Name?.includes('EQUITY') || row.Header?.Name?.includes('Equity')) {
+        const items = extractBalanceSheetItems(row, 'Equity')
+        equityItems.push(...items)
+        totalEquity += items.reduce((sum, item) => sum + item.amount, 0)
+      }
+      
+      // Also check for total rows
+      if (row.Header?.Name?.includes('TOTAL ASSETS')) {
+        totalAssets = parseFloat(row.Summary?.ColData?.[0]?.value || '0') || totalAssets
+      } else if (row.Header?.Name?.includes('TOTAL LIABILITIES')) {
+        totalLiabilities = parseFloat(row.Summary?.ColData?.[0]?.value || '0') || totalLiabilities
+      } else if (row.Header?.Name?.includes('TOTAL EQUITY')) {
+        totalEquity = parseFloat(row.Summary?.ColData?.[0]?.value || '0') || totalEquity
+      }
+    }
+
+    // Calculate key metrics
+    const currentAssets = assetItems
+      .filter(item => item.name.toLowerCase().includes('current') || 
+                      item.name.toLowerCase().includes('cash') ||
+                      item.name.toLowerCase().includes('receivable') ||
+                      item.name.toLowerCase().includes('inventory'))
+      .reduce((sum, item) => sum + item.amount, 0)
+
+    const currentLiabilities = liabilityItems
+      .filter(item => item.name.toLowerCase().includes('current') ||
+                      item.name.toLowerCase().includes('payable') ||
+                      item.name.toLowerCase().includes('accrued'))
+      .reduce((sum, item) => sum + item.amount, 0)
+
+    const transformedData = {
+      asOfDate,
+      totalAssets,
+      totalLiabilities,
+      totalEquity,
+      currentAssets: currentAssets || totalAssets * 0.6, // Estimate if not found
+      currentLiabilities: currentLiabilities || totalLiabilities * 0.7, // Estimate if not found
+      workingCapital: (currentAssets || totalAssets * 0.6) - (currentLiabilities || totalLiabilities * 0.7),
+      currentRatio: currentLiabilities > 0 ? (currentAssets || totalAssets * 0.6) / (currentLiabilities || totalLiabilities * 0.7) : 0,
+      debtToEquity: totalEquity > 0 ? totalLiabilities / totalEquity : 0,
+      assetItems: assetItems.length > 0 ? assetItems : [
+        { name: 'Total Assets', amount: totalAssets }
+      ],
+      liabilityItems: liabilityItems.length > 0 ? liabilityItems : [
+        { name: 'Total Liabilities', amount: totalLiabilities }
+      ],
+      equityItems: equityItems.length > 0 ? equityItems : [
+        { name: 'Total Equity', amount: totalEquity }
+      ],
+      lastUpdated: new Date().toISOString()
+    }
+
+    return NextResponse.json(transformedData)
+    
   } catch (error) {
-    console.error('❌ Error fetching Balance Sheet data:', error)
+    console.error('Error fetching Balance Sheet data:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch balance sheet data' },
+      { error: 'Failed to fetch balance sheet data' }, 
       { status: 500 }
     )
   }
 }
 
-interface BalanceSheetMetrics {
-  totalAssets: number
-  totalLiabilities: number
-  totalEquity: number
-  assetItems: Array<{ name: string; amount: number }>
-  liabilityItems: Array<{ name: string; amount: number }>
-  equityItems: Array<{ name: string; amount: number }>
-}
-
-function extractBalanceSheetMetrics(data: any): BalanceSheetMetrics {
-  const metrics: BalanceSheetMetrics = {
-    totalAssets: 0,
-    totalLiabilities: 0,
-    totalEquity: 0,
-    assetItems: [],
-    liabilityItems: [],
-    equityItems: []
+// Helper function to extract balance sheet line items
+function extractBalanceSheetItems(row: any, category: string): Array<{name: string, amount: number}> {
+  const items = []
+  
+  if (row.Rows) {
+    for (const subRow of row.Rows) {
+      if (subRow.ColData && subRow.ColData[0]?.value) {
+        const name = subRow.ColData[0].value
+        const amount = parseFloat(subRow.ColData[1]?.value || '0')
+        
+        // Skip total rows and headers
+        if (name && !isNaN(amount) && amount !== 0 && 
+            !name.toLowerCase().includes('total') &&
+            !name.toLowerCase().includes('assets') &&
+            !name.toLowerCase().includes('liabilities') &&
+            !name.toLowerCase().includes('equity')) {
+          items.push({ name, amount: Math.abs(amount) })
+        }
+      }
+      
+      // Recursively check for nested rows
+      if (subRow.Rows) {
+        items.push(...extractBalanceSheetItems(subRow, category))
+      }
+    }
   }
-
-  // QuickBooks returns data in this structure: data.Rows.Row
-  const rows = data?.Rows?.Row || []
-  console.log(`🔍 FOUND BALANCE SHEET ROWS: ${rows.length}`)
-  console.log(`🔍 EXTRACTING BALANCE SHEET METRICS FROM ${rows.length} TOP-LEVEL ROWS`)
-
-  rows.forEach((row: any, index: number) => {
-    const group = row.group || 'Unknown'
-    const type = row.type || 'Unknown'
-    
-    console.log(`🔍 PROCESSING BALANCE SHEET ROW - Type: ${type}, Group: ${group}`)
-
-    // Process Assets sections
-    if (group === 'Assets' && row.Rows?.Row) {
-      console.log(`✅ FOUND ASSETS SECTION`)
-      
-      row.Rows.Row.forEach((assetRow: any) => {
-        if (assetRow.type === 'Section' && assetRow.Rows?.Row) {
-          // This is a section like "Current Assets"
-          const sectionName = assetRow.group || 'Unknown Asset Section'
-          const sectionTotal = parseFloat(assetRow.total || '0')
-          
-          console.log(`✅ ADDED ASSET SECTION: ${sectionName} = ${sectionTotal}`)
-
-          // Add individual items within the section
-          assetRow.Rows.Row.forEach((item: any) => {
-            if (item.type === 'Data' && item.total) {
-              const itemName = item.group || 'Unknown Asset'
-              const itemAmount = parseFloat(item.total || '0')
-              
-              console.log(`✅ ADDED ASSET ITEM: ${itemName} = ${itemAmount}`)
-              metrics.assetItems.push({
-                name: itemName,
-                amount: itemAmount
-              })
-            }
-          })
-        } else if (assetRow.type === 'Data' && assetRow.total) {
-          // This is a direct asset item
-          const itemName = assetRow.group || 'Unknown Asset'
-          const itemAmount = parseFloat(assetRow.total || '0')
-          
-          console.log(`✅ ADDED ASSET ITEM: ${itemName} = ${itemAmount}`)
-          metrics.assetItems.push({
-            name: itemName,
-            amount: itemAmount
-          })
-        }
-      })
-
-      // Get total from the main assets row if available
-      if (row.total) {
-        const assetsTotal = parseFloat(row.total || '0')
-        console.log(`✅ ADDED ASSETS SUMMARY: ${assetsTotal}`)
-        metrics.totalAssets = assetsTotal
-      }
-    }
-
-    // Process Liabilities sections
-    else if (group === 'Liabilities' && row.Rows?.Row) {
-      console.log(`✅ FOUND LIABILITIES SECTION`)
-      
-      row.Rows.Row.forEach((liabilityRow: any) => {
-        if (liabilityRow.type === 'Section' && liabilityRow.Rows?.Row) {
-          // This is a section like "Current Liabilities"
-          const sectionName = liabilityRow.group || 'Unknown Liability Section'
-          const sectionTotal = parseFloat(liabilityRow.total || '0')
-          
-          console.log(`✅ ADDED LIABILITY SECTION: ${sectionName} = ${sectionTotal}`)
-
-          // Add individual items within the section
-          liabilityRow.Rows.Row.forEach((item: any) => {
-            if (item.type === 'Data' && item.total) {
-              const itemName = item.group || 'Unknown Liability'
-              const itemAmount = parseFloat(item.total || '0')
-              
-              console.log(`✅ ADDED LIABILITY ITEM: ${itemName} = ${itemAmount}`)
-              metrics.liabilityItems.push({
-                name: itemName,
-                amount: itemAmount
-              })
-            }
-          })
-        } else if (liabilityRow.type === 'Data' && liabilityRow.total) {
-          // This is a direct liability item
-          const itemName = liabilityRow.group || 'Unknown Liability'
-          const itemAmount = parseFloat(liabilityRow.total || '0')
-          
-          console.log(`✅ ADDED LIABILITY ITEM: ${itemName} = ${itemAmount}`)
-          metrics.liabilityItems.push({
-            name: itemName,
-            amount: itemAmount
-          })
-        }
-      })
-
-      // Get total from the main liabilities row if available
-      if (row.total) {
-        const liabilitiesTotal = parseFloat(row.total || '0')
-        console.log(`✅ ADDED LIABILITIES SUMMARY: ${liabilitiesTotal}`)
-        metrics.totalLiabilities = liabilitiesTotal
-      }
-    }
-
-    // Process Equity sections
-    else if ((group === 'Equity' || group === 'TotalEquity') && row.Rows?.Row) {
-      console.log(`✅ FOUND EQUITY SECTION`)
-      
-      row.Rows.Row.forEach((equityRow: any) => {
-        if (equityRow.type === 'Section' && equityRow.Rows?.Row) {
-          // This is a section like "Owner's Equity"
-          const sectionName = equityRow.group || 'Unknown Equity Section'
-          const sectionTotal = parseFloat(equityRow.total || '0')
-          
-          console.log(`✅ ADDED EQUITY SECTION: ${sectionName} = ${sectionTotal}`)
-
-          // Add individual items within the section
-          equityRow.Rows.Row.forEach((item: any) => {
-            if (item.type === 'Data' && item.total) {
-              const itemName = item.group || 'Unknown Equity'
-              const itemAmount = parseFloat(item.total || '0')
-              
-              console.log(`✅ ADDED EQUITY ITEM: ${itemName} = ${itemAmount}`)
-              metrics.equityItems.push({
-                name: itemName,
-                amount: itemAmount
-              })
-            }
-          })
-        } else if (equityRow.type === 'Data' && equityRow.total) {
-          // This is a direct equity item
-          const itemName = equityRow.group || 'Unknown Equity'
-          const itemAmount = parseFloat(equityRow.total || '0')
-          
-          console.log(`✅ ADDED EQUITY ITEM: ${itemName} = ${itemAmount}`)
-          metrics.equityItems.push({
-            name: itemName,
-            amount: itemAmount
-          })
-        }
-      })
-
-      // Get total from the main equity row if available
-      if (row.total) {
-        const equityTotal = parseFloat(row.total || '0')
-        console.log(`✅ ADDED EQUITY SUMMARY: ${equityTotal}`)
-        metrics.totalEquity = equityTotal
-      }
-    }
-
-    // Process Total Equity row (sometimes separate)
-    else if (group === 'TotalEquity' && row.total) {
-      console.log(`✅ FOUND TOTAL EQUITY`)
-      metrics.totalEquity = parseFloat(row.total || '0')
-      console.log(`✅ SET TOTAL EQUITY: ${metrics.totalEquity}`)
-    }
-  })
-
-  // Sort items by amount (highest to lowest)
-  metrics.assetItems.sort((a, b) => b.amount - a.amount)
-  metrics.liabilityItems.sort((a, b) => b.amount - a.amount)
-  metrics.equityItems.sort((a, b) => b.amount - a.amount)
-
-  console.log(`🔍 FINAL BALANCE SHEET METRICS:`)
-  console.log(`   Total Assets: ${metrics.totalAssets}`)
-  console.log(`   Total Liabilities: ${metrics.totalLiabilities}`)
-  console.log(`   Total Equity: ${metrics.totalEquity}`)
-  console.log(`   Asset Items: ${metrics.assetItems.length}`)
-  console.log(`   Liability Items: ${metrics.liabilityItems.length}`)
-  console.log(`   Equity Items: ${metrics.equityItems.length}`)
-
-  return metrics
+  
+  return items
 }

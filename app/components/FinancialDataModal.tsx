@@ -1,3 +1,4 @@
+"use client"
 import React, { useState, useEffect } from 'react'
 import { X, Printer, Calendar, TrendingUp, TrendingDown, DollarSign } from 'lucide-react'
 
