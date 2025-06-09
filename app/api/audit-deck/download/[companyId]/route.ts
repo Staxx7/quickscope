@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+interface RouteParams {
+  params: Promise<{ companyId: string }>
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { companyId: string } }
+  { params }: RouteParams
 ) {
   try {
-    const { companyId } = params;
+    const { companyId } = await params;
 
     if (!companyId) {
       return NextResponse.json(
@@ -21,6 +25,7 @@ export async function GET(
       Generated: ${new Date().toLocaleString()}
       
       This is a mock PDF report.
+      In production, this would be a comprehensive financial analysis document.
     `);
 
     return new NextResponse(mockPdfContent, {
