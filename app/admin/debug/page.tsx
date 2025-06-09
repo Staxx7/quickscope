@@ -32,7 +32,7 @@ export default function DebugPage() {
         status: prospectRes.status
       }
     } catch (e) {
-      results.api = { prospects: false, error: e.message }
+      results.api = { prospects: false, error: e instanceof Error ? e.message : String(e) }
     }
 
     // Check Supabase connection
@@ -49,7 +49,7 @@ export default function DebugPage() {
         error: error?.message
       }
     } catch (e) {
-      results.database = { connected: false, error: e.message }
+      results.database = { connected: false, error: e instanceof Error ? e.message : String(e) }
     }
 
     setChecks(results)
