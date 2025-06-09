@@ -14,15 +14,13 @@ export async function GET(
       );
     }
 
-    // For now, return a mock PDF download response
-    // In production, this would generate and return the actual PDF
+    // Mock PDF content
     const mockPdfContent = Buffer.from(`
       QuickScope Financial Analysis Report
       Company ID: ${companyId}
       Generated: ${new Date().toLocaleString()}
       
       This is a mock PDF report.
-      In production, this would be a comprehensive financial analysis document.
     `);
 
     return new NextResponse(mockPdfContent, {
