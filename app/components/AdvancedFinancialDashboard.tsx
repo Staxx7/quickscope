@@ -1,9 +1,7 @@
 'use client'
 
-import { TrendingUp, TrendingDown, DollarSign, PieChart, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, PieChart, AlertTriangle, CheckCircle } from 'lucide-react';
-
 interface FinancialMetrics {
   revenue: {
     current: number
@@ -274,24 +272,3 @@ export default function AdvancedFinancialDashboard({ companyId, data }: Advanced
     </div>
   )
 }
-```
-
-## 2. Create Transcript Analysis Component
-
-```typescript
-// app/components/TranscriptAnalysis.tsx
-'use client'
-
-
-interface TranscriptInsight {
-  category: 'pain_point' | 'opportunity' | 'concern' | 'goal'
-  content: string
-  confidence: number
-  relatedFinancials?: string[]
-}
-
-interface TranscriptAnalysisProps {
-  companyId: string
-  transcript?: string
-}
-
