@@ -1,7 +1,6 @@
 'use client'
+import { useState, useEffect } from 'react';
 
-import { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, DollarSign, PieChart, AlertTriangle, CheckCircle } from 'lucide-react'
 
 interface FinancialMetrics {
   revenue: {
@@ -281,8 +280,6 @@ export default function AdvancedFinancialDashboard({ companyId, data }: Advanced
 // app/components/TranscriptAnalysis.tsx
 'use client'
 
-import React, { useState } from 'react'
-import { Upload, FileText, Brain, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react'
 
 interface TranscriptInsight {
   category: 'pain_point' | 'opportunity' | 'concern' | 'goal'
