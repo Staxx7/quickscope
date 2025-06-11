@@ -1,658 +1,399 @@
-"use client"
-import React, { useState, useEffect } from 'react'
-import { Database, RefreshCw, CheckCircle, AlertTriangle, Download, BarChart3, DollarSign, Calendar, Users, TrendingUp } from 'lucide-react'
+'use client';
+import React, { useState, useRef } from 'react';
+import { Upload, Download, FileText, Play, Pause, RefreshCw, CheckCircle, AlertCircle, TrendingUp, DollarSign, Calendar, Users, Settings, Filter, Search, BarChart3, Database } from 'lucide-react';
 
-interface QBODataSet {
-  companyInfo: {
-    companyName: string
-    ein: string
-    address: string
-    currency: string
-    fiscalYearStart: string
-  }
-  financialStatements: {
-    profitLoss: any
-    balanceSheet: any
-    cashFlow: any
-  }
-  detailedData: {
-    accountsReceivable: any[]
-    accountsPayable: any[]
-    customerList: any[]
-    vendorList: any[]
-    itemList: any[]
-    employees: any[]
-    chartOfAccounts: any[]
-    generalLedger: any[]
-  }
-  cashFlowAnalysis: {
-    monthlyFlow: any[]
-    projectedFlow: any[]
-    workingCapital: number
-    burnRate: number
-    runway: number
-  }
-  customerAnalysis: {
-    topCustomers: any[]
-    customerConcentration: number
-    averageInvoiceValue: number
-    daysOutstanding: number
-    collectionEfficiency: number
-  }
-  vendorAnalysis: {
-    topVendors: any[]
-    paymentTerms: any[]
-    daysPayableOutstanding: number
-    spendConcentration: number
-  }
-  kpiMetrics: {
-    revenue: {
-      current: number
-      growth: number
-      recurring: number
-      seasonal: boolean
-    }
-    profitability: {
-      grossMargin: number
-      netMargin: number
-      ebitda: number
-      trends: any[]
-    }
-    liquidity: {
-      currentRatio: number
-      quickRatio: number
-      cashRatio: number
-      workingCapital: number
-    }
-    efficiency: {
-      assetTurnover: number
-      inventoryTurnover: number
-      receivablesTurnover: number
-      payablesTurnover: number
-    }
-    leverage: {
-      debtToEquity: number
-      debtToAssets: number
-      interestCoverage: number
-    }
-  }
-  riskAssessment: {
-    concentrationRisks: any[]
-    cashFlowRisks: any[]
-    complianceIssues: any[]
-    operationalRisks: any[]
-  }
-  recommendations: any[]
+interface DataFile {
+  id: string;
+  name: string;
+  type: string;
+  size: string;
+  uploadedAt: string;
+  status: 'uploading' | 'processing' | 'completed' | 'error';
+  progress: number;
+  recordCount?: number;
 }
 
-interface EnhancedQBODataExtractorProps {
-  prospectId: string
-  companyName: string
-  onDataExtracted?: (data: QBODataSet) => void
+interface ExtractionResult {
+  id: string;
+  fileName: string;
+  extractedAt: string;
+  recordCount: number;
+  categories: string[];
+  totalAmount: number;
+  dateRange: {
+    start: string;
+    end: string;
+  };
 }
 
-const EnhancedQBODataExtractor: React.FC<EnhancedQBODataExtractorProps> = ({
-  prospectId,
-  companyName,
-  onDataExtracted
-}) => {
-  const [dataSet, setDataSet] = useState<QBODataSet | null>(null)
-  const [extracting, setExtracting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [extractionStep, setExtractionStep] = useState('')
-  const [extractionProgress, setExtractionProgress] = useState(0)
+const EnhancedQBODataExtractor: React.FC = () => {
+  const [files, setFiles] = useState<DataFile[]>([]);
+  const [extractionResults, setExtractionResults] = useState<ExtractionResult[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState('upload');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const extractionSteps = [
-    { step: 'Connecting to QuickBooks...', weight: 10 },
-    { step: 'Fetching company information...', weight: 5 },
-    { step: 'Extracting financial statements...', weight: 15 },
-    { step: 'Analyzing accounts receivable...', weight: 10 },
-    { step: 'Analyzing accounts payable...', weight: 10 },
-    { step: 'Processing customer data...', weight: 10 },
-    { step: 'Processing vendor data...', weight: 10 },
-    { step: 'Extracting chart of accounts...', weight: 10 },
-    { step: 'Generating cash flow analysis...', weight: 15 },
-    { step: 'Calculating KPI metrics...', weight: 10 },
-    { step: 'Performing risk assessment...', weight: 5 }
-  ]
-
-  const performDeepExtraction = async () => {
-    setExtracting(true)
-    setError(null)
-    setExtractionProgress(0)
-
-    try {
-      let currentProgress = 0
-
-      for (let i = 0; i < extractionSteps.length; i++) {
-        const stepInfo = extractionSteps[i]
-        setExtractionStep(stepInfo.step)
-        
-        // Simulate API calls with realistic delays
-        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000))
-        
-        currentProgress += stepInfo.weight
-        setExtractionProgress(currentProgress)
-      }
-
-      // Generate comprehensive mock data
-      const mockDataSet: QBODataSet = {
-        companyInfo: {
-          companyName: companyName,
-          ein: "12-3456789",
-          address: "123 Business Ave, Suite 100, Charlotte, NC 28202",
-          currency: "USD",
-          fiscalYearStart: "January"
-        },
-        financialStatements: {
-          profitLoss: {
-            revenue: 2450000,
-            cogs: 735000,
-            grossProfit: 1715000,
-            operatingExpenses: 1372000,
-            netIncome: 343000,
-            periods: generateMonthlyData()
-          },
-          balanceSheet: {
-            totalAssets: 1850000,
-            currentAssets: 925000,
-            cash: 385000,
-            accountsReceivable: 340000,
-            inventory: 125000,
-            totalLiabilities: 620000,
-            currentLiabilities: 340000,
-            totalEquity: 1230000
-          },
-          cashFlow: {
-            operatingCashFlow: 425000,
-            investingCashFlow: -85000,
-            financingCashFlow: -125000,
-            netCashFlow: 215000
-          }
-        },
-        detailedData: {
-          accountsReceivable: generateARData(),
-          accountsPayable: generateAPData(),
-          customerList: generateCustomerData(),
-          vendorList: generateVendorData(),
-          itemList: generateItemData(),
-          employees: generateEmployeeData(),
-          chartOfAccounts: generateCOAData(),
-          generalLedger: generateGLData()
-        },
-        cashFlowAnalysis: {
-          monthlyFlow: generateCashFlowData(),
-          projectedFlow: generateProjectedCashFlow(),
-          workingCapital: 585000,
-          burnRate: 125000,
-          runway: 4.7
-        },
-        customerAnalysis: {
-          topCustomers: generateTopCustomers(),
-          customerConcentration: 0.35,
-          averageInvoiceValue: 12500,
-          daysOutstanding: 38,
-          collectionEfficiency: 0.92
-        },
-        vendorAnalysis: {
-          topVendors: generateTopVendors(),
-          paymentTerms: generatePaymentTerms(),
-          daysPayableOutstanding: 28,
-          spendConcentration: 0.42
-        },
-        kpiMetrics: {
-          revenue: {
-            current: 2450000,
-            growth: 0.18,
-            recurring: 0.65,
-            seasonal: true
-          },
-          profitability: {
-            grossMargin: 0.70,
-            netMargin: 0.14,
-            ebitda: 485000,
-            trends: generateProfitabilityTrends()
-          },
-          liquidity: {
-            currentRatio: 2.72,
-            quickRatio: 2.35,
-            cashRatio: 1.13,
-            workingCapital: 585000
-          },
-          efficiency: {
-            assetTurnover: 1.32,
-            inventoryTurnover: 8.5,
-            receivablesTurnover: 7.2,
-            payablesTurnover: 12.3
-          },
-          leverage: {
-            debtToEquity: 0.50,
-            debtToAssets: 0.34,
-            interestCoverage: 15.2
-          }
-        },
-        riskAssessment: {
-          concentrationRisks: [
-            {
-              type: "Customer Concentration",
-              severity: "medium",
-              description: "Top 3 customers represent 35% of revenue",
-              recommendation: "Diversify customer base"
-            },
-            {
-              type: "Vendor Concentration", 
-              severity: "low",
-              description: "Healthy vendor distribution",
-              recommendation: "Continue monitoring"
-            }
-          ],
-          cashFlowRisks: [
-            {
-              type: "Seasonal Volatility",
-              severity: "medium", 
-              description: "Q1 typically shows 25% revenue decline",
-              recommendation: "Establish credit facility for seasonal support"
-            }
-          ],
-          complianceIssues: [
-            {
-              type: "Sales Tax",
-              severity: "low",
-              description: "All filings current",
-              recommendation: "Maintain current compliance procedures"
-            }
-          ],
-          operationalRisks: [
-            {
-              type: "Key Person Dependency",
-              severity: "high",
-              description: "Revenue heavily dependent on founder relationships", 
-              recommendation: "Develop business development team"
-            }
-          ]
-        },
-        recommendations: [
-          {
-            category: "Cash Flow Management",
-            priority: "high",
-            recommendation: "Implement payment terms optimization",
-            impact: "$85,000 annual benefit",
-            effort: "low"
-          },
-          {
-            category: "Process Automation",
-            priority: "high", 
-            recommendation: "Automate AP/AR processes",
-            impact: "$125,000 annual savings",
-            effort: "medium"
-          },
-          {
-            category: "Risk Management",
-            priority: "medium",
-            recommendation: "Diversify customer concentration",
-            impact: "Reduced revenue risk",
-            effort: "high"
-          }
-        ]
-      }
-
-      setDataSet(mockDataSet)
-      onDataExtracted?.(mockDataSet)
-
-    } catch (err) {
-      setError('Failed to extract QBO data')
-      console.error('Error extracting QBO data:', err)
-    } finally {
-      setExtracting(false)
-      setExtractionStep('')
-      setExtractionProgress(0)
-    }
-  }
-
-  const exportDataSet = () => {
-    if (!dataSet) return
+  const handleFileUpload = async (uploadedFiles: FileList) => {
+    setIsProcessing(true);
     
-    const dataBlob = new Blob([JSON.stringify(dataSet, null, 2)], {
-      type: 'application/json'
-    })
-    const url = URL.createObjectURL(dataBlob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${companyName}_financial_data.json`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+    for (let i = 0; i < uploadedFiles.length; i++) {
+      const file = uploadedFiles[i];
+      const newFile: DataFile = {
+        id: `file_${Date.now()}_${i}`,
+        name: file.name,
+        type: file.type,
+        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+        uploadedAt: new Date().toISOString(),
+        status: 'uploading',
+        progress: 0
+      };
+      
+      setFiles(prev => [...prev, newFile]);
+      
+      // Simulate upload and processing
+      for (let progress = 0; progress <= 100; progress += 10) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        setFiles(prev => prev.map(f => 
+          f.id === newFile.id ? { ...f, progress, status: progress === 100 ? 'processing' : 'uploading' } : f
+        ));
+      }
+      
+      // Simulate processing completion
+      setTimeout(() => {
+        const mockResult: ExtractionResult = {
+          id: newFile.id,
+          fileName: file.name,
+          extractedAt: new Date().toISOString(),
+          recordCount: Math.floor(Math.random() * 1000) + 100,
+          categories: ['Income', 'Expenses', 'Assets', 'Liabilities'],
+          totalAmount: Math.floor(Math.random() * 100000) + 10000,
+          dateRange: {
+            start: '2024-01-01',
+            end: '2024-12-31'
+          }
+        };
+        
+        setFiles(prev => prev.map(f => 
+          f.id === newFile.id ? { ...f, status: 'completed', recordCount: mockResult.recordCount } : f
+        ));
+        setExtractionResults(prev => [...prev, mockResult]);
+      }, 2000);
+    }
+    
+    setIsProcessing(false);
+  };
 
-  // Helper functions to generate mock data
-  function generateMonthlyData() {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    return months.map(month => ({
-      month,
-      revenue: Math.floor(180000 + Math.random() * 80000),
-      expenses: Math.floor(120000 + Math.random() * 40000),
-      netIncome: Math.floor(15000 + Math.random() * 35000)
-    }))
-  }
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed': return <CheckCircle className="w-5 h-5 text-green-400" />;
+      case 'processing': return <RefreshCw className="w-5 h-5 text-blue-400 animate-spin" />;
+      case 'error': return <AlertCircle className="w-5 h-5 text-red-400" />;
+      default: return <Upload className="w-5 h-5 text-gray-400" />;
+    }
+  };
 
-  function generateARData() {
-    return [
-      { customer: "TechCorp Solutions", amount: 45000, daysOld: 15, invoiceDate: "2024-11-20" },
-      { customer: "Global Industries", amount: 32000, daysOld: 25, invoiceDate: "2024-11-10" },
-      { customer: "StartupX", amount: 18000, daysOld: 35, invoiceDate: "2024-10-31" },
-      { customer: "Enterprise LLC", amount: 28000, daysOld: 8, invoiceDate: "2024-11-27" }
-    ]
-  }
-
-  function generateAPData() {
-    return [
-      { vendor: "Office Supplies Co", amount: 8500, dueDate: "2024-12-15", daysUntilDue: 10 },
-      { vendor: "IT Services Inc", amount: 15000, dueDate: "2024-12-20", daysUntilDue: 15 },
-      { vendor: "Marketing Agency", amount: 12000, dueDate: "2024-12-10", daysUntilDue: 5 }
-    ]
-  }
-
-  function generateCustomerData() {
-    return [
-      { name: "TechCorp Solutions", totalRevenue: 285000, invoiceCount: 24, avgInvoice: 11875 },
-      { name: "Global Industries", totalRevenue: 195000, invoiceCount: 18, avgInvoice: 10833 },
-      { name: "StartupX", totalRevenue: 145000, invoiceCount: 15, avgInvoice: 9667 }
-    ]
-  }
-
-  function generateVendorData() {
-    return [
-      { name: "IT Services Inc", totalSpend: 85000, invoiceCount: 12, avgInvoice: 7083 },
-      { name: "Office Supplies Co", totalSpend: 45000, invoiceCount: 24, avgInvoice: 1875 },
-      { name: "Marketing Agency", totalSpend: 120000, invoiceCount: 8, avgInvoice: 15000 }
-    ]
-  }
-
-  function generateItemData() {
-    return [
-      { name: "Consulting Services", type: "Service", unitPrice: 175, quantitySold: 1200 },
-      { name: "Software License", type: "Product", unitPrice: 2500, quantitySold: 48 },
-      { name: "Training Program", type: "Service", unitPrice: 1200, quantitySold: 65 }
-    ]
-  }
-
-  function generateEmployeeData() {
-    return [
-      { name: "John Smith", title: "CEO", department: "Executive", salary: 185000 },
-      { name: "Sarah Johnson", title: "COO", department: "Operations", salary: 145000 },
-      { name: "Mike Chen", title: "VP Engineering", department: "Technology", salary: 165000 }
-    ]
-  }
-
-  function generateCOAData() {
-    return [
-      { account: "1000 - Cash", type: "Asset", balance: 385000 },
-      { account: "1200 - Accounts Receivable", type: "Asset", balance: 340000 },
-      { account: "4000 - Revenue", type: "Income", balance: 2450000 },
-      { account: "5000 - Cost of Goods Sold", type: "Expense", balance: 735000 }
-    ]
-  }
-
-  function generateGLData() {
-    return Array.from({ length: 50 }, (_, i) => ({
-      date: `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
-      account: `Account ${i + 1}`,
-      description: `Transaction ${i + 1}`,
-      debit: Math.random() > 0.5 ? Math.floor(Math.random() * 50000) : 0,
-      credit: Math.random() > 0.5 ? Math.floor(Math.random() * 50000) : 0
-    }))
-  }
-
-  function generateCashFlowData() {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    return months.map(month => ({
-      month,
-      inflow: Math.floor(200000 + Math.random() * 100000),
-      outflow: Math.floor(150000 + Math.random() * 80000),
-      netFlow: Math.floor(25000 + Math.random() * 50000)
-    }))
-  }
-
-  function generateProjectedCashFlow() {
-    return Array.from({ length: 12 }, (_, i) => ({
-      month: `Month ${i + 1}`,
-      projected: Math.floor(180000 + Math.random() * 80000),
-      confidence: Math.floor(70 + Math.random() * 25)
-    }))
-  }
-
-  function generateTopCustomers() {
-    return [
-      { name: "TechCorp Solutions", revenue: 285000, percentage: 11.6 },
-      { name: "Global Industries", revenue: 195000, percentage: 8.0 },
-      { name: "StartupX", revenue: 145000, percentage: 5.9 },
-      { name: "Enterprise LLC", revenue: 125000, percentage: 5.1 },
-      { name: "Innovation Co", revenue: 98000, percentage: 4.0 }
-    ]
-  }
-
-  function generateTopVendors() {
-    return [
-      { name: "IT Services Inc", spend: 85000, percentage: 12.5 },
-      { name: "Marketing Agency", spend: 120000, percentage: 17.6 },
-      { name: "Office Supplies Co", spend: 45000, percentage: 6.6 },
-      { name: "Legal Services", spend: 65000, percentage: 9.5 }
-    ]
-  }
-
-  function generatePaymentTerms() {
-    return [
-      { terms: "Net 30", percentage: 45 },
-      { terms: "Net 15", percentage: 30 },
-      { terms: "Due on Receipt", percentage: 20 },
-      { terms: "Net 45", percentage: 5 }
-    ]
-  }
-
-  function generateProfitabilityTrends() {
-    return Array.from({ length: 12 }, (_, i) => ({
-      month: i + 1,
-      grossMargin: 0.68 + Math.random() * 0.08,
-      netMargin: 0.12 + Math.random() * 0.06
-    }))
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
+  const filteredFiles = files.filter(file => {
+    const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filterType === 'all' || file.status === filterType;
+    return matchesSearch && matchesFilter;
+  });
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900 p-6" style={{ fontFamily: 'Poppins, sans-serif' }}>
       {/* Header */}
-      <div className="border-b border-gray-200 px-6 py-4">
+      <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-6 mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-              <Database className="w-5 h-5 mr-2 text-blue-600" />
-              Enhanced QuickBooks Data Extraction
-            </h3>
-            <p className="text-sm text-gray-500">
-              Deep financial data analysis for {companyName}
-            </p>
+            <h1 className="text-3xl font-medium text-white mb-2">QuickBooks Data Extractor</h1>
+            <p className="text-gray-300">Extract and analyze your QuickBooks financial data</p>
           </div>
-          <div className="flex space-x-2">
-            {!dataSet && (
-              <button
-                onClick={performDeepExtraction}
-                disabled={extracting}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${extracting ? 'animate-spin' : ''}`} />
-                {extracting ? 'Extracting...' : 'Start Deep Extraction'}
-              </button>
-            )}
-            {dataSet && (
-              <button
-                onClick={exportDataSet}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export Data
-              </button>
-            )}
+          <div className="flex items-center space-x-4">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/25">
+              <Database className="w-8 h-8 text-cyan-400" />
+            </div>
+            <div className="text-right">
+              <div className="text-white font-semibold">{files.length}</div>
+              <div className="text-gray-400 text-sm">Files Processed</div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Extraction Progress */}
-      {extracting && (
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="mb-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">{extractionStep}</span>
-              <span className="text-gray-600">{extractionProgress}%</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-              <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${extractionProgress}%` }}
-              ></div>
-            </div>
-          </div>
+      {/* Tab Navigation */}
+      <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 mb-6">
+        <div className="flex space-x-1 p-2">
+          {[
+            { id: 'upload', label: 'Upload & Extract', icon: Upload },
+            { id: 'files', label: 'File Manager', icon: FileText },
+            { id: 'results', label: 'Results', icon: BarChart3 },
+            { id: 'settings', label: 'Settings', icon: Settings }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center space-x-2 px-4 py-3 rounded-xl transition-all duration-200 ${
+                activeTab === tab.id
+                  ? 'bg-white/15 text-white border border-white/30'
+                  : 'text-gray-400 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              <span className="font-medium">{tab.label}</span>
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
-      {/* Error State */}
-      {error && (
-        <div className="p-6">
-          <div className="bg-red-50 border border-red-200 rounded-md p-4">
-            <div className="flex">
-              <AlertTriangle className="h-5 w-5 text-red-400" />
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Extraction Error</h3>
-                <div className="mt-2 text-sm text-red-700">{error}</div>
+      {/* Upload Tab */}
+      {activeTab === 'upload' && (
+        <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
+          <div className="text-center">
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/25 mb-6">
+              <div className="bg-cyan-500/20 rounded-full p-6 w-24 h-24 mx-auto mb-4 flex items-center justify-center">
+                <Upload className="w-12 h-12 text-cyan-400" />
+              </div>
+              <h3 className="text-xl font-medium text-white mb-2">Upload QuickBooks Files</h3>
+              <p className="text-gray-400 mb-6">Drag and drop your QBO files or click to browse</p>
+              
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".qbo,.qbw,.qbb,.iif"
+                onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+                className="hidden"
+              />
+              
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isProcessing}
+                className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 disabled:opacity-50"
+              >
+                {isProcessing ? 'Processing...' : 'Choose Files'}
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
+                <Database className="w-8 h-8 text-blue-400 mb-2" />
+                <h4 className="font-medium text-white mb-1">Secure Processing</h4>
+                <p className="text-gray-400 text-sm">Enterprise-grade security for your financial data</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
+                <TrendingUp className="w-8 h-8 text-cyan-400 mb-2" />
+                <h4 className="font-medium text-white mb-1">Smart Analysis</h4>
+                <p className="text-gray-400 text-sm">AI-powered insights and categorization</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
+                <Download className="w-8 h-8 text-slate-300 mb-2" />
+                <h4 className="font-medium text-white mb-1">Export Ready</h4>
+                <p className="text-gray-400 text-sm">Multiple formats for analysis and reporting</p>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Data Summary */}
-      {dataSet && (
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="flex items-center">
-                <CheckCircle className="w-8 h-8 text-green-600" />
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-green-800">Extraction Complete</p>
-                  <p className="text-xs text-green-600">All data successfully retrieved</p>
+      {/* Files Tab */}
+      {activeTab === 'files' && (
+        <div className="space-y-6">
+          {/* Search and Filter */}
+          <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search files..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/25 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="px-4 py-2 bg-white/10 border border-white/25 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="all" className="bg-slate-800">All Files</option>
+                <option value="completed" className="bg-slate-800">Completed</option>
+                <option value="processing" className="bg-slate-800">Processing</option>
+                <option value="error" className="bg-slate-800">Error</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Files List */}
+          <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
+            <div className="space-y-4">
+              {filteredFiles.map(file => (
+                <div
+                  key={file.id}
+                  className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25 hover:bg-white/15 transition-all duration-200"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-2 rounded-lg bg-blue-500/20">
+                        {getStatusIcon(file.status)}
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-white">{file.name}</h3>
+                        <div className="flex items-center space-x-4 text-sm text-gray-400">
+                          <span>{file.size}</span>
+                          <span>{new Date(file.uploadedAt).toLocaleString()}</span>
+                          {file.recordCount && <span>{file.recordCount} records</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        file.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                        file.status === 'processing' ? 'bg-blue-500/20 text-blue-400' :
+                        file.status === 'error' ? 'bg-red-500/20 text-red-400' :
+                        'bg-gray-500/20 text-gray-400'
+                      }`}>
+                        {file.status}
+                      </span>
+                      {file.status === 'completed' && (
+                        <button className="bg-white/10 border border-white/25 text-white px-3 py-1 rounded-lg hover:bg-white/15 transition-all duration-200 text-xs">
+                          <Download className="w-3 h-3 inline mr-1" />
+                          Export
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {file.status === 'uploading' || file.status === 'processing' ? (
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between text-sm text-gray-400 mb-1">
+                        <span>{file.status === 'uploading' ? 'Uploading...' : 'Processing...'}</span>
+                        <span>{file.progress}%</span>
+                      </div>
+                      <div className="w-full bg-white/10 rounded-full h-2">
+                        <div
+                          className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${file.progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
+              ))}
+              
+              {filteredFiles.length === 0 && (
+                <div className="text-center py-8">
+                  <FileText className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                  <p className="text-gray-400">No files found</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Results Tab */}
+      {activeTab === 'results' && (
+        <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium text-white">Total Records</h3>
+                  <p className="text-2xl font-semibold text-cyan-400">
+                    {extractionResults.reduce((sum, result) => sum + result.recordCount, 0).toLocaleString()}
+                  </p>
+                </div>
+                <BarChart3 className="w-8 h-8 text-cyan-400" />
               </div>
             </div>
             
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="flex items-center">
-                <DollarSign className="w-8 h-8 text-blue-600" />
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-blue-800">Annual Revenue</p>
-                  <p className="text-lg font-bold text-blue-900">{formatCurrency(dataSet.kpiMetrics.revenue.current)}</p>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium text-white">Total Amount</h3>
+                  <p className="text-2xl font-semibold text-blue-400">
+                    ${extractionResults.reduce((sum, result) => sum + result.totalAmount, 0).toLocaleString()}
+                  </p>
                 </div>
+                <DollarSign className="w-8 h-8 text-blue-400" />
               </div>
             </div>
-
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <div className="flex items-center">
-                <BarChart3 className="w-8 h-8 text-purple-600" />
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-purple-800">Health Score</p>
-                  <p className="text-lg font-bold text-purple-900">78/100</p>
+            
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium text-white">Files Processed</h3>
+                  <p className="text-2xl font-semibold text-slate-300">{extractionResults.length}</p>
                 </div>
-              </div>
-            </div>
-
-            <div className="bg-yellow-50 p-4 rounded-lg">
-              <div className="flex items-center">
-                <TrendingUp className="w-8 h-8 text-yellow-600" />
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-yellow-800">Growth Rate</p>
-                  <p className="text-lg font-bold text-yellow-900">{(dataSet.kpiMetrics.revenue.growth * 100).toFixed(0)}%</p>
-                </div>
+                <FileText className="w-8 h-8 text-slate-300" />
               </div>
             </div>
           </div>
+          
+          <div className="space-y-4">
+            {extractionResults.map(result => (
+              <div key={result.id} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-medium text-white">{result.fileName}</h3>
+                  <span className="text-sm text-gray-400">{new Date(result.extractedAt).toLocaleString()}</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-400">Records:</span>
+                    <span className="text-white font-medium ml-2">{result.recordCount.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Amount:</span>
+                    <span className="text-white font-medium ml-2">${result.totalAmount.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Categories:</span>
+                    <span className="text-white font-medium ml-2">{result.categories.length}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Date Range:</span>
+                    <span className="text-white font-medium ml-2">{result.dateRange.start} to {result.dateRange.end}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-          {/* Data Categories */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="space-y-4">
-              <h4 className="font-semibold text-gray-900">Financial Data</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">P&L Statements</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Balance Sheets</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Cash Flow</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">General Ledger</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </div>
+      {/* Settings Tab */}
+      {activeTab === 'settings' && (
+        <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
+          <h2 className="text-xl font-medium text-white mb-6">Extraction Settings</h2>
+          <div className="space-y-6">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
+              <h3 className="font-medium text-white mb-4">Data Categories</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {['Income', 'Expenses', 'Assets', 'Liabilities', 'Equity', 'Accounts'].map(category => (
+                  <label key={category} className="flex items-center space-x-2">
+                    <input type="checkbox" defaultChecked className="rounded border-white/25" />
+                    <span className="text-gray-300">{category}</span>
+                  </label>
+                ))}
               </div>
             </div>
-
-            <div className="space-y-4">
-              <h4 className="font-semibold text-gray-900">Operational Data</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Customer Analysis</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Vendor Analysis</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">A/R & A/P Details</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Employee Data</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="font-semibold text-gray-900">Analytics</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">KPI Metrics</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Risk Assessment</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Recommendations</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Projections</span>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </div>
-              </div>
+            
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
+              <h3 className="font-medium text-white mb-4">Export Format</h3>
+              <select className="w-full px-4 py-2 bg-white/10 border border-white/25 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <option value="csv" className="bg-slate-800">CSV</option>
+                <option value="xlsx" className="bg-slate-800">Excel (XLSX)</option>
+                <option value="json" className="bg-slate-800">JSON</option>
+                <option value="pdf" className="bg-slate-800">PDF Report</option>
+              </select>
             </div>
           </div>
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default EnhancedQBODataExtractor
+export default EnhancedQBODataExtractor;

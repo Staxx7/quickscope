@@ -48,7 +48,7 @@ export default function SalesPipelineManager() {
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Sales Pipeline</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Quickscope Workflow</h2>
         <div className="flex items-center space-x-2">
           <Users className="h-5 w-5 text-gray-500" />
           <span className="text-sm text-gray-600">{prospects.length} prospects</span>

@@ -1,186 +1,205 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { useState } from 'react';
+import { Shield, Zap, Users, Building2, ArrowRight, CheckCircle } from 'lucide-react';
 
 export default function ConnectPage() {
-  const router = useRouter()
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    company: '',
-    phone: ''
-  })
-  const [isLoading, setIsLoading] = useState(false)
+  const [isConnecting, setIsConnecting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  const handleQuickBooksConnect = async () => {
+    setIsConnecting(true);
     
+    // This will eventually connect to your QuickBooks OAuth endpoint
+    // For now, we'll simulate the connection
     try {
-      // Send data to OAuth initiation endpoint
-      const response = await fetch('/api/qbo/auth', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.fullName,
-          email: formData.email,
-          company: formData.company,
-          phone: formData.phone
-        }),
-      })
-
-      if (response.ok) {
-        const { authUrl } = await response.json()
-        // Redirect to QuickBooks OAuth
-        window.location.href = authUrl
-      } else {
-        throw new Error('Failed to initiate QuickBooks connection')
-      }
+      // Replace this with your actual QuickBooks OAuth URL
+      const quickbooksAuthUrl = `https://appcenter.intuit.com/connect/oauth2?` +
+        `client_id=YOUR_CLIENT_ID&` +
+        `scope=com.intuit.quickbooks.accounting&` +
+        `redirect_uri=${encodeURIComponent('https://www.quickscope.info/success')}&` +
+        `response_type=code&` +
+        `access_type=offline`;
+      
+      // For demo purposes, we'll redirect to success page after a short delay
+      setTimeout(() => {
+        window.location.href = '/success?company=Demo%20Company';
+      }, 2000);
+      
     } catch (error) {
-      console.error('Error:', error)
-      alert('Something went wrong. Please try again.')
-    } finally {
-      setIsLoading(false)
+      console.error('Connection error:', error);
+      setIsConnecting(false);
     }
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden flex items-center justify-center p-6">
-      {/* Same grid pattern for consistency */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-      
-      {/* Header */}
-      <nav className="absolute top-0 left-0 right-0 z-10 flex justify-between items-center p-6 lg:px-12">
-        <a href="/" className="flex items-center space-x-3">
-          {/* STAXX Logo Icon */}
-          <div className="w-8 h-8 flex flex-col justify-center space-y-0.5">
-            <div className="h-1.5 bg-white rounded-sm"></div>
-            <div className="h-1.5 bg-white rounded-sm w-3/4"></div>
-            <div className="h-1.5 bg-white rounded-sm w-1/2"></div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Navigation */}
+      <nav className="px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-bold text-white">QUICKSCOPE</span>
+            <span className="text-sm text-gray-400">by STAXX</span>
           </div>
-          <span className="text-white font-medium text-xl tracking-wide">Quickscope by STAXX</span>
-        </a>
+        </div>
       </nav>
 
-      {/* Form Container */}
-      <div className="relative z-10 w-full max-w-md">
-        <div className="bg-white rounded-2xl p-8 shadow-2xl">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-6 h-6 flex flex-col justify-center space-y-0.5">
-                <div className="h-1 bg-black rounded-sm"></div>
-                <div className="h-1 bg-black rounded-sm w-3/4"></div>
-                <div className="h-1 bg-black rounded-sm w-1/2"></div>
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          {/* Left Side - Content */}
+          <div className="text-center lg:text-left">
+            <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+              Connect Your
+              <span className="block bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                QuickBooks
+              </span>
+            </h1>
+            
+            <p className="text-xl text-gray-300 mb-8 leading-relaxed">
+              Our team of CFOs will analyze your financial data and compile insights, 
+              findings, and opportunities to present to you on your scheduled Audit Call.
+            </p>
+
+            {/* Features Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 text-center">
+                <div className="w-12 h-12 mx-auto mb-4 bg-blue-500/20 border border-blue-500/30 rounded-xl flex items-center justify-center">
+                  <Shield className="w-6 h-6 text-blue-400" />
+                </div>
+                <h3 className="font-semibold text-white mb-2">Secure Connection</h3>
+                <p className="text-gray-300 text-sm">
+                  Bank-level security with OAuth 2.0 encryption
+                </p>
               </div>
-              <span className="text-black font-bold text-lg">QUICKSCOPE</span>
+
+              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 text-center">
+                <div className="w-12 h-12 mx-auto mb-4 bg-green-500/20 border border-green-500/30 rounded-xl flex items-center justify-center">
+                  <Zap className="w-6 h-6 text-green-400" />
+                </div>
+                <h3 className="font-semibold text-white mb-2">CFO Analysis</h3>
+                <p className="text-gray-300 text-sm">
+                  Deep financial analysis by experienced CFOs
+                </p>
+              </div>
+
+              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 text-center">
+                <div className="w-12 h-12 mx-auto mb-4 bg-purple-500/20 border border-purple-500/30 rounded-xl flex items-center justify-center">
+                  <Users className="w-6 h-6 text-purple-400" />
+                </div>
+                <h3 className="font-semibold text-white mb-2">Audit Deck</h3>
+                <p className="text-gray-300 text-sm">
+                  Comprehensive presentation on your audit call
+                </p>
+              </div>
             </div>
-            <p className="text-gray-600 text-sm">by STAXX</p>
+
+            {/* Process Steps */}
+            <div className="space-y-4 mb-8">
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-4">
+                  1
+                </div>
+                <div className="text-left">
+                  <h3 className="text-white font-semibold">Connect QuickBooks</h3>
+                  <p className="text-gray-300 text-sm">Secure OAuth connection to your accounting data</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-4">
+                  2
+                </div>
+                <div className="text-left">
+                  <h3 className="text-white font-semibold">CFO Analysis</h3>
+                  <p className="text-gray-300 text-sm">Our team analyzes your financial performance</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-4">
+                  3
+                </div>
+                <div className="text-left">
+                  <h3 className="text-white font-semibold">Receive Insights</h3>
+                  <p className="text-gray-300 text-sm">Get actionable recommendations and insights</p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-black mb-2 text-center">
-            Connect Your QuickBooks
-          </h1>
-          <p className="text-gray-600 text-center mb-8">
-            Enter your details to begin comprehensive financial analysis
-          </p>
+          {/* Right Side - Connection Card */}
+          <div className="flex justify-center lg:justify-end">
+            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-8 w-full max-w-md">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center">
+                  <Building2 className="w-8 h-8 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">Ready to Connect?</h2>
+                <p className="text-gray-300">
+                  Connect your QuickBooks account to get started with your financial analysis
+                </p>
+              </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-black font-medium mb-2">
-                Full Name *
-              </label>
-              <input
-                type="text"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleChange}
-                placeholder="John Smith"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
-                required
-                disabled={isLoading}
-              />
+              {/* Connection Status */}
+              <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                <div className="flex items-center">
+                  <Shield className="w-5 h-5 text-blue-400 mr-3" />
+                  <div>
+                    <div className="text-blue-200 font-medium text-sm">Secure OAuth 2.0</div>
+                    <div className="text-blue-300 text-xs">
+                      View-only access • No data stored
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Connect Button */}
+              <button
+                onClick={handleQuickBooksConnect}
+                disabled={isConnecting}
+                className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white py-4 px-6 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isConnecting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Connecting to QuickBooks...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Connect to QuickBooks</span>
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+
+              {/* Security Notes */}
+              <div className="mt-6 space-y-3 text-center">
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-300">
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                  <span>256-bit SSL encryption</span>
+                </div>
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-300">
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                  <span>Read-only access</span>
+                </div>
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-300">
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                  <span>Revoke access anytime</span>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-white/10">
+                <p className="text-xs text-gray-400 text-center">
+                  By connecting, you agree to our secure data handling practices. 
+                  Your financial data remains private and secure.
+                </p>
+              </div>
             </div>
-
-            <div>
-              <label className="block text-black font-medium mb-2">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="john@company.com"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
-                required
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <label className="block text-black font-medium mb-2">
-                Company Name *
-              </label>
-              <input
-                type="text"
-                name="company"
-                value={formData.company}
-                onChange={handleChange}
-                placeholder="Acme Corporation"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
-                required
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <label className="block text-black font-medium mb-2">
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="(555) 123-4567"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
-                disabled={isLoading}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-black text-white py-4 rounded-lg font-semibold text-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Connecting to QuickBooks...' : 'Connect QuickBooks Account'}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <div className="flex items-center justify-center text-green-600 text-sm mb-2">
-              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              Secure QuickBooks OAuth Connection
-            </div>
-            <p className="text-gray-500 text-xs">
-              🔒 Your data is encrypted and never stored on our servers
-            </p>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

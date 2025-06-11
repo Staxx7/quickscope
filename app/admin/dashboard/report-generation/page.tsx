@@ -1,5 +1,5 @@
-import AIReportGenerator from '../../../components/AIReportGenerator'
+import AIReportGenerator from '../../../components/AIReportGenerator';
 
 export default function ReportGenerationPage() {
-  return <AIReportGenerator />
+  return <AIReportGenerator />;
 }
