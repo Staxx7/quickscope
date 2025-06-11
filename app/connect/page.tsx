@@ -3,9 +3,8 @@
 import React, { useState } from 'react';
 import { Shield, Zap, Users, Building2, ArrowRight, CheckCircle } from 'lucide-react';
 
-// Cache buster comment: 2025-06-11-15:30
+// Cache buster comment: 2025-06-11-16:05
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 export default function ConnectPage() {
   const [isConnecting, setIsConnecting] = useState(false);
