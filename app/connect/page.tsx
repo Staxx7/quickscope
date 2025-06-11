@@ -1,27 +1,21 @@
-export const dynamic = 'force-dynamic'
-
 'use client';
 
 import React, { useState } from 'react';
 import { Shield, Zap, Users, Building2, ArrowRight, CheckCircle } from 'lucide-react';
 
+// Cache buster comment: 2025-06-11-15:30
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default function ConnectPage() {
   const [isConnecting, setIsConnecting] = useState(false);
+
+  console.log('🚀 NEW CONNECT PAGE LOADED - Cache Buster Active!');
 
   const handleQuickBooksConnect = async () => {
     setIsConnecting(true);
     
-    // This will eventually connect to your QuickBooks OAuth endpoint
-    // For now, we'll simulate the connection
     try {
-      // Replace this with your actual QuickBooks OAuth URL
-      const quickbooksAuthUrl = `https://appcenter.intuit.com/connect/oauth2?` +
-        `client_id=YOUR_CLIENT_ID&` +
-        `scope=com.intuit.quickbooks.accounting&` +
-        `redirect_uri=${encodeURIComponent('https://www.quickscope.info/success')}&` +
-        `response_type=code&` +
-        `access_type=offline`;
-      
       // For demo purposes, we'll redirect to success page after a short delay
       setTimeout(() => {
         window.location.href = '/success?company=Demo%20Company';
@@ -35,6 +29,11 @@ export default function ConnectPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Add a visible indicator that this is the new page */}
+      <div className="fixed top-4 right-4 bg-green-500 text-white px-3 py-1 rounded text-xs z-50">
+        NEW PAGE LOADED ✅
+      </div>
+      
       {/* Navigation */}
       <nav className="px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
