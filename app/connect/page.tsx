@@ -36,7 +36,7 @@ export default function ConnectPage() {
           <h1 className="text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
             QUICKSCOPE
           </h1>
-          <p className="text-lg text-gray-400 mb-8">by STAXX</p>
+          <p className="text-xl text-gray-300 mb-8 font-medium">by STAXX</p>
           
           <h2 className="text-3xl lg:text-4xl font-medium text-white mb-6">
             Connect Your QuickBooks
@@ -97,7 +97,7 @@ export default function ConnectPage() {
 
         {/* Process Steps */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-          <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-8 text-center hover:bg-white/10 transition-all duration-300">
+          <div className="text-center p-6 hover:bg-white/5 rounded-2xl transition-all duration-300">
             <div className="w-16 h-16 mx-auto mb-6 bg-blue-500/20 border border-blue-500/30 rounded-2xl flex items-center justify-center">
               <Shield className="w-8 h-8 text-blue-400" />
             </div>
@@ -107,7 +107,7 @@ export default function ConnectPage() {
             </p>
           </div>
 
-          <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-8 text-center hover:bg-white/10 transition-all duration-300">
+          <div className="text-center p-6 hover:bg-white/5 rounded-2xl transition-all duration-300">
             <div className="w-16 h-16 mx-auto mb-6 bg-green-500/20 border border-green-500/30 rounded-2xl flex items-center justify-center">
               <Zap className="w-8 h-8 text-green-400" />
             </div>
@@ -117,7 +117,7 @@ export default function ConnectPage() {
             </p>
           </div>
 
-          <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-8 text-center hover:bg-white/10 transition-all duration-300">
+          <div className="text-center p-6 hover:bg-white/5 rounded-2xl transition-all duration-300">
             <div className="w-16 h-16 mx-auto mb-6 bg-purple-500/20 border border-purple-500/30 rounded-2xl flex items-center justify-center">
               <Users className="w-8 h-8 text-purple-400" />
             </div>
