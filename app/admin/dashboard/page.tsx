@@ -124,32 +124,6 @@ const AdminDashboardMain: React.FC = () => {
       }
     },
     {
-      id: 'advanced-analysis',
-      title: 'Advanced Analysis',
-      description: 'Deep-dive financial modeling, predictive analytics, and comprehensive business intelligence',
-      icon: Brain,
-      route: '/admin/advanced-analysis',
-      status: 'active',
-      stats: {
-        value: '94%',
-        label: 'Accuracy Rate',
-        trend: 'up'
-      }
-    },
-    {
-      id: 'client-portal',
-      title: 'Client Portal',
-      description: 'Secure client access to reports, dashboards, and collaborative financial planning tools',
-      icon: Users,
-      route: '/admin/client-portal',
-      status: 'beta',
-      stats: {
-        value: '28',
-        label: 'Active Clients',
-        trend: 'up'
-      }
-    },
-    {
       id: 'ai-insights',
       title: 'AI Strategic Insights',
       description: 'Machine learning-powered business recommendations and predictive financial modeling',
@@ -214,12 +188,12 @@ const AdminDashboardMain: React.FC = () => {
 
   const categories = [
     { id: 'all', label: 'All Modules', count: dashboardCards.length },
-    { id: 'financial', label: 'Financial', count: dashboardCards.filter(card => 
-      ['financial-analysis', 'advanced-analysis', 'benchmarking', 'risk-management'].includes(card.id)).length },
-    { id: 'data', label: 'Data & AI', count: dashboardCards.filter(card => 
-      ['data-extractor', 'ai-insights', 'call-transcripts', 'automation'].includes(card.id)).length },
-    { id: 'client', label: 'Client Management', count: dashboardCards.filter(card => 
-      ['client-portal', 'connected-accounts', 'report-generation'].includes(card.id)).length },
+    { id: 'core', label: 'Core Functions', count: dashboardCards.filter(card => 
+      ['main-dashboard', 'account-workflow', 'advanced-analysis', 'data-extraction'].includes(card.id)).length },
+    { id: 'intelligence', label: 'AI & Intelligence', count: dashboardCards.filter(card => 
+      ['ai-insights', 'report-generation', 'call-transcripts', 'automation'].includes(card.id)).length },
+    { id: 'business', label: 'Business Management', count: dashboardCards.filter(card => 
+      ['sales-pipeline', 'risk-management', 'benchmarking'].includes(card.id)).length },
     { id: 'system', label: 'System', count: dashboardCards.filter(card => 
       ['settings'].includes(card.id)).length }
   ];
@@ -229,9 +203,9 @@ const AdminDashboardMain: React.FC = () => {
                          card.description.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCategory = selectedCategory === 'all' || 
-      (selectedCategory === 'financial' && ['financial-analysis', 'advanced-analysis', 'benchmarking', 'risk-management'].includes(card.id)) ||
-      (selectedCategory === 'data' && ['data-extractor', 'ai-insights', 'call-transcripts', 'automation'].includes(card.id)) ||
-      (selectedCategory === 'client' && ['client-portal', 'connected-accounts', 'report-generation'].includes(card.id)) ||
+      (selectedCategory === 'core' && ['main-dashboard', 'account-workflow', 'advanced-analysis', 'data-extraction'].includes(card.id)) ||
+      (selectedCategory === 'intelligence' && ['ai-insights', 'report-generation', 'call-transcripts', 'automation'].includes(card.id)) ||
+      (selectedCategory === 'business' && ['sales-pipeline', 'risk-management', 'benchmarking'].includes(card.id)) ||
       (selectedCategory === 'system' && ['settings'].includes(card.id));
 
     return matchesSearch && matchesCategory;
@@ -290,9 +264,9 @@ const AdminDashboardMain: React.FC = () => {
                 <div className="text-blue-400 text-xs">Pending</div>
               </div>
               <div className="bg-white/5 rounded-xl p-4">
-                <div className="text-gray-400 text-sm">System Status</div>
-                <div className="text-green-400 font-medium">Operational</div>
-                <div className="text-gray-500 text-xs">99.9% uptime</div>
+                <div className="text-gray-400 text-sm">System Health</div>
+                <div className="text-green-400 font-medium">98.5%</div>
+                <div className="text-gray-500 text-xs">Excellent</div>
               </div>
             </div>
           </div>
@@ -415,8 +389,8 @@ const AdminDashboardMain: React.FC = () => {
       <div className="mt-12 bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
           <div>
-            <div className="text-2xl font-bold text-green-400">98.9%</div>
-            <div className="text-gray-400 text-sm">System Uptime</div>
+            <div className="text-2xl font-bold text-green-400">98.5%</div>
+            <div className="text-gray-400 text-sm">System Health</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-blue-400">847ms</div>
