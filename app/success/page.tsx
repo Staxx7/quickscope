@@ -1,12 +1,8 @@
-'use client'
+'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { CheckCircle, Shield, Zap, Users, Clock } from 'lucide-react';
-
-// Simulated useSearchParams for demo
-const useSearchParams = () => ({
-  get: (key) => key === 'company' ? 'Demo%20Company' : null
-});
 
 export default function SuccessPage() {
   const searchParams = useSearchParams();
