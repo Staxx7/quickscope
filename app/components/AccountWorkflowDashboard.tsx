@@ -25,6 +25,14 @@ interface Prospect {
   financial_summary: FinancialSummary | null
   days_connected: number
   notes: string
+  legalName?: string
+  industry?: string
+  foundedDate?: string
+  employeeCount?: string
+  recentActivity?: Array<{
+    description: string
+    date: string
+  }>
 }
 
 interface ProspectsResponse {
@@ -45,6 +53,8 @@ export default function AccountWorkflowDashboard() {
   const [stats, setStats] = useState({ total: 0, connected: 0, expired: 0 })
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncingProspectId, setSyncingProspectId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchProspects()
@@ -112,44 +122,91 @@ export default function AccountWorkflowDashboard() {
     }).format(amount)
   }
 
-  const handleViewDetails = (prospect: Prospect) => {
-    setSelectedProspect(prospect)
+  const handleViewDetails = async (prospect: Prospect) => {
+    try {
+      // Try to fetch additional details from the new API endpoint
+      const response = await fetch(`/api/qbo/company-details/${prospect.company_id}`)
+      if (response.ok) {
+        const additionalDetails = await response.json()
+        setSelectedProspect({ ...prospect, ...additionalDetails })
+      } else {
+        // Fallback to existing prospect data
+        setSelectedProspect(prospect)
+      }
+    } catch (error) {
+      console.error('Error fetching additional details:', error)
+      // Still show modal with existing data
+      setSelectedProspect(prospect)
+    }
     setShowDetailsModal(true)
   }
 
   const handleUploadTranscript = (prospect: Prospect) => {
-    router.push(`/admin/call-transcripts?company_id=${prospect.company_id}&company_name=${encodeURIComponent(prospect.company_name)}`)
+    router.push(`/admin/dashboard/call-transcripts?account=${prospect.company_id}&company=${encodeURIComponent(prospect.company_name)}`)
   }
 
   const handleGenerateReport = (prospect: Prospect) => {
-    router.push(`/admin/reports?company_id=${prospect.company_id}&company_name=${encodeURIComponent(prospect.company_name)}`)
+    router.push(`/admin/dashboard/report-generation?account=${prospect.company_id}&company=${encodeURIComponent(prospect.company_name)}`)
   }
 
   const handleDataExtraction = (prospect: Prospect) => {
-    router.push(`/admin/data-extraction?company_id=${prospect.company_id}&company_name=${encodeURIComponent(prospect.company_name)}`)
+    router.push(`/admin/dashboard/data-extraction?account=${prospect.company_id}&company=${encodeURIComponent(prospect.company_name)}`)
   }
 
   const handleFinancialAnalysis = (prospect: Prospect) => {
-    router.push(`/admin/financial-analysis?company_id=${prospect.company_id}&company_name=${encodeURIComponent(prospect.company_name)}`)
+    router.push(`/admin/dashboard/advanced-analysis?account=${prospect.company_id}&company=${encodeURIComponent(prospect.company_name)}`)
   }
 
   const triggerSync = async (prospectId: string) => {
     try {
-      const response = await fetch('/api/admin/prospects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'trigger_sync',
-          prospect_id: prospectId
-        })
+      setSyncingProspectId(prospectId)
+      
+      const response = await fetch(`/api/qbo/sync/${prospectId}`, {
+        method: 'POST'
       })
 
       if (response.ok) {
-        // Refresh the prospects list
-        fetchProspects()
+        const result = await response.json()
+        console.log('Sync successful:', result.message)
+        
+        // Show success feedback (you could add toast notifications here)
+        setTimeout(() => {
+          fetchProspects() // Refresh the prospects list
+        }, 1000)
+      } else {
+        throw new Error('Sync failed')
       }
     } catch (error) {
       console.error('Error triggering sync:', error)
+      // You could add error toast notification here
+    } finally {
+      setSyncingProspectId(null)
+    }
+  }
+
+  const handleSyncAll = async () => {
+    try {
+      setIsSyncing(true)
+      
+      const response = await fetch('/api/qbo/sync', {
+        method: 'POST'
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Sync all successful:', result.message)
+        
+        // Refresh the prospects list after sync
+        setTimeout(() => {
+          fetchProspects()
+        }, 1000)
+      } else {
+        throw new Error('Sync all failed')
+      }
+    } catch (error) {
+      console.error('Error syncing all:', error)
+    } finally {
+      setIsSyncing(false)
     }
   }
 
@@ -250,9 +307,16 @@ export default function AccountWorkflowDashboard() {
           </select>
           <button
             onClick={fetchProspects}
-            className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Refresh
+          </button>
+          <button
+            onClick={handleSyncAll}
+            disabled={isSyncing}
+            className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSyncing ? 'Syncing All...' : 'Sync All'}
           </button>
         </div>
       </div>
@@ -308,25 +372,25 @@ export default function AccountWorkflowDashboard() {
                     <div className="flex space-x-2">
                       <button
                         onClick={() => handleViewDetails(prospect)}
-                        className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                        className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
                       >
                         View Details
                       </button>
                       <button
                         onClick={() => handleDataExtraction(prospect)}
-                        className="px-3 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700"
+                        className="px-3 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700 transition-colors"
                       >
                         Extract Data
                       </button>
                       <button
                         onClick={() => handleUploadTranscript(prospect)}
-                        className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+                        className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition-colors"
                       >
                         Transcript
                       </button>
                       <button
                         onClick={() => handleGenerateReport(prospect)}
-                        className="px-3 py-1 bg-amber-600 text-white text-xs rounded hover:bg-amber-700"
+                        className="px-3 py-1 bg-amber-600 text-white text-xs rounded hover:bg-amber-700 transition-colors"
                       >
                         Report
                       </button>
@@ -348,12 +412,12 @@ export default function AccountWorkflowDashboard() {
       {/* Details Modal */}
       {showDetailsModal && selectedProspect && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-800 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-white">{selectedProspect.company_name} Details</h3>
               <button
                 onClick={() => setShowDetailsModal(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-white text-2xl"
               >
                 ✕
               </button>
@@ -385,6 +449,31 @@ export default function AccountWorkflowDashboard() {
                 </div>
               </div>
 
+              {/* Enhanced Company Details (from new API) */}
+              {selectedProspect.legalName && (
+                <div>
+                  <h4 className="text-lg font-semibold text-white mb-3">Additional Details</h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-slate-400 text-sm">Legal Name</p>
+                      <p className="text-white">{selectedProspect.legalName}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-sm">Industry</p>
+                      <p className="text-white">{selectedProspect.industry || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-sm">Founded</p>
+                      <p className="text-white">{selectedProspect.foundedDate || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-sm">Employees</p>
+                      <p className="text-white">{selectedProspect.employeeCount || 'Not specified'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Financial Summary */}
               {selectedProspect.financial_summary && (
                 <div>
@@ -410,39 +499,67 @@ export default function AccountWorkflowDashboard() {
                 </div>
               )}
 
+              {/* Recent Activity (if available from API) */}
+              {selectedProspect.recentActivity && (
+                <div>
+                  <h4 className="text-lg font-semibold text-white mb-3">Recent Activity</h4>
+                  <div className="space-y-2">
+                    {selectedProspect.recentActivity.slice(0, 5).map((activity, index) => (
+                      <div key={index} className="flex justify-between items-center text-sm">
+                        <span className="text-white">{activity.description}</span>
+                        <span className="text-slate-400">{activity.date}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Actions */}
               <div>
                 <h4 className="text-lg font-semibold text-white mb-3">Quick Actions</h4>
                 <div className="flex flex-wrap gap-2">
                   <button
-                    onClick={() => handleFinancialAnalysis(selectedProspect)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    onClick={() => {
+                      handleFinancialAnalysis(selectedProspect)
+                      setShowDetailsModal(false)
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     Financial Analysis
                   </button>
                   <button
-                    onClick={() => handleDataExtraction(selectedProspect)}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                    onClick={() => {
+                      handleDataExtraction(selectedProspect)
+                      setShowDetailsModal(false)
+                    }}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
                   >
                     Extract Data
                   </button>
                   <button
-                    onClick={() => handleUploadTranscript(selectedProspect)}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                    onClick={() => {
+                      handleUploadTranscript(selectedProspect)
+                      setShowDetailsModal(false)
+                    }}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                   >
                     Upload Transcript
                   </button>
                   <button
-                    onClick={() => handleGenerateReport(selectedProspect)}
-                    className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                    onClick={() => {
+                      handleGenerateReport(selectedProspect)
+                      setShowDetailsModal(false)
+                    }}
+                    className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
                   >
                     Generate Report
                   </button>
                   <button
                     onClick={() => triggerSync(selectedProspect.id)}
-                    className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
+                    disabled={syncingProspectId === selectedProspect.id}
+                    className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Sync Data
+                    {syncingProspectId === selectedProspect.id ? 'Syncing...' : 'Sync Data'}
                   </button>
                 </div>
               </div>
