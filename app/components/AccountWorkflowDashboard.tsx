@@ -1,427 +1,453 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import { 
-  Building2, Users, TrendingUp, FileText, Phone, Database, 
-  Search, Filter, Eye, Upload, Download, RefreshCw, 
-  CheckCircle, Clock, AlertTriangle, ArrowRight, Zap,
-  Plus, Settings, Calendar, DollarSign, Activity
-} from 'lucide-react';
+'use client'
 
-interface ConnectedAccount {
-  id: string;
-  companyName: string;
-  contactName: string;
-  contactEmail: string;
-  connectedDate: string;
-  lastSync: string;
-  workflowProgress: {
-    connected: boolean;
-    transcriptUploaded: boolean;
-    dataExtracted: boolean;
-    analysisComplete: boolean;
-    auditDeckReady: boolean;
-  };
-  financialSnapshot: {
-    revenue: string;
-    netIncome: string;
-    lastUpdate: string;
-  };
-  nextStep: string;
-  priority: 'high' | 'medium' | 'low';
-  transcriptCount: number;
-  status: 'active' | 'pending' | 'completed';
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+
+interface FinancialSummary {
+  revenue: number
+  expenses: number
+  profit: number
+  profit_margin: number
+  cash_flow: number
 }
 
-const AccountWorkflowDashboard: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
-  const [loading, setLoading] = useState(true);
+interface Prospect {
+  id: string
+  company_id: string
+  company_name: string
+  email: string
+  phone: string
+  status: string
+  connection_date: string
+  connection_status: 'active' | 'expired'
+  workflow_stage: string
+  next_action: string
+  financial_summary: FinancialSummary | null
+  days_connected: number
+  notes: string
+}
 
-  // TODO: Replace with real API call to fetch connected QB accounts
+interface ProspectsResponse {
+  prospects: Prospect[]
+  total: number
+  connected: number
+  expired: number
+}
+
+export default function AccountWorkflowDashboard() {
+  const router = useRouter()
+  const [prospects, setProspects] = useState<Prospect[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [stats, setStats] = useState({ total: 0, connected: 0, expired: 0 })
+  const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+
   useEffect(() => {
-    const fetchConnectedAccounts = async () => {
-      try {
-        // This should call your actual API endpoint
-        // const response = await fetch('/api/connected-accounts');
-        // const data = await response.json();
-        
-        // Mock data for now - replace with real data
-        const mockAccounts: ConnectedAccount[] = [
-          {
-            id: '1',
-            companyName: 'TechCorp Solutions',
-            contactName: 'Sarah Johnson',
-            contactEmail: 'sarah@techcorp.com',
-            connectedDate: '2024-01-15',
-            lastSync: '2 hours ago',
-            workflowProgress: {
-              connected: true,
-              transcriptUploaded: false,
-              dataExtracted: true,
-              analysisComplete: false,
-              auditDeckReady: false
-            },
-            financialSnapshot: {
-              revenue: '$2,840,000',
-              netIncome: '$684,000',
-              lastUpdate: '2 hours ago'
-            },
-            nextStep: 'Upload discovery call transcript',
-            priority: 'high',
-            transcriptCount: 0,
-            status: 'active'
-          },
-          {
-            id: '2',
-            companyName: 'Global Manufacturing Inc',
-            contactName: 'Michael Chen',
-            contactEmail: 'mchen@globalmfg.com',
-            connectedDate: '2024-01-10',
-            lastSync: '4 hours ago',
-            workflowProgress: {
-              connected: true,
-              transcriptUploaded: true,
-              dataExtracted: true,
-              analysisComplete: true,
-              auditDeckReady: false
-            },
-            financialSnapshot: {
-              revenue: '$5,200,000',
-              netIncome: '$520,000',
-              lastUpdate: '4 hours ago'
-            },
-            nextStep: 'Generate audit deck',
-            priority: 'high',
-            transcriptCount: 2,
-            status: 'active'
-          },
-          {
-            id: '3',
-            companyName: 'Healthcare Plus',
-            contactName: 'Emily Rodriguez',
-            contactEmail: 'emily@healthcareplus.com',
-            connectedDate: '2024-01-05',
-            lastSync: '1 day ago',
-            workflowProgress: {
-              connected: true,
-              transcriptUploaded: true,
-              dataExtracted: true,
-              analysisComplete: true,
-              auditDeckReady: true
-            },
-            financialSnapshot: {
-              revenue: '$3,600,000',
-              netIncome: '$360,000',
-              lastUpdate: '1 day ago'
-            },
-            nextStep: 'Review and deliver audit deck',
-            priority: 'medium',
-            transcriptCount: 5,
-            status: 'completed'
-          },
-          {
-            id: '4',
-            companyName: 'RetailMax',
-            contactName: 'David Thompson',
-            contactEmail: 'david@retailmax.com',
-            connectedDate: '2024-01-20',
-            lastSync: '30 minutes ago',
-            workflowProgress: {
-              connected: true,
-              transcriptUploaded: false,
-              dataExtracted: false,
-              analysisComplete: false,
-              auditDeckReady: false
-            },
-            financialSnapshot: {
-              revenue: '$2,500,000',
-              netIncome: '$250,000',
-              lastUpdate: '30 minutes ago'
-            },
-            nextStep: 'Schedule discovery call',
-            priority: 'medium',
-            transcriptCount: 0,
-            status: 'pending'
-          },
-          {
-            id: '5',
-            companyName: 'Financial Services Group',
-            contactName: 'Amanda Foster',
-            contactEmail: 'amanda@fsg.com',
-            connectedDate: '2024-01-18',
-            lastSync: '5 hours ago',
-            workflowProgress: {
-              connected: true,
-              transcriptUploaded: true,
-              dataExtracted: true,
-              analysisComplete: false,
-              auditDeckReady: false
-            },
-            financialSnapshot: {
-              revenue: '$9,500,000',
-              netIncome: '$950,000',
-              lastUpdate: '5 hours ago'
-            },
-            nextStep: 'Schedule follow-up presentation',
-            priority: 'high',
-            transcriptCount: 8,
-            status: 'active'
-          }
-        ];
+    fetchProspects()
+  }, [])
 
-        // Simulate loading delay
-        setTimeout(() => {
-          setAccounts(mockAccounts);
-          setLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Error fetching connected accounts:', error);
-        setLoading(false);
+  const fetchProspects = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/admin/prospects')
+      const data: ProspectsResponse = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch prospects')
       }
-    };
 
-    fetchConnectedAccounts();
-  }, []);
-
-  const getWorkflowProgress = (progress: ConnectedAccount['workflowProgress']) => {
-    const steps = Object.values(progress);
-    const completed = steps.filter(Boolean).length;
-    return (completed / steps.length) * 100;
-  };
-
-  const getWorkflowStep = (progress: ConnectedAccount['workflowProgress']) => {
-    if (!progress.connected) return { step: 1, total: 5 };
-    if (!progress.transcriptUploaded) return { step: 2, total: 5 };
-    if (!progress.dataExtracted) return { step: 3, total: 5 };
-    if (!progress.analysisComplete) return { step: 4, total: 5 };
-    if (!progress.auditDeckReady) return { step: 5, total: 5 };
-    return { step: 5, total: 5 };
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'text-slate-200 bg-slate-700/40 border-slate-600/30';
-      case 'medium': return 'text-slate-300 bg-slate-800/40 border-slate-700/30';
-      case 'low': return 'text-slate-400 bg-slate-800/20 border-slate-700/20';
-      default: return 'text-slate-400 bg-slate-800/20 border-slate-700/20';
+      setProspects(data.prospects)
+      setStats({
+        total: data.total,
+        connected: data.connected,
+        expired: data.expired
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    } finally {
+      setLoading(false)
     }
-  };
+  }
+
+  const filteredProspects = prospects.filter(prospect => {
+    const matchesSearch = prospect.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         prospect.email.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesFilter = filterStatus === 'all' || prospect.connection_status === filterStatus
+
+    return matchesSearch && matchesFilter
+  })
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'text-cyan-300 bg-cyan-500/10 border-cyan-500/20';
-      case 'pending': return 'text-slate-300 bg-slate-600/20 border-slate-600/30';
-      case 'completed': return 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20';
-      default: return 'text-slate-400 bg-slate-700/20 border-slate-600/20';
+      case 'active': return 'bg-emerald-500'
+      case 'expired': return 'bg-red-500'
+      case 'syncing': return 'bg-amber-500'
+      default: return 'bg-slate-500'
     }
-  };
+  }
 
-  const filteredAccounts = accounts.filter(account => {
-    const matchesSearch = account.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         account.contactName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || account.status === filterStatus;
-    return matchesSearch && matchesFilter;
-  });
+  const getWorkflowStageIcon = (stage: string) => {
+    switch (stage) {
+      case 'connected': return '🔗'
+      case 'data_extracted': return '📊'
+      case 'transcript_uploaded': return '🎵'
+      case 'analysis_complete': return '🔍'
+      case 'report_generated': return '📋'
+      default: return '⏳'
+    }
+  }
 
-  const workflowStats = {
-    totalAccounts: accounts.length,
-    readyForTranscripts: accounts.filter(a => a.workflowProgress.connected && !a.workflowProgress.transcriptUploaded).length,
-    readyForAudit: accounts.filter(a => a.workflowProgress.analysisComplete && !a.workflowProgress.auditDeckReady).length,
-    completed: accounts.filter(a => a.workflowProgress.auditDeckReady).length
-  };
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount)
+  }
+
+  const handleViewDetails = (prospect: Prospect) => {
+    setSelectedProspect(prospect)
+    setShowDetailsModal(true)
+  }
+
+  const handleUploadTranscript = (prospect: Prospect) => {
+    router.push(`/admin/call-transcripts?company_id=${prospect.company_id}&company_name=${encodeURIComponent(prospect.company_name)}`)
+  }
+
+  const handleGenerateReport = (prospect: Prospect) => {
+    router.push(`/admin/reports?company_id=${prospect.company_id}&company_name=${encodeURIComponent(prospect.company_name)}`)
+  }
+
+  const handleDataExtraction = (prospect: Prospect) => {
+    router.push(`/admin/data-extraction?company_id=${prospect.company_id}&company_name=${encodeURIComponent(prospect.company_name)}`)
+  }
+
+  const handleFinancialAnalysis = (prospect: Prospect) => {
+    router.push(`/admin/financial-analysis?company_id=${prospect.company_id}&company_name=${encodeURIComponent(prospect.company_name)}`)
+  }
+
+  const triggerSync = async (prospectId: string) => {
+    try {
+      const response = await fetch('/api/admin/prospects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'trigger_sync',
+          prospect_id: prospectId
+        })
+      })
+
+      if (response.ok) {
+        // Refresh the prospects list
+        fetchProspects()
+      }
+    } catch (error) {
+      console.error('Error triggering sync:', error)
+    }
+  }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-slate-600/30 border-t-slate-400 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-300 text-lg">Loading connected accounts...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
         </div>
       </div>
-    );
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black p-6">
+        <div className="text-center text-red-400">
+          <h2 className="text-xl font-semibold mb-2">Error Loading Prospects</h2>
+          <p>{error}</p>
+          <button 
+            onClick={fetchProspects}
+            className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-8">
-      {/* Workflow Stats - Simplified */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
-          <div className="flex items-center justify-between mb-3">
-            <Building2 className="w-7 h-7 text-slate-400" />
-            <span className="text-3xl font-light text-white">{workflowStats.totalAccounts}</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black p-6">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-white mb-2">Account Workflow Dashboard</h1>
+        <p className="text-slate-400">Manage connected prospects and their financial analysis workflow</p>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-slate-800 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-400 text-sm">Total Prospects</p>
+              <p className="text-2xl font-bold text-white">{stats.total}</p>
+            </div>
+            <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+              <span className="text-white text-xl">👥</span>
+            </div>
           </div>
-          <p className="text-slate-300 text-sm font-medium">Total Accounts</p>
-          <p className="text-slate-400 text-xs mt-1">Connected QuickBooks</p>
         </div>
 
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
-          <div className="flex items-center justify-between mb-3">
-            <Upload className="w-7 h-7 text-slate-400" />
-            <span className="text-3xl font-light text-white">{workflowStats.readyForTranscripts}</span>
+        <div className="bg-slate-800 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-400 text-sm">Active Connections</p>
+              <p className="text-2xl font-bold text-emerald-400">{stats.connected}</p>
+            </div>
+            <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center">
+              <span className="text-white text-xl">✅</span>
+            </div>
           </div>
-          <p className="text-slate-300 text-sm font-medium">Ready for Transcripts</p>
-          <p className="text-slate-400 text-xs mt-1">Need call uploads</p>
         </div>
 
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
-          <div className="flex items-center justify-between mb-3">
-            <FileText className="w-7 h-7 text-slate-400" />
-            <span className="text-3xl font-light text-white">{workflowStats.readyForAudit}</span>
+        <div className="bg-slate-800 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-400 text-sm">Expired Connections</p>
+              <p className="text-2xl font-bold text-red-400">{stats.expired}</p>
+            </div>
+            <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
+              <span className="text-white text-xl">⚠️</span>
+            </div>
           </div>
-          <p className="text-slate-300 text-sm font-medium">Ready for Audit</p>
-          <p className="text-slate-400 text-xs mt-1">Can generate decks</p>
-        </div>
-
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
-          <div className="flex items-center justify-between mb-3">
-            <CheckCircle className="w-7 h-7 text-emerald-400/70" />
-            <span className="text-3xl font-light text-white">{workflowStats.completed}</span>
-          </div>
-          <p className="text-slate-300 text-sm font-medium">Completed</p>
-          <p className="text-slate-400 text-xs mt-1">Audit decks ready</p>
         </div>
       </div>
 
-      {/* Search and Filters - Simplified */}
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
+      {/* Filters */}
+      <div className="bg-slate-800 rounded-xl p-6 mb-8">
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+          <div className="flex-1">
             <input
               type="text"
-              placeholder="Search accounts, contacts, industries..."
+              placeholder="Search by company name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all"
+              className="w-full px-4 py-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:border-emerald-500 focus:outline-none"
             />
           </div>
-          
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-cyan-400/50 transition-all"
+            className="px-4 py-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:border-emerald-500 focus:outline-none"
           >
-            <option value="all" className="bg-slate-800">All Stages</option>
-            <option value="pending" className="bg-slate-800">Pending</option>
-            <option value="active" className="bg-slate-800">Active</option>
-            <option value="completed" className="bg-slate-800">Completed</option>
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="expired">Expired</option>
           </select>
+          <button
+            onClick={fetchProspects}
+            className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+          >
+            Refresh
+          </button>
         </div>
       </div>
 
-      {/* Connected Accounts Table - Refined */}
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 overflow-hidden">
-        <div className="p-6 border-b border-white/10">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-light text-white">Connected Accounts ({filteredAccounts.length})</h2>
-            <button className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/5">
-              <RefreshCw className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
+      {/* Prospects Table */}
+      <div className="bg-slate-800 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-white/5">
+            <thead className="bg-slate-700">
               <tr>
-                <th className="text-left py-4 px-6 text-slate-300 font-medium text-sm">Account</th>
-                <th className="text-left py-4 px-6 text-slate-300 font-medium text-sm">Workflow Progress</th>
-                <th className="text-left py-4 px-6 text-slate-300 font-medium text-sm">Financial Snapshot</th>
-                <th className="text-left py-4 px-6 text-slate-300 font-medium text-sm">Next Step</th>
-                <th className="text-left py-4 px-6 text-slate-300 font-medium text-sm">Actions</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Company</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Stage</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Financial Summary</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Connected</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody>
-              {filteredAccounts.map((account) => {
-                const progressPercent = getWorkflowProgress(account.workflowProgress);
-                const currentStep = getWorkflowStep(account.workflowProgress);
-                
-                return (
-                  <tr key={account.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td className="py-5 px-6">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-slate-600 to-slate-700 rounded-lg flex items-center justify-center">
-                          <Building2 className="w-5 h-5 text-slate-300" />
-                        </div>
-                        <div>
-                          <div className="text-white font-medium">{account.companyName}</div>
-                          <div className="text-slate-400 text-sm">{account.contactName}</div>
-                          <div className="text-slate-500 text-xs">Connected {account.connectedDate}</div>
-                        </div>
+            <tbody className="divide-y divide-slate-700">
+              {filteredProspects.map((prospect) => (
+                <tr key={prospect.id} className="hover:bg-slate-700/50">
+                  <td className="px-6 py-4">
+                    <div>
+                      <div className="text-white font-medium">{prospect.company_name}</div>
+                      <div className="text-slate-400 text-sm">{prospect.email}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white ${getStatusColor(prospect.connection_status)}`}>
+                      {prospect.connection_status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center">
+                      <span className="mr-2">{getWorkflowStageIcon(prospect.workflow_stage)}</span>
+                      <span className="text-white text-sm">{prospect.workflow_stage.replace('_', ' ')}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    {prospect.financial_summary ? (
+                      <div className="text-sm">
+                        <div className="text-white">Revenue: {formatCurrency(prospect.financial_summary.revenue)}</div>
+                        <div className="text-slate-400">Profit: {formatCurrency(prospect.financial_summary.profit)}</div>
                       </div>
-                    </td>
-                    
-                    <td className="py-5 px-6">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-300 text-sm">Step {currentStep.step}/{currentStep.total}</span>
-                          <span className={`px-2 py-1 rounded-full text-xs border font-medium ${getStatusColor(account.status)}`}>
-                            {account.status}
-                          </span>
-                        </div>
-                        <div className="w-full bg-slate-700/30 rounded-full h-1.5">
-                          <div 
-                            className="bg-gradient-to-r from-slate-400 to-slate-300 h-1.5 rounded-full transition-all duration-300"
-                            style={{ width: `${progressPercent}%` }}
-                          />
-                        </div>
-                        <div className="grid grid-cols-5 gap-1.5 mt-2">
-                          <div className={`w-2 h-2 rounded-full ${account.workflowProgress.connected ? 'bg-emerald-400/70' : 'bg-slate-600'}`} title="Connected" />
-                          <div className={`w-2 h-2 rounded-full ${account.workflowProgress.transcriptUploaded ? 'bg-emerald-400/70' : 'bg-slate-600'}`} title="Transcript Uploaded" />
-                          <div className={`w-2 h-2 rounded-full ${account.workflowProgress.dataExtracted ? 'bg-emerald-400/70' : 'bg-slate-600'}`} title="Data Extracted" />
-                          <div className={`w-2 h-2 rounded-full ${account.workflowProgress.analysisComplete ? 'bg-emerald-400/70' : 'bg-slate-600'}`} title="Analysis Complete" />
-                          <div className={`w-2 h-2 rounded-full ${account.workflowProgress.auditDeckReady ? 'bg-emerald-400/70' : 'bg-slate-600'}`} title="Audit Deck Ready" />
-                        </div>
-                      </div>
-                    </td>
-                    
-                    <td className="py-5 px-6">
-                      <div className="space-y-1">
-                        <div className="text-white font-medium">Revenue: {account.financialSnapshot.revenue}</div>
-                        <div className="text-slate-300 text-sm">Net: {account.financialSnapshot.netIncome}</div>
-                        <div className="text-slate-500 text-xs">Last sync: {account.lastSync}</div>
-                      </div>
-                    </td>
-                    
-                    <td className="py-5 px-6">
-                      <div className="space-y-2">
-                        <div className="text-white text-sm">{account.nextStep}</div>
-                        <div className="flex items-center space-x-2">
-                          <span className={`px-2 py-1 rounded-full text-xs border ${getPriorityColor(account.priority)}`}>
-                            {account.priority}
-                          </span>
-                          {account.transcriptCount > 0 && (
-                            <span className="text-slate-400 text-xs">
-                              {account.transcriptCount} transcripts
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    
-                    <td className="py-5 px-6">
-                      <div className="flex items-center space-x-1">
-                        <button className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/5" title="View Details">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/5" title="Upload Transcript">
-                          <Upload className="w-4 h-4" />
-                        </button>
-                        <button className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/5" title="Generate Report">
-                          <Download className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                    ) : (
+                      <span className="text-slate-500">No data</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-slate-400 text-sm">{prospect.days_connected} days ago</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleViewDetails(prospect)}
+                        className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                      >
+                        View Details
+                      </button>
+                      <button
+                        onClick={() => handleDataExtraction(prospect)}
+                        className="px-3 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700"
+                      >
+                        Extract Data
+                      </button>
+                      <button
+                        onClick={() => handleUploadTranscript(prospect)}
+                        className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+                      >
+                        Transcript
+                      </button>
+                      <button
+                        onClick={() => handleGenerateReport(prospect)}
+                        className="px-3 py-1 bg-amber-600 text-white text-xs rounded hover:bg-amber-700"
+                      >
+                        Report
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
-  );
-};
 
-export default AccountWorkflowDashboard;
+        {filteredProspects.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-slate-400">No prospects found matching your criteria.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Details Modal */}
+      {showDetailsModal && selectedProspect && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-white">{selectedProspect.company_name} Details</h3>
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Company Info */}
+              <div>
+                <h4 className="text-lg font-semibold text-white mb-3">Company Information</h4>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-slate-400 text-sm">Email</p>
+                    <p className="text-white">{selectedProspect.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 text-sm">Phone</p>
+                    <p className="text-white">{selectedProspect.phone || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 text-sm">Connected</p>
+                    <p className="text-white">{new Date(selectedProspect.connection_date).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 text-sm">Status</p>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white ${getStatusColor(selectedProspect.connection_status)}`}>
+                      {selectedProspect.connection_status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial Summary */}
+              {selectedProspect.financial_summary && (
+                <div>
+                  <h4 className="text-lg font-semibold text-white mb-3">Financial Summary</h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-slate-400 text-sm">Revenue</p>
+                      <p className="text-white text-lg font-semibold">{formatCurrency(selectedProspect.financial_summary.revenue)}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-sm">Expenses</p>
+                      <p className="text-white text-lg font-semibold">{formatCurrency(selectedProspect.financial_summary.expenses)}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-sm">Profit</p>
+                      <p className="text-white text-lg font-semibold">{formatCurrency(selectedProspect.financial_summary.profit)}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-sm">Profit Margin</p>
+                      <p className="text-white text-lg font-semibold">{selectedProspect.financial_summary.profit_margin.toFixed(1)}%</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div>
+                <h4 className="text-lg font-semibold text-white mb-3">Quick Actions</h4>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => handleFinancialAnalysis(selectedProspect)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Financial Analysis
+                  </button>
+                  <button
+                    onClick={() => handleDataExtraction(selectedProspect)}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                  >
+                    Extract Data
+                  </button>
+                  <button
+                    onClick={() => handleUploadTranscript(selectedProspect)}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                  >
+                    Upload Transcript
+                  </button>
+                  <button
+                    onClick={() => handleGenerateReport(selectedProspect)}
+                    className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                  >
+                    Generate Report
+                  </button>
+                  <button
+                    onClick={() => triggerSync(selectedProspect.id)}
+                    className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
+                  >
+                    Sync Data
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
