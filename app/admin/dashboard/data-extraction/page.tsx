@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
+// Import the actual component name from your files
 import EnhancedQBODataExtractor from '@/components/EnhancedQBODataExtractor'
 
 function DataExtractionContent() {

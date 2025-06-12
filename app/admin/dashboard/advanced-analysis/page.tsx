@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
-import AIEnhancedFinancialDashboard from '@/components/AdvancedFinancialDashboard'
+import AIEnhancedFinancialDashboard from '@/components/AIEnhancedFinancialDashboard'
 
 function AdvancedAnalysisContent() {
   const searchParams = useSearchParams()
