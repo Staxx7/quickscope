@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
-import IntelligentAuditDeckGenerator from '@/components/IntelligentAuditDeckGenerator'
+import IntelligentAuditDeckGenerator from '../../../components/IntelligentAuditDeckGenerator'
 
 function ReportGenerationContent() {
   const searchParams = useSearchParams()

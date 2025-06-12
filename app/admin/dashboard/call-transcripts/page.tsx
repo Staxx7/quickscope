@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
-import CallTranscriptsIntegration from '@/components/CallTranscriptsIntegration'
+import CallTranscriptsIntegration from '../../../components/CallTranscriptsIntegration'
 
 function CallTranscriptsContent() {
   const searchParams = useSearchParams()

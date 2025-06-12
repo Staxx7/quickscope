@@ -49,7 +49,12 @@ interface AIAnalysisProgress {
   message: string;
 }
 
-const EnhancedQBODataExtractor: React.FC = () => {
+interface EnhancedQBODataExtractorProps {
+  companyId: string;
+  companyName: string;
+}
+
+const EnhancedQBODataExtractor: React.FC<EnhancedQBODataExtractorProps> = ({ companyId, companyName }) => {
   const [files, setFiles] = useState<DataFile[]>([]);
   const [connectedCompanies, setConnectedCompanies] = useState<ConnectedCompany[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<ConnectedCompany | null>(null);

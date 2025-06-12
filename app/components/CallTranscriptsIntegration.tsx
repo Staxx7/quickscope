@@ -50,7 +50,12 @@ interface AIProcessingStage {
   message: string;
 }
 
-const EnhancedCallTranscriptIntegration: React.FC = () => {
+interface CallTranscriptsIntegrationProps {
+  defaultCompanyId: string;
+  defaultCompanyName: string;
+}
+
+const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProps> = ({ defaultCompanyId, defaultCompanyName }) => {
   const [transcripts, setTranscripts] = useState<CallTranscript[]>([]);
   const [connectedCompanies, setConnectedCompanies] = useState<ConnectedCompany[]>([]);
   const [selectedTranscript, setSelectedTranscript] = useState<CallTranscript | null>(null);

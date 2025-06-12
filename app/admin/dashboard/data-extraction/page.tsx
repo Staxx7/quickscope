@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
-import EnhancedQBODataExtractor from '@/components/EnhancedQBODataExtractor'
+import EnhancedQBODataExtractor from '@/app/components/EnhancedQBODataExtractor'
 
 function DataExtractionContent() {
   const searchParams = useSearchParams()
