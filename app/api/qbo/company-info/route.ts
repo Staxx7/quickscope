@@ -1,97 +1,83 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseClient'
-import { qbService } from '@/lib/quickbooksService'
+// Temporarily remove supabase import until we fix the auth flow
+// import { supabase } from '@/lib/supabaseClient'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const companyId = searchParams.get('companyId')
+    const accessToken = searchParams.get('access_token')
+    const realmId = searchParams.get('realm_id')
 
-    if (!companyId) {
+    if (!accessToken || !realmId) {
       return NextResponse.json(
-        { error: 'Company ID is required' },
+        { error: 'Missing access token or realm ID' },
         { status: 400 }
       )
     }
 
-    console.log('Fetching company info for:', companyId)
+    // Call QuickBooks API to get company information
+    const qboResponse = await fetch(
+      `${process.env.QUICKBOOKS_BASE_URL}/v3/company/${realmId}/companyinfo/${realmId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json'
+        }
+      }
+    )
 
-    // Get QB tokens from database
-    const { data: tokenData, error: tokenError } = await supabase
-      .from('qbo_tokens')
-      .select('*')
-      .eq('company_id', companyId)
-      .single()
-
-    if (tokenError || !tokenData) {
-      console.error('No QB tokens found for company:', companyId, tokenError)
+    if (!qboResponse.ok) {
+      const errorData = await qboResponse.json()
+      console.error('QuickBooks API error:', errorData)
       return NextResponse.json(
-        { error: 'QuickBooks connection not found. Please reconnect your QuickBooks account.' },
+        { 
+          error: 'Failed to fetch company info from QuickBooks',
+          details: errorData
+        },
+        { status: qboResponse.status }
+      )
+    }
+
+    const data = await qboResponse.json()
+    
+    // Extract company information
+    const companyInfo = data.QueryResponse?.CompanyInfo?.[0]
+    
+    if (!companyInfo) {
+      return NextResponse.json(
+        { error: 'No company information found' },
         { status: 404 }
       )
     }
 
-    // Check if token is expired
-    const now = new Date()
-    const expiresAt = new Date(tokenData.expires_at)
-    
-    let accessToken = tokenData.access_token
-    let refreshToken = tokenData.refresh_token
-
-    if (now >= expiresAt) {
-      console.log('Token expired, refreshing...')
-      
-      const refreshResult = await qbService.refreshToken(refreshToken)
-      if (!refreshResult) {
-        return NextResponse.json(
-          { error: 'Unable to refresh QuickBooks token. Please reconnect your account.' },
-          { status: 401 }
-        )
-      }
-
-      // Update tokens in database
-      const newExpiresAt = new Date(now.getTime() + refreshResult.expiresIn * 1000)
-      
-      await supabase
-        .from('qbo_tokens')
-        .update({
-          access_token: refreshResult.accessToken,
-          refresh_token: refreshResult.refreshToken,
-          expires_at: newExpiresAt.toISOString(),
-          updated_at: now.toISOString()
-        })
-        .eq('company_id', companyId)
-
-      accessToken = refreshResult.accessToken
-      refreshToken = refreshResult.refreshToken
+    const result = {
+      id: companyInfo.Id,
+      name: companyInfo.CompanyName,
+      address: {
+        line1: companyInfo.CompanyAddr?.Line1 || '',
+        city: companyInfo.CompanyAddr?.City || '',
+        state: companyInfo.CompanyAddr?.CountrySubDivisionCode || '',
+        postalCode: companyInfo.CompanyAddr?.PostalCode || '',
+        country: companyInfo.CompanyAddr?.Country || ''
+      },
+      phone: companyInfo.PrimaryPhone?.FreeFormNumber || '',
+      email: companyInfo.Email?.Address || '',
+      website: companyInfo.WebAddr?.URI || '',
+      fiscalYearStart: companyInfo.FiscalYearStartMonth || '1',
+      currency: companyInfo.Currency?.value || 'USD',
+      timeZone: companyInfo.QBVersion || '',
+      lastUpdated: new Date().toISOString()
     }
 
-    // Fetch company info from QuickBooks
-    const credentials = {
-      accessToken,
-      refreshToken,
-      companyId,
-      expiresAt: new Date(tokenData.expires_at)
-    }
-
-    const result = await qbService.getCompanyInfo(credentials)
-
-    if (!result.success) {
-      return NextResponse.json(
-        { error: result.error || 'Failed to fetch company information' },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json({
-      success: true,
-      company: result.data
-    })
+    return NextResponse.json(result)
 
   } catch (error) {
-    console.error('Error in company-info API:', error)
+    console.error('Error fetching company info:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
