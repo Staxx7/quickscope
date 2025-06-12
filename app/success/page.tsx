@@ -7,103 +7,145 @@ import { supabase } from '@/lib/supabaseClient'
 function SuccessContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [isStoring, setIsStoring] = useState(true)
-  const [error, setError] = useState('')
-  const [companyInfo, setCompanyInfo] = useState<any>(null)
-  
-  const connected = searchParams.get('connected')
-  const company = searchParams.get('company')
-  const accessToken = searchParams.get('access_token')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
 
   useEffect(() => {
-    if (connected === 'true' && company && accessToken) {
-      storeTokensAndCompanyData()
-    } else {
-      setError('Missing connection data')
-      setIsStoring(false)
-    }
-  }, [connected, company, accessToken])
+    const handleSuccess = async () => {
+      try {
+        // Get parameters from URL
+        const connected = searchParams.get('connected')
+        const companyId = searchParams.get('company')
+        const accessToken = searchParams.get('access_token')
+        const refreshToken = searchParams.get('refresh_token')
 
-  const storeTokensAndCompanyData = async () => {
-    try {
-      // Store OAuth tokens in Supabase
-      const { data: tokenData, error: tokenError } = await supabase
-        .from('qbo_tokens')
-        .upsert({
-          company_id: company,
-          access_token: accessToken,
-          refresh_token: searchParams.get('refresh_token') || '',
-          expires_at: new Date(Date.now() + 3600 * 1000).toISOString(), // 1 hour from now
-          scope: 'com.intuit.quickbooks.accounting',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
+        console.log('Success page params:', { connected, companyId, accessToken: accessToken ? 'present' : 'missing' })
 
-      if (tokenError) {
-        console.error('Error storing tokens:', tokenError)
-        setError('Failed to store access tokens')
-        setIsStoring(false)
-        return
-      }
+        if (!connected || connected !== 'true') {
+          setError('OAuth connection not confirmed')
+          setLoading(false)
+          return
+        }
 
-      // Get company information from QuickBooks
-      const companyResponse = await fetch(`/api/qbo/company-info?access_token=${accessToken}&realm_id=${company}`)
-      const companyData = await companyResponse.json()
+        if (!companyId) {
+          setError('Missing company ID from QuickBooks')
+          setLoading(false)
+          return
+        }
 
-      if (companyResponse.ok) {
-        setCompanyInfo(companyData)
+        if (!accessToken) {
+          setError('Missing access token from QuickBooks')
+          setLoading(false)
+          return
+        }
+
+        // Get company information from QuickBooks API
+        const companyInfo = await fetchCompanyInfo(companyId, accessToken)
         
-        // Store prospect information
-        const { data: prospectData, error: prospectError } = await supabase
+        // Store tokens in Supabase
+        const { error: dbError } = await supabase
+          .from('qbo_tokens')
+          .upsert({
+            company_id: companyId,
+            company_name: companyInfo.name,
+            access_token: accessToken,
+            refresh_token: refreshToken || 'not_provided',
+            expires_at: new Date(Date.now() + (3600 * 1000)).toISOString(), // 1 hour default
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'company_id'
+          })
+
+        if (dbError) {
+          console.error('Database error:', dbError)
+          setError(`Failed to store tokens: ${dbError.message}`)
+          setLoading(false)
+          return
+        }
+
+        // Create/update prospect record
+        const { error: prospectError } = await supabase
           .from('prospects')
           .upsert({
-            company_id: company,
-            company_name: companyData.name || 'Unknown Company',
-            email: companyData.email || '',
-            phone: companyData.phone || '',
-            status: 'connected',
-            connection_date: new Date().toISOString(),
-            last_sync: new Date().toISOString(),
-            financial_health_score: null,
-            notes: 'Connected via QuickScope OAuth flow'
+            id: crypto.randomUUID(),
+            company_name: companyInfo.name,
+            qb_company_id: companyId,
+            connection_status: 'connected',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'qb_company_id'
           })
-          .select()
 
         if (prospectError) {
-          console.error('Error storing prospect:', prospectError)
+          console.warn('Prospect creation warning:', prospectError)
+          // Don't fail the whole process for this
+        }
+
+        setSuccess(true)
+        setLoading(false)
+
+        // Redirect to dashboard after 3 seconds
+        setTimeout(() => {
+          router.push('/admin/dashboard')
+        }, 3000)
+
+      } catch (error) {
+        console.error('Error in success handler:', error)
+        setError(error instanceof Error ? error.message : 'Unexpected error occurred')
+        setLoading(false)
+      }
+    }
+
+    handleSuccess()
+  }, [searchParams, router])
+
+  const fetchCompanyInfo = async (companyId: string, accessToken: string) => {
+    try {
+      // Try to get company info from QuickBooks
+      const baseUrl = process.env.NODE_ENV === 'production'
+        ? 'https://quickbooks.api.intuit.com'
+        : 'https://sandbox-quickbooks.api.intuit.com'
+
+      const response = await fetch(`${baseUrl}/v3/company/${companyId}/companyinfo/${companyId}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const companyInfo = data?.QueryResponse?.CompanyInfo?.[0]
+        return {
+          name: companyInfo?.Name || companyInfo?.CompanyName || `Company ${companyId}`,
+          id: companyId
+        }
+      } else {
+        console.warn('Failed to fetch company info, using fallback')
+        return {
+          name: `Company ${companyId}`,
+          id: companyId
         }
       }
-
-      setIsStoring(false)
-
     } catch (error) {
-      console.error('Error in token storage:', error)
-      setError('Connection failed')
-      setIsStoring(false)
+      console.warn('Error fetching company info:', error)
+      return {
+        name: `Company ${companyId}`,
+        id: companyId
+      }
     }
   }
 
-  const goToDashboard = () => {
-    // Navigate to admin dashboard with company context
-    router.push(`/admin/dashboard?company=${company}&connected=true`)
-  }
-
-  const viewPricingPlans = () => {
-    router.push('/pricing')
-  }
-
-  const getSupport = () => {
-    window.open('mailto:support@quickscope.info', '_blank')
-  }
-
-  if (isStoring) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-emerald-500 mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-white mb-2">Setting up your connection...</h2>
-          <p className="text-slate-400">Storing your QuickBooks data securely</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full mx-4 text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Connecting QuickBooks</h2>
+          <p className="text-gray-600">Setting up your financial data integration...</p>
         </div>
       </div>
     )
@@ -111,16 +153,18 @@ function SuccessContent() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
-            <span className="text-red-500 text-2xl">❌</span>
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full mx-4 text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </div>
-          <h2 className="text-xl font-semibold text-white mb-2">Connection Error</h2>
-          <p className="text-slate-400 mb-4">{error}</p>
-          <button 
-            onClick={() => router.push('/connect')}
-            className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Connection Error</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => window.location.href = '/auth/quickbooks'}
+            className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
           >
             Try Again
           </button>
@@ -129,112 +173,39 @@ function SuccessContent() {
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full">
-        {/* Success Header */}
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 rounded-full bg-emerald-500 flex items-center justify-center mx-auto mb-6">
-            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  if (success) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full mx-4 text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          
-          <h1 className="text-3xl font-bold text-white mb-3">
-            🎉 Welcome to QuickScope!
-          </h1>
-          
-          <p className="text-lg text-slate-300">
-            {companyInfo?.name || company} is now connected and ready for financial analysis
-          </p>
-        </div>
-
-        {/* What Happens Next */}
-        <div className="bg-slate-800 rounded-xl p-6 mb-8">
-          <h2 className="text-xl font-semibold text-white mb-6 text-center">What happens next?</h2>
-          
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-slate-700 rounded-lg p-4 text-center">
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <span className="text-white text-xl">📊</span>
-              </div>
-              <h3 className="font-semibold text-white mb-2">Data Analysis</h3>
-              <p className="text-sm text-slate-300">
-                We're analyzing your QuickBooks data to generate insights and identify opportunities.
-              </p>
-            </div>
-            
-            <div className="bg-slate-700 rounded-lg p-4 text-center">
-              <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <span className="text-white text-xl">🚀</span>
-              </div>
-              <h3 className="font-semibold text-white mb-2">Dashboard Ready</h3>
-              <p className="text-sm text-slate-300">
-                Your personalized financial dashboard will be ready in just a few minutes.
-              </p>
-            </div>
-            
-            <div className="bg-slate-700 rounded-lg p-4 text-center">
-              <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <span className="text-white text-xl">📧</span>
-              </div>
-              <h3 className="font-semibold text-white mb-2">Stay Updated</h3>
-              <p className="text-sm text-slate-300">
-                We'll email you when new insights and reports are available.
-              </p>
-            </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Successfully Connected!</h2>
+          <p className="text-gray-600 mb-6">Your QuickBooks account has been linked successfully.</p>
+          <div className="text-sm text-gray-500 mb-6">
+            Redirecting to dashboard in 3 seconds...
           </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="text-center space-y-4">
           <button
-            onClick={goToDashboard}
-            className="w-full sm:w-auto px-8 py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors inline-flex items-center justify-center"
+            onClick={() => router.push('/admin/dashboard')}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
           >
-            <span className="mr-2">🎯</span>
             Go to Dashboard
           </button>
-          
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={viewPricingPlans}
-              className="px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
-            >
-              View Pricing Plans
-            </button>
-            
-            <button
-              onClick={getSupport}
-              className="px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
-            >
-              Get Support
-            </button>
-          </div>
-        </div>
-
-        {/* Free Trial Notice */}
-        <div className="mt-8 p-4 bg-emerald-900/30 border border-emerald-700 rounded-lg">
-          <div className="flex items-center">
-            <span className="text-emerald-400 text-xl mr-3">🎁</span>
-            <div>
-              <h3 className="font-semibold text-emerald-400">Your 14-Day Free Trial Starts Now</h3>
-              <p className="text-emerald-300 text-sm">
-                Explore all QuickScope features free for 14 days. No credit card required. Cancel anytime or upgrade to continue after your trial.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
+
+  return null
 }
 
-export default function Success() {
+export default function SuccessPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-emerald-500"></div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
       </div>
     }>
       <SuccessContent />
