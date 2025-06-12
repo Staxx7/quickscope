@@ -2,9 +2,11 @@
 
 import React, { useState } from 'react';
 import { Shield, Zap, Users, Building2, ArrowRight, CheckCircle, Clock, Target, BarChart3 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function ConnectPage() {
   const [isConnecting, setIsConnecting] = useState(false);
+  const router = useRouter();
 
   const handleQuickBooksConnect = async () => {
     setIsConnecting(true);
@@ -12,7 +14,7 @@ export default function ConnectPage() {
     try {
       // For demo purposes, we'll redirect to success page after a short delay
       setTimeout(() => {
-        window.location.href = '/success?company=Demo%20Company';
+        router.push('/success?company=Demo%20Company');
       }, 2000);
       
     } catch (error) {
