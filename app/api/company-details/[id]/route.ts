@@ -1,10 +1,15 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: RouteParams
 ) {
   try {
+    const params = await context.params;
     const accountId = params.id;
     
     // Mock data for now - replace with real QB API call
@@ -26,8 +31,9 @@ export async function GET(
       ]
     };
 
-    return Response.json(mockDetails);
+    return NextResponse.json(mockDetails);
   } catch (error) {
-    return Response.json({ error: 'Failed to fetch details' }, { status: 500 });
+    console.error('Error fetching company details:', error);
+    return NextResponse.json({ error: 'Failed to fetch details' }, { status: 500 });
   }
 }
