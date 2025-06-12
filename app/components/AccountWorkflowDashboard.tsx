@@ -32,6 +32,7 @@ interface ProspectsResponse {
   total: number
   connected: number
   expired: number
+  error?: string
 }
 
 export default function AccountWorkflowDashboard() {
@@ -53,12 +54,13 @@ export default function AccountWorkflowDashboard() {
     try {
       setLoading(true)
       const response = await fetch('/api/admin/prospects')
-      const data: ProspectsResponse = await response.json()
-
+      
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch prospects')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to fetch prospects')
       }
 
+      const data: ProspectsResponse = await response.json()
       setProspects(data.prospects)
       setStats({
         total: data.total,
