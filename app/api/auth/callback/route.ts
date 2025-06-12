@@ -39,11 +39,12 @@ export async function GET(request: NextRequest) {
       realmId
     })
     
-    const authString = `${clientId}:${clientSecret}`
-    const authHeader = `Basic ${Buffer.from(authString).toString('base64')}`
+    // Create Basic Auth header
+    const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+    const authHeader = `Basic ${credentials}`
     
     console.log('Auth details:', {
-      authStringLength: authString.length,
+      authStringLength: `${clientId}:${clientSecret}`.length,
       authHeaderLength: authHeader.length,
       authHeaderPreview: authHeader.substring(0, 30) + '...'
     })
@@ -56,7 +57,8 @@ export async function GET(request: NextRequest) {
 
     console.log('Token request details:', {
       url: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
-      bodyParams: Object.fromEntries(tokenRequestBody.entries())
+      bodyParams: Object.fromEntries(tokenRequestBody.entries()),
+      authHeaderStart: authHeader.substring(0, 50) + '...'
     })
     
     const tokenResponse = await fetch('https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', {
@@ -89,12 +91,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(errorUrl)
     }
 
-    const tokens = await tokenResponse.json()
-    console.log('Tokens received successfully:', {
-      hasAccessToken: !!tokens.access_token,
-      hasRefreshToken: !!tokens.refresh_token,
-      expiresIn: tokens.expires_in
-    })
+    const tokens = JSON.parse(responseText)
+console.log('Tokens received successfully:', {
+  hasAccessToken: !!tokens.access_token,
+  hasRefreshToken: !!tokens.refresh_token,
+  expiresIn: tokens.expires_in
+})
 
     // Get company information from QuickBooks
     console.log('Fetching company info...')
