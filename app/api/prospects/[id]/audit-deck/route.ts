@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabaseClient'
 
+interface RouteContext {
+  params: {
+    id: string
+  }
+}
+
 export async function GET(
   request: NextRequest, 
-  context: { params: { id: string } }
+  context: RouteContext
 ) {
-  const { params } = context
   try {
-    const prospectId = params.id
+    const prospectId = context.params.id
 
     // Fetch saved audit decks for this prospect
     const { data: auditDecks, error } = await supabase
@@ -31,11 +36,10 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: RouteContext
 ) {
-  const { params } = context
   try {
-    const prospectId = params.id
+    const prospectId = context.params.id
     const { searchParams } = new URL(request.url)
     const deckId = searchParams.get('deckId')
 
