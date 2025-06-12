@@ -1,4 +1,3 @@
-// app/api/audit-deck/generate-with-qb/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -22,7 +21,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 1: Fetch real financial data
-    const financialResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/financial-snapshots?realm_id=${companyId}`, {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const financialResponse = await fetch(`${baseUrl}/api/financial-snapshots?realm_id=${companyId}`, {
       headers: {
         'Authorization': request.headers.get('Authorization') || ''
       }
@@ -179,142 +179,6 @@ async function generateAuditDeckWithRealData({
         'Working capital optimization opportunities present immediate value'
       ]
     },
-    painPointAnalysis: {
-      identifiedPains: baseInsights.painPoints.map((pain: string, index: number) => ({
-        painPoint: pain,
-        financialEvidence: `Financial impact analysis shows ${(revenue * 0.02 / 1000).toFixed(0)}K annual cost`,
-        impact: `Operational efficiency reduction of ${15 + index * 5}%`,
-        solution: `Implement automated ${pain.includes('manual') ? 'reporting' : 'optimization'} solution`,
-        priority: index < 2 ? 'high' : 'medium',
-        estimatedValue: Math.floor(revenue * 0.01) + (index * 25000)
-      })),
-      rootCauseAnalysis: [
-        `${financialData ? 'Data analysis reveals' : 'Assessment indicates'} operational scaling challenges`,
-        'Manual processes limiting growth capacity',
-        'Infrastructure gaps affecting financial visibility'
-      ]
-    },
-    opportunityMatrix: {
-      opportunities: [
-        {
-          opportunity: 'Financial Process Automation',
-          financialBasis: `Revenue base of $${(revenue / 1000000).toFixed(1)}M supports automation ROI`,
-          estimatedValue: Math.floor(revenue * 0.03),
-          difficulty: 'medium',
-          timeline: '3-6 months',
-          alignsWithGoals: true,
-          roi: 350
-        },
-        {
-          opportunity: 'Working Capital Optimization',
-          financialBasis: `Cash flow enhancement potential identified`,
-          estimatedValue: Math.floor(revenue * 0.02),
-          difficulty: 'low',
-          timeline: '1-3 months',
-          alignsWithGoals: true,
-          roi: 280
-        }
-      ],
-      priorityRanking: [
-        'Immediate: Process automation (High impact, sustainable)',
-        'Short-term: Working capital optimization (Quick wins)',
-        'Long-term: Strategic planning enhancement (Growth enabler)'
-      ]
-    },
-    riskProfile: {
-      criticalRisks: [
-        { risk: 'Operational scaling limitations', probability: 'High', impact: 'Medium', mitigation: 'Infrastructure enhancement program' },
-        { risk: 'Manual process dependencies', probability: 'Medium', impact: 'High', mitigation: 'Automation implementation' }
-      ],
-      mitigationStrategies: [
-        { strategy: 'Financial infrastructure modernization', timeline: '3-6 months', investment: '$25K', expectedOutcome: 'Automated operations' },
-        { strategy: 'Process optimization program', timeline: '2-4 months', investment: '$15K', expectedOutcome: 'Enhanced efficiency' }
-      ],
-      contingencyPlanning: [
-        'Phased implementation to minimize disruption',
-        'Backup systems and processes during transition',
-        'Training programs for team adaptation'
-      ]
-    },
-    personalizedRecommendations: {
-      immediate: [
-        { action: 'Deploy financial dashboard', rationale: 'Enhance real-time visibility', expectedOutcome: 'Daily financial monitoring', timeline: '2 weeks' },
-        { action: 'Optimize cash flow processes', rationale: 'Improve working capital efficiency', expectedOutcome: 'Enhanced liquidity management', timeline: '3 weeks' }
-      ],
-      shortTerm: [
-        { action: 'Implement automated reporting', rationale: 'Eliminate manual processes', expectedOutcome: '40+ hours monthly savings', timeline: '2 months' },
-        { action: 'Strategic planning system', rationale: 'Support growth objectives', expectedOutcome: 'Enhanced forecasting capability', timeline: '3 months' }
-      ],
-      longTerm: [
-        { action: 'Comprehensive FP&A function', rationale: 'Scale financial operations', expectedOutcome: 'Strategic financial partnership', timeline: '6-12 months' },
-        { action: 'Advanced analytics implementation', rationale: 'Data-driven decision making', expectedOutcome: 'Predictive financial insights', timeline: '9-12 months' }
-      ],
-      budgetAligned: [
-        { service: 'Fractional CFO Services', investment: '$10,000/month', roi: '400% Year 1', priority: 'High' },
-        { service: 'Financial Systems Setup', investment: '$15,000 one-time', roi: '350% Year 1', priority: 'High' },
-        { service: 'Strategic Advisory', investment: '$6,000/month', roi: '280% Year 1', priority: 'Medium' }
-      ]
-    },
-    proposedEngagement: {
-      services: [
-        {
-          name: 'Fractional CFO Services',
-          description: 'Strategic financial leadership and oversight',
-          deliverables: ['Weekly financial monitoring', 'Monthly strategic reporting', 'Quarterly business reviews', 'Annual planning'],
-          timeline: 'Ongoing monthly engagement'
-        },
-        {
-          name: 'Financial Infrastructure Setup',
-          description: 'Technology and process optimization',
-          deliverables: ['Automated reporting system', 'Dashboard implementation', 'Process documentation', 'Team training'],
-          timeline: '3-6 months implementation'
-        }
-      ],
-      phasedApproach: [
-        {
-          phase: 'Foundation (Months 1-2)',
-          duration: '60 days',
-          objectives: ['Stabilize operations', 'Implement monitoring', 'Establish controls'],
-          deliverables: ['Real-time dashboard', 'Automated processes', 'Financial controls', 'KPI framework']
-        },
-        {
-          phase: 'Optimization (Months 3-4)',
-          duration: '60 days',
-          objectives: ['Enhance efficiency', 'Optimize processes', 'Improve margins'],
-          deliverables: ['Process automation', 'Efficiency improvements', 'Cost optimization', 'Performance metrics']
-        },
-        {
-          phase: 'Strategic Growth (Months 5-6)',
-          duration: '60 days',
-          objectives: ['Scale operations', 'Strategic planning', 'Growth enablement'],
-          deliverables: ['Growth strategy', 'Strategic roadmap', 'Advanced analytics', 'Future planning']
-        }
-      ],
-      investment: {
-        monthly: '$10,000',
-        setup: '$15,000',
-        total: '$75,000 (6 months)'
-      },
-      expectedOutcomes: [
-        `Enhanced financial performance using ${financialData ? 'real-time QuickBooks' : 'optimized financial'} data`,
-        'Automated reporting reducing manual effort by 80%',
-        'Improved cash flow management and working capital optimization',
-        'Strategic planning capabilities supporting growth objectives',
-        'Scalable financial infrastructure for future expansion'
-      ],
-      roi: {
-        timeToValue: '30 days for initial improvements',
-        yearOneROI: '400% return on investment',
-        threeYearROI: '650% cumulative return'
-      },
-      successMetrics: [
-        'Financial reporting cycle reduced to 3 days',
-        'Automated processes saving 40+ hours monthly',
-        'Cash flow forecasting accuracy >95%',
-        'Stakeholder satisfaction >4.5/5',
-        'Operational efficiency increase >40%'
-      ]
-    },
     metadata: {
       generatedAt: new Date().toISOString(),
       dataSource: financialData ? 'real_quickbooks' : 'demo',
@@ -358,67 +222,4 @@ function calculateHealthScore(financialData: any): number {
   else if (debtRatio < 0.8) score += 4
 
   return Math.min(Math.max(score, 20), 100)
-}
-
-// app/api/prospects/[id]/audit-deck/route.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseClient'
-
-export async function GET(
-  request: NextRequest, 
-  { params }: { params: { id: string } }
-) {
-  try {
-    const prospectId = params.id
-
-    // Fetch saved audit decks for this prospect
-    const { data: auditDecks, error } = await supabase
-      .from('audit_decks')
-      .select('*')
-      .eq('prospect_id', prospectId)
-      .order('generated_at', { ascending: false })
-
-    if (error) {
-      console.error('Error fetching audit decks:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ auditDecks })
-
-  } catch (error) {
-    console.error('Unexpected error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const prospectId = params.id
-    const { searchParams } = new URL(request.url)
-    const deckId = searchParams.get('deckId')
-
-    if (!deckId) {
-      return NextResponse.json({ error: 'deckId is required' }, { status: 400 })
-    }
-
-    const { error } = await supabase
-      .from('audit_decks')
-      .delete()
-      .eq('id', deckId)
-      .eq('prospect_id', prospectId)
-
-    if (error) {
-      console.error('Error deleting audit deck:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true })
-
-  } catch (error) {
-    console.error('Unexpected error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
 }
