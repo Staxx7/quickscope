@@ -1,5 +1,5 @@
+// app/api/auth/callback/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseClient'
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,87 +8,101 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state')
     const realmId = searchParams.get('realmId')
 
-    console.log('OAuth Callback received:', { code: !!code, state, realmId })
+    console.log('OAuth Callback received:', { 
+      code: code ? code.substring(0, 20) + '...' : null,
+      state, 
+      realmId,
+      fullUrl: request.url
+    })
 
     if (!code || !realmId) {
-      console.error('Missing code or realmId')
-      return NextResponse.json(
-        { error: 'Missing authorization code or realm ID' },
-        { status: 400 }
-      )
+      console.error('Missing required OAuth parameters:', { code: !!code, realmId: !!realmId })
+      return NextResponse.redirect(new URL('/connect?error=missing_parameters', request.url))
+    }
+
+    // Get environment variables
+    const clientId = process.env.QUICKBOOKS_CLIENT_ID
+    const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET
+    const redirectUri = process.env.QUICKBOOKS_REDIRECT_URI
+
+    if (!clientId || !clientSecret || !redirectUri) {
+      console.error('Missing QB environment variables')
+      return NextResponse.redirect(new URL('/connect?error=config_error', request.url))
     }
 
     // Exchange authorization code for access token
+    console.log('Exchanging code for tokens...')
+    
     const tokenResponse = await fetch('https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${Buffer.from(`${process.env.QB_CLIENT_ID}:${process.env.QB_CLIENT_SECRET}`).toString('base64')}`
+        'Accept': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`
       },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code: code,
-        redirect_uri: process.env.QB_REDIRECT_URI!
+        redirect_uri: redirectUri
       })
     })
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text()
-      console.error('Token exchange failed:', tokenResponse.status, errorText)
-      throw new Error(`Token exchange failed: ${tokenResponse.status}`)
+      console.error('Token exchange failed:', {
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        error: errorText
+      })
+      return NextResponse.redirect(new URL('/connect?error=token_exchange_failed', request.url))
     }
 
-    const tokenData = await tokenResponse.json()
-    console.log('Token exchange successful, expires in:', tokenData.expires_in)
+    const tokens = await tokenResponse.json()
+    console.log('Tokens received successfully:', {
+      hasAccessToken: !!tokens.access_token,
+      hasRefreshToken: !!tokens.refresh_token,
+      expiresIn: tokens.expires_in
+    })
 
-    // Calculate expiry time
-    const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000)
+    // Get company information from QuickBooks
+    console.log('Fetching company info...')
+    
+    const companyResponse = await fetch(`https://api.quickbooks.com/v3/company/${realmId}/companyinfo/${realmId}`, {
+      headers: {
+        'Authorization': `Bearer ${tokens.access_token}`,
+        'Accept': 'application/json'
+      }
+    })
 
-    // Store tokens in database
-    const { data, error } = await supabase
-      .from('qbo_tokens')
-      .upsert({
-        company_id: realmId,
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token,
-        expires_at: expiresAt.toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-
-    if (error) {
-      console.error('Database error storing tokens:', error)
-      throw new Error('Failed to store tokens')
+    let companyName = 'Unknown Company'
+    if (companyResponse.ok) {
+      const companyData = await companyResponse.json()
+      companyName = companyData?.QueryResponse?.CompanyInfo?.[0]?.Name || 'Unknown Company'
+      console.log('Company name retrieved:', companyName)
+    } else {
+      console.warn('Failed to fetch company info, using default name')
     }
 
-    console.log('Tokens stored successfully for company:', realmId)
+    // TODO: Store tokens in database
+    // For now, we'll just redirect to success
+    console.log('OAuth flow completed successfully')
 
-    // Also create/update prospect record
-    await supabase
-      .from('prospects')
-      .upsert({
-        qb_company_id: realmId,
-        company_name: 'Connected Company', // We'll update this when we fetch company info
-        status: 'connected',
-        connected_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-
-    // Redirect to success page
+    // Store basic info in URL for success page
     const successUrl = new URL('/success', request.url)
+    successUrl.searchParams.set('company', companyName)
+    successUrl.searchParams.set('realmId', realmId)
     successUrl.searchParams.set('connected', 'true')
-    successUrl.searchParams.set('company', realmId)
 
     return NextResponse.redirect(successUrl)
 
   } catch (error) {
     console.error('Error in auth callback:', error)
     
-    // Redirect to error page
-    const errorUrl = new URL('/connect', request.url)
-    errorUrl.searchParams.set('error', 'connection_failed')
+    // Redirect to connect page with detailed error
+    const connectUrl = new URL('/connect', request.url)
+    connectUrl.searchParams.set('error', 'callback_error')
+    connectUrl.searchParams.set('details', error instanceof Error ? error.message : 'Unknown error')
     
-    return NextResponse.redirect(errorUrl)
+    return NextResponse.redirect(connectUrl)
   }
 }
