@@ -201,19 +201,19 @@ const AccountWorkflowDashboard: React.FC = () => {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'text-red-400 bg-red-500/20 border-red-500/30';
-      case 'medium': return 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30';
-      case 'low': return 'text-green-400 bg-green-500/20 border-green-500/30';
-      default: return 'text-gray-400 bg-gray-500/20 border-gray-500/30';
+      case 'high': return 'text-slate-200 bg-slate-700/40 border-slate-600/30';
+      case 'medium': return 'text-slate-300 bg-slate-800/40 border-slate-700/30';
+      case 'low': return 'text-slate-400 bg-slate-800/20 border-slate-700/20';
+      default: return 'text-slate-400 bg-slate-800/20 border-slate-700/20';
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'text-blue-400 bg-blue-500/20 border-blue-500/30';
-      case 'pending': return 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30';
-      case 'completed': return 'text-green-400 bg-green-500/20 border-green-500/30';
-      default: return 'text-gray-400 bg-gray-500/20 border-gray-500/30';
+      case 'active': return 'text-cyan-300 bg-cyan-500/10 border-cyan-500/20';
+      case 'pending': return 'text-slate-300 bg-slate-600/20 border-slate-600/30';
+      case 'completed': return 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20';
+      default: return 'text-slate-400 bg-slate-700/20 border-slate-600/20';
     }
   };
 
@@ -235,193 +235,189 @@ const AccountWorkflowDashboard: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white text-lg">Loading connected accounts...</p>
+          <div className="w-16 h-16 border-4 border-slate-600/30 border-t-slate-400 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-300 text-lg">Loading connected accounts...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900">
-      <div className="space-y-8 p-6">
-        {/* Workflow Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <div className="bg-white/10 rounded-xl p-4 border border-white/20">
-            <div className="flex items-center justify-between mb-2">
-              <Building2 className="w-8 h-8 text-cyan-400" />
-              <span className="text-2xl font-bold text-white">{workflowStats.totalAccounts}</span>
-            </div>
-            <p className="text-gray-300 text-sm">Total Accounts</p>
-            <p className="text-cyan-400 text-xs">Connected QuickBooks</p>
+    <div className="space-y-8">
+      {/* Workflow Stats - Simplified */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+          <div className="flex items-center justify-between mb-3">
+            <Building2 className="w-7 h-7 text-slate-400" />
+            <span className="text-3xl font-light text-white">{workflowStats.totalAccounts}</span>
           </div>
+          <p className="text-slate-300 text-sm font-medium">Total Accounts</p>
+          <p className="text-slate-400 text-xs mt-1">Connected QuickBooks</p>
+        </div>
 
-          <div className="bg-white/10 rounded-xl p-4 border border-white/20">
-            <div className="flex items-center justify-between mb-2">
-              <Upload className="w-8 h-8 text-yellow-400" />
-              <span className="text-2xl font-bold text-white">{workflowStats.readyForTranscripts}</span>
-            </div>
-            <p className="text-gray-300 text-sm">Ready for Transcripts</p>
-            <p className="text-yellow-400 text-xs">Need call uploads</p>
+        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+          <div className="flex items-center justify-between mb-3">
+            <Upload className="w-7 h-7 text-slate-400" />
+            <span className="text-3xl font-light text-white">{workflowStats.readyForTranscripts}</span>
           </div>
+          <p className="text-slate-300 text-sm font-medium">Ready for Transcripts</p>
+          <p className="text-slate-400 text-xs mt-1">Need call uploads</p>
+        </div>
 
-          <div className="bg-white/10 rounded-xl p-4 border border-white/20">
-            <div className="flex items-center justify-between mb-2">
-              <FileText className="w-8 h-8 text-blue-400" />
-              <span className="text-2xl font-bold text-white">{workflowStats.readyForAudit}</span>
-            </div>
-            <p className="text-gray-300 text-sm">Ready for Audit</p>
-            <p className="text-blue-400 text-xs">Can generate decks</p>
+        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+          <div className="flex items-center justify-between mb-3">
+            <FileText className="w-7 h-7 text-slate-400" />
+            <span className="text-3xl font-light text-white">{workflowStats.readyForAudit}</span>
           </div>
+          <p className="text-slate-300 text-sm font-medium">Ready for Audit</p>
+          <p className="text-slate-400 text-xs mt-1">Can generate decks</p>
+        </div>
 
-          <div className="bg-white/10 rounded-xl p-4 border border-white/20">
-            <div className="flex items-center justify-between mb-2">
-              <CheckCircle className="w-8 h-8 text-green-400" />
-              <span className="text-2xl font-bold text-white">{workflowStats.completed}</span>
-            </div>
-            <p className="text-gray-300 text-sm">Completed</p>
-            <p className="text-green-400 text-xs">Audit decks ready</p>
+        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+          <div className="flex items-center justify-between mb-3">
+            <CheckCircle className="w-7 h-7 text-emerald-400/70" />
+            <span className="text-3xl font-light text-white">{workflowStats.completed}</span>
+          </div>
+          <p className="text-slate-300 text-sm font-medium">Completed</p>
+          <p className="text-slate-400 text-xs mt-1">Audit decks ready</p>
+        </div>
+      </div>
+
+      {/* Search and Filters - Simplified */}
+      <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search accounts, contacts, industries..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all"
+            />
+          </div>
+          
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-cyan-400/50 transition-all"
+          >
+            <option value="all" className="bg-slate-800">All Stages</option>
+            <option value="pending" className="bg-slate-800">Pending</option>
+            <option value="active" className="bg-slate-800">Active</option>
+            <option value="completed" className="bg-slate-800">Completed</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Connected Accounts Table - Refined */}
+      <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 overflow-hidden">
+        <div className="p-6 border-b border-white/10">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-light text-white">Connected Accounts ({filteredAccounts.length})</h2>
+            <button className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/5">
+              <RefreshCw className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
-        {/* Search and Filters */}
-        <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search accounts, contacts, industries..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/25 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
-              />
-            </div>
-            
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-3 bg-white/10 border border-white/25 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
-            >
-              <option value="all">All Stages</option>
-              <option value="pending">Pending</option>
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Connected Accounts Table */}
-        <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 overflow-hidden">
-          <div className="p-6 border-b border-white/20">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Connected Accounts ({filteredAccounts.length})</h2>
-              <div className="flex items-center space-x-2">
-                <button className="p-2 text-gray-400 hover:text-white transition-colors">
-                  <RefreshCw className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-white/5">
-                <tr>
-                  <th className="text-left py-4 px-6 text-gray-300 font-medium">Account</th>
-                  <th className="text-left py-4 px-6 text-gray-300 font-medium">Workflow Progress</th>
-                  <th className="text-left py-4 px-6 text-gray-300 font-medium">Financial Snapshot</th>
-                  <th className="text-left py-4 px-6 text-gray-300 font-medium">Next Step</th>
-                  <th className="text-left py-4 px-6 text-gray-300 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAccounts.map((account) => {
-                  const progressPercent = getWorkflowProgress(account.workflowProgress);
-                  const currentStep = getWorkflowStep(account.workflowProgress);
-                  
-                  return (
-                    <tr key={account.id} className="border-b border-white/10 hover:bg-white/5 transition-colors">
-                      <td className="py-4 px-6">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center">
-                            <Building2 className="w-5 h-5 text-white" />
-                          </div>
-                          <div>
-                            <div className="text-white font-medium">{account.companyName}</div>
-                            <div className="text-gray-400 text-sm">{account.contactName}</div>
-                            <div className="text-gray-500 text-xs">Connected {account.connectedDate}</div>
-                          </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-white/5">
+              <tr>
+                <th className="text-left py-4 px-6 text-slate-300 font-medium text-sm">Account</th>
+                <th className="text-left py-4 px-6 text-slate-300 font-medium text-sm">Workflow Progress</th>
+                <th className="text-left py-4 px-6 text-slate-300 font-medium text-sm">Financial Snapshot</th>
+                <th className="text-left py-4 px-6 text-slate-300 font-medium text-sm">Next Step</th>
+                <th className="text-left py-4 px-6 text-slate-300 font-medium text-sm">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAccounts.map((account) => {
+                const progressPercent = getWorkflowProgress(account.workflowProgress);
+                const currentStep = getWorkflowStep(account.workflowProgress);
+                
+                return (
+                  <tr key={account.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <td className="py-5 px-6">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-slate-600 to-slate-700 rounded-lg flex items-center justify-center">
+                          <Building2 className="w-5 h-5 text-slate-300" />
                         </div>
-                      </td>
-                      
-                      <td className="py-4 px-6">
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-300 text-sm">Step {currentStep.step}/{currentStep.total}</span>
-                            <span className={`px-2 py-1 rounded-full text-xs border ${getStatusColor(account.status)}`}>
-                              {account.status}
-                            </span>
-                          </div>
-                          <div className="w-full bg-white/10 rounded-full h-2">
-                            <div 
-                              className="bg-gradient-to-r from-cyan-500 to-blue-600 h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${progressPercent}%` }}
-                            />
-                          </div>
-                          <div className="grid grid-cols-5 gap-1 mt-2">
-                            <div className={`w-2 h-2 rounded-full ${account.workflowProgress.connected ? 'bg-green-400' : 'bg-gray-600'}`} title="Connected" />
-                            <div className={`w-2 h-2 rounded-full ${account.workflowProgress.transcriptUploaded ? 'bg-green-400' : 'bg-gray-600'}`} title="Transcript Uploaded" />
-                            <div className={`w-2 h-2 rounded-full ${account.workflowProgress.dataExtracted ? 'bg-green-400' : 'bg-gray-600'}`} title="Data Extracted" />
-                            <div className={`w-2 h-2 rounded-full ${account.workflowProgress.analysisComplete ? 'bg-green-400' : 'bg-gray-600'}`} title="Analysis Complete" />
-                            <div className={`w-2 h-2 rounded-full ${account.workflowProgress.auditDeckReady ? 'bg-green-400' : 'bg-gray-600'}`} title="Audit Deck Ready" />
-                          </div>
+                        <div>
+                          <div className="text-white font-medium">{account.companyName}</div>
+                          <div className="text-slate-400 text-sm">{account.contactName}</div>
+                          <div className="text-slate-500 text-xs">Connected {account.connectedDate}</div>
                         </div>
-                      </td>
-                      
-                      <td className="py-4 px-6">
-                        <div className="space-y-1">
-                          <div className="text-white font-medium">Revenue: {account.financialSnapshot.revenue}</div>
-                          <div className="text-gray-300 text-sm">Net: {account.financialSnapshot.netIncome}</div>
-                          <div className="text-gray-500 text-xs">Last sync: {account.lastSync}</div>
+                      </div>
+                    </td>
+                    
+                    <td className="py-5 px-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-300 text-sm">Step {currentStep.step}/{currentStep.total}</span>
+                          <span className={`px-2 py-1 rounded-full text-xs border font-medium ${getStatusColor(account.status)}`}>
+                            {account.status}
+                          </span>
                         </div>
-                      </td>
-                      
-                      <td className="py-4 px-6">
-                        <div className="space-y-2">
-                          <div className="text-white text-sm">{account.nextStep}</div>
-                          <div className="flex items-center space-x-2">
-                            <span className={`px-2 py-1 rounded-full text-xs border ${getPriorityColor(account.priority)}`}>
-                              {account.priority} priority
-                            </span>
-                            {account.transcriptCount > 0 && (
-                              <span className="text-cyan-400 text-xs">
-                                {account.transcriptCount} transcripts
-                              </span>
-                            )}
-                          </div>
+                        <div className="w-full bg-slate-700/30 rounded-full h-1.5">
+                          <div 
+                            className="bg-gradient-to-r from-slate-400 to-slate-300 h-1.5 rounded-full transition-all duration-300"
+                            style={{ width: `${progressPercent}%` }}
+                          />
                         </div>
-                      </td>
-                      
-                      <td className="py-4 px-6">
+                        <div className="grid grid-cols-5 gap-1.5 mt-2">
+                          <div className={`w-2 h-2 rounded-full ${account.workflowProgress.connected ? 'bg-emerald-400/70' : 'bg-slate-600'}`} title="Connected" />
+                          <div className={`w-2 h-2 rounded-full ${account.workflowProgress.transcriptUploaded ? 'bg-emerald-400/70' : 'bg-slate-600'}`} title="Transcript Uploaded" />
+                          <div className={`w-2 h-2 rounded-full ${account.workflowProgress.dataExtracted ? 'bg-emerald-400/70' : 'bg-slate-600'}`} title="Data Extracted" />
+                          <div className={`w-2 h-2 rounded-full ${account.workflowProgress.analysisComplete ? 'bg-emerald-400/70' : 'bg-slate-600'}`} title="Analysis Complete" />
+                          <div className={`w-2 h-2 rounded-full ${account.workflowProgress.auditDeckReady ? 'bg-emerald-400/70' : 'bg-slate-600'}`} title="Audit Deck Ready" />
+                        </div>
+                      </div>
+                    </td>
+                    
+                    <td className="py-5 px-6">
+                      <div className="space-y-1">
+                        <div className="text-white font-medium">Revenue: {account.financialSnapshot.revenue}</div>
+                        <div className="text-slate-300 text-sm">Net: {account.financialSnapshot.netIncome}</div>
+                        <div className="text-slate-500 text-xs">Last sync: {account.lastSync}</div>
+                      </div>
+                    </td>
+                    
+                    <td className="py-5 px-6">
+                      <div className="space-y-2">
+                        <div className="text-white text-sm">{account.nextStep}</div>
                         <div className="flex items-center space-x-2">
-                          <button className="p-2 text-gray-400 hover:text-white transition-colors" title="View Details">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button className="p-2 text-gray-400 hover:text-white transition-colors" title="Upload Transcript">
-                            <Upload className="w-4 h-4" />
-                          </button>
-                          <button className="p-2 text-gray-400 hover:text-white transition-colors" title="Generate Report">
-                            <Download className="w-4 h-4" />
-                          </button>
+                          <span className={`px-2 py-1 rounded-full text-xs border ${getPriorityColor(account.priority)}`}>
+                            {account.priority}
+                          </span>
+                          {account.transcriptCount > 0 && (
+                            <span className="text-slate-400 text-xs">
+                              {account.transcriptCount} transcripts
+                            </span>
+                          )}
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    </td>
+                    
+                    <td className="py-5 px-6">
+                      <div className="flex items-center space-x-1">
+                        <button className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/5" title="View Details">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/5" title="Upload Transcript">
+                          <Upload className="w-4 h-4" />
+                        </button>
+                        <button className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/5" title="Generate Report">
+                          <Download className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
