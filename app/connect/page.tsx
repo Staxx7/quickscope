@@ -1,15 +1,10 @@
-// app/connect/page.tsx - Fixed with Suspense boundary
+// app/connect/page.tsx - Back to original design with Suspense
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 
-interface CompanyInfo {
-  name: string
-  id?: string
-}
-
-// Separate component that uses useSearchParams
+// Component that uses useSearchParams
 function ConnectContent() {
   const [formData, setFormData] = useState({
     name: '',
@@ -19,31 +14,7 @@ function ConnectContent() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [isConnected, setIsConnected] = useState(false)
-  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null)
-  const router = useRouter()
   const searchParams = useSearchParams()
-
-  // Check if user is already connected
-  useEffect(() => {
-    checkConnectionStatus()
-  }, [])
-
-  const checkConnectionStatus = async () => {
-    try {
-      // Check if user has active QB connection
-      const response = await fetch('/api/qbo/connection-status')
-      if (response.ok) {
-        const data = await response.json()
-        if (data.connected) {
-          setIsConnected(true)
-          setCompanyInfo(data.company)
-        }
-      }
-    } catch (error) {
-      console.log('No existing connection found')
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,131 +31,49 @@ function ConnectContent() {
     }
   }
 
-  const handleDisconnect = async () => {
-    try {
-      const response = await fetch('/api/auth/disconnect', { method: 'POST' })
-      if (response.ok) {
-        setIsConnected(false)
-        setCompanyInfo(null)
-      }
-    } catch (error) {
-      setError('Failed to disconnect')
-    }
-  }
-
-  // Show connected state - HIDE connect button per QB requirement
-  if (isConnected) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900">
-        <div className="container mx-auto px-4 py-12">
-          <div className="max-w-2xl mx-auto">
-            
-            <div className="text-center mb-12">
-              <h1 className="text-4xl font-bold text-white mb-4">
-                QuickBooks Connected! ✅
-              </h1>
-              <p className="text-xl text-slate-300">
-                Your QuickBooks account is successfully connected
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-xl p-8">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Connection Active</h2>
-                {companyInfo && (
-                  <p className="text-gray-600">Connected to: {companyInfo.name}</p>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <button
-                  onClick={() => router.push('/admin/dashboard')}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg transition-colors"
-                >
-                  🚀 Go to Dashboard
-                </button>
-                
-                <button
-                  onClick={handleDisconnect}
-                  className="w-full bg-red-100 hover:bg-red-200 text-red-800 font-semibold py-3 px-6 rounded-lg transition-colors"
-                >
-                  🔌 Disconnect QuickBooks
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   // Show error state if connection failed
   const errorParam = searchParams.get('error')
-  if (errorParam) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900">
-        <div className="container mx-auto px-4 py-12">
-          <div className="max-w-2xl mx-auto">
-            
-            <div className="text-center mb-12">
-              <h1 className="text-4xl font-bold text-white mb-4">
-                Connection Failed
-              </h1>
-              <p className="text-xl text-slate-300">
-                There was an issue connecting your QuickBooks account
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-xl p-8">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Connection Error</h2>
-                <p className="text-red-600 mb-4">
-                  Error: {errorParam}
-                </p>
-              </div>
-
-              <button
-                onClick={() => window.location.href = '/connect'}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg transition-colors"
-              >
-                🔄 Try Again
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Show connect form - ONLY when not connected per QB requirement
+  const errorDetails = searchParams.get('details')
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900">
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-2xl mx-auto">
           
+          {/* Header */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-white mb-4">
+            <div className="flex items-center justify-center space-x-3 mb-6">
+              <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                <span className="text-white text-2xl">🎯</span>
+              </div>
+              <h1 className="text-3xl font-bold text-white">QUICKSCOPE</h1>
+            </div>
+            <h2 className="text-4xl font-bold text-white mb-4">
               Connect Your QuickBooks
-            </h1>
+            </h2>
             <p className="text-xl text-slate-300">
-              Securely connect your QuickBooks Online account to get started with your financial analysis
+              Securely connect your QuickBooks Online account for analysis
             </p>
           </div>
 
+          {/* Form */}
           <div className="bg-white rounded-lg shadow-xl p-8">
-            {error && (
+            {/* Error Display */}
+            {(error || errorParam) && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-800">{error}</p>
+                <h4 className="text-red-800 font-semibold mb-2">Connection Failed</h4>
+                <p className="text-red-700 mb-2">{error || errorParam}</p>
+                {errorDetails && (
+                  <details className="mt-2">
+                    <summary className="text-red-600 cursor-pointer text-sm">View technical details</summary>
+                    <pre className="text-xs text-red-500 mt-2 p-2 bg-red-50 rounded overflow-auto">
+                      {decodeURIComponent(errorDetails)}
+                    </pre>
+                  </details>
+                )}
+                <p className="text-sm text-red-600 mt-2">
+                  If this error persists, please contact support.
+                </p>
               </div>
             )}
 
@@ -200,7 +89,7 @@ function ConnectContent() {
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter your full name"
+                  placeholder="John Smith"
                 />
               </div>
 
@@ -215,7 +104,7 @@ function ConnectContent() {
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter your email address"
+                  placeholder="john@company.com"
                 />
               </div>
 
@@ -230,7 +119,7 @@ function ConnectContent() {
                   value={formData.company}
                   onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter your company name"
+                  placeholder="Acme Corporation"
                 />
               </div>
 
@@ -244,11 +133,10 @@ function ConnectContent() {
                   value={formData.phone}
                   onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter your phone number (optional)"
+                  placeholder="(555) 123-4567"
                 />
               </div>
 
-              {/* QB-COMPLIANT CONNECT BUTTON - Use official QuickBooks button */}
               <button
                 type="submit"
                 disabled={isLoading}
@@ -269,11 +157,27 @@ function ConnectContent() {
             </form>
 
             <div className="mt-6 text-center">
+              <div className="flex items-center justify-center text-sm text-green-600 mb-2">
+                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+                Your data is encrypted and secure
+              </div>
               <p className="text-sm text-gray-500">
-                Your QuickBooks data is secured with bank-level encryption. 
-                We only access the financial data needed for your analysis.
+                We only access financial reports, not transaction details
               </p>
             </div>
+          </div>
+
+          {/* Debug Link (temporary) */}
+          <div className="mt-6 text-center">
+            <a 
+              href="/api/debug/oauth"
+              target="_blank"
+              className="text-sm text-slate-400 hover:text-slate-300 underline"
+            >
+              Debug OAuth Credentials
+            </a>
           </div>
         </div>
       </div>
