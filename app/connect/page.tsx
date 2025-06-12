@@ -1,7 +1,7 @@
-// app/connect/page.tsx - Fixed TypeScript errors
+// app/connect/page.tsx - Fixed with Suspense boundary
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 interface CompanyInfo {
@@ -9,7 +9,8 @@ interface CompanyInfo {
   id?: string
 }
 
-export default function ConnectPage() {
+// Separate component that uses useSearchParams
+function ConnectContent() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -123,7 +124,8 @@ export default function ConnectPage() {
   }
 
   // Show error state if connection failed
-  if (searchParams.get('error')) {
+  const errorParam = searchParams.get('error')
+  if (errorParam) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900">
         <div className="container mx-auto px-4 py-12">
@@ -147,7 +149,7 @@ export default function ConnectPage() {
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Connection Error</h2>
                 <p className="text-red-600 mb-4">
-                  Error: {searchParams.get('error')}
+                  Error: {errorParam}
                 </p>
               </div>
 
@@ -276,5 +278,26 @@ export default function ConnectPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Loading component for Suspense fallback
+function ConnectLoading() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+        <p className="text-white">Loading...</p>
+      </div>
+    </div>
+  )
+}
+
+// Main page component with Suspense boundary
+export default function ConnectPage() {
+  return (
+    <Suspense fallback={<ConnectLoading />}>
+      <ConnectContent />
+    </Suspense>
   )
 }
