@@ -1,53 +1,60 @@
+// app/api/auth/login/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    // Get form data (we'll store this in session/database later)
+    // Get form data (store for later callback)
     const formData = await request.json()
-    console.log('Connect form submitted:', formData)
-
-    // Store prospect info in database for later use
-    // (We'll update this after QB connection completes)
+    console.log('Connect form data:', formData)
     
-    // Generate state parameter for security
-    const state = Math.random().toString(36).substring(2, 15)
+    // Check environment variables first
+    const clientId = process.env.QUICKBOOKS_CLIENT_ID
+    const redirectUri = process.env.QUICKBOOKS_REDIRECT_URI
     
-    // QuickBooks OAuth URL
-    const qbAuthUrl = new URL('https://appcenter.intuit.com/connect/oauth2')
-    qbAuthUrl.searchParams.set('client_id', process.env.QB_CLIENT_ID!)
-    qbAuthUrl.searchParams.set('scope', 'com.intuit.quickbooks.accounting')
-    qbAuthUrl.searchParams.set('redirect_uri', process.env.QB_REDIRECT_URI!)
-    qbAuthUrl.searchParams.set('response_type', 'code')
-    qbAuthUrl.searchParams.set('access_type', 'offline')
-    qbAuthUrl.searchParams.set('state', state)
-
-    console.log('Redirecting to QB OAuth:', qbAuthUrl.toString())
-
-    // Redirect to QuickBooks OAuth
-    return NextResponse.redirect(qbAuthUrl.toString())
-
+    if (!clientId || !redirectUri) {
+      console.error('Missing QB credentials:', { 
+        hasClientId: !!clientId,
+        hasRedirectUri: !!redirectUri,
+        allEnvKeys: Object.keys(process.env).filter(key => key.includes('QUICKBOOKS'))
+      })
+      
+      return NextResponse.json({ 
+        error: 'QuickBooks credentials not configured properly',
+        details: 'Missing QUICKBOOKS_CLIENT_ID or QUICKBOOKS_REDIRECT_URI'
+      }, { status: 500 })
+    }
+    
+    console.log('QB OAuth credentials found:', {
+      clientId: clientId.substring(0, 10) + '...',
+      redirectUri
+    })
+    
+    // Store form data in session/database for callback
+    // TODO: Store formData for the callback to use
+    
+    // Build QB OAuth URL
+    const authUrl = new URL('https://appcenter.intuit.com/connect/oauth2')
+    authUrl.searchParams.set('client_id', clientId)
+    authUrl.searchParams.set('scope', 'com.intuit.quickbooks.accounting')
+    authUrl.searchParams.set('redirect_uri', redirectUri)
+    authUrl.searchParams.set('response_type', 'code')
+    authUrl.searchParams.set('access_type', 'offline')
+    authUrl.searchParams.set('state', 'randomstate123')
+    
+    console.log('Redirecting to QB OAuth:', authUrl.toString())
+    
+    return NextResponse.redirect(authUrl.toString())
+    
   } catch (error) {
-    console.error('Error in login API:', error)
-    return NextResponse.json(
-      { error: 'Failed to initiate QuickBooks connection' },
-      { status: 500 }
-    )
+    console.error('Login API error:', error)
+    return NextResponse.json({ 
+      error: 'Failed to initiate QB connection',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
 
+// Also support GET for direct testing
 export async function GET(request: NextRequest) {
-  // Handle GET requests the same way (for direct /api/auth/login access)
-  const state = Math.random().toString(36).substring(2, 15)
-  
-  const qbAuthUrl = new URL('https://appcenter.intuit.com/connect/oauth2')
-  qbAuthUrl.searchParams.set('client_id', process.env.QB_CLIENT_ID!)
-  qbAuthUrl.searchParams.set('scope', 'com.intuit.quickbooks.accounting')
-  qbAuthUrl.searchParams.set('redirect_uri', process.env.QB_REDIRECT_URI!)
-  qbAuthUrl.searchParams.set('response_type', 'code')
-  qbAuthUrl.searchParams.set('access_type', 'offline')
-  qbAuthUrl.searchParams.set('state', state)
-
-  console.log('GET request - Redirecting to QB OAuth:', qbAuthUrl.toString())
-  
-  return NextResponse.redirect(qbAuthUrl.toString())
+  return POST(request)
 }
