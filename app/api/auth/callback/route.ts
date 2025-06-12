@@ -33,8 +33,19 @@ export async function GET(request: NextRequest) {
     // Exchange authorization code for access token
     console.log('Exchanging code for tokens...', {
       clientId: clientId.substring(0, 10) + '...',
+      clientSecret: clientSecret.substring(0, 10) + '...',
       redirectUri,
-      codeLength: code.length
+      codeLength: code.length,
+      realmId
+    })
+    
+    const authString = `${clientId}:${clientSecret}`
+    const authHeader = `Basic ${Buffer.from(authString).toString('base64')}`
+    
+    console.log('Auth details:', {
+      authStringLength: authString.length,
+      authHeaderLength: authHeader.length,
+      authHeaderPreview: authHeader.substring(0, 30) + '...'
     })
     
     const tokenRequestBody = new URLSearchParams({
@@ -45,8 +56,7 @@ export async function GET(request: NextRequest) {
 
     console.log('Token request details:', {
       url: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
-      body: tokenRequestBody.toString(),
-      authHeader: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64').substring(0, 20)}...`
+      bodyParams: Object.fromEntries(tokenRequestBody.entries())
     })
     
     const tokenResponse = await fetch('https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', {
@@ -54,7 +64,7 @@ export async function GET(request: NextRequest) {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`
+        'Authorization': authHeader
       },
       body: tokenRequestBody
     })
@@ -79,7 +89,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(errorUrl)
     }
 
-    const tokens = JSON.parse(responseText)
+    const tokens = await tokenResponse.json()
     console.log('Tokens received successfully:', {
       hasAccessToken: !!tokens.access_token,
       hasRefreshToken: !!tokens.refresh_token,
