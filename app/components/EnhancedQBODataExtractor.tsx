@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Download, FileText, RefreshCw, CheckCircle, AlertCircle, TrendingUp, DollarSign, Calendar, Users, Settings, Filter, Search, BarChart3, Database, Brain, Zap, Clock, Target } from 'lucide-react';
+import { Upload, Download, FileText, RefreshCw, CheckCircle, AlertTriangle, AlertCircle, TrendingUp, DollarSign, Calendar, Users, Settings, Filter, Search, BarChart3, Database, Brain, Zap, Clock, Target } from 'lucide-react';
 import { useToast } from './Toast';
 
 interface DataFile {

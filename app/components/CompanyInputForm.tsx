@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
-import { Building2, Mail, User, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
+import { Building2, Mail, User, AlertCircle, FileText, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react'
 
 interface FormData {
   name: string
