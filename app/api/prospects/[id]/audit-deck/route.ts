@@ -3,8 +3,9 @@ import { supabase } from '@/lib/supabaseClient'
 
 export async function GET(
   request: NextRequest, 
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { params } = context
   try {
     const prospectId = params.id
 
@@ -30,8 +31,9 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { params } = context
   try {
     const prospectId = params.id
     const { searchParams } = new URL(request.url)
