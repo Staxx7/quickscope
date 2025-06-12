@@ -1,69 +1,97 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '../../../../lib/supabaseClient'
+import { supabase } from '@/lib/supabaseClient'
+import { qbService } from '@/lib/quickbooksService'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const companyId = searchParams.get('companyId')
-    const accessToken = searchParams.get('accessToken')
-    
-    if (!companyId || !accessToken) {
-      return NextResponse.json({ 
-        error: 'Company ID and access token required' 
-      }, { status: 400 })
+
+    if (!companyId) {
+      return NextResponse.json(
+        { error: 'Company ID is required' },
+        { status: 400 }
+      )
     }
 
-    const baseUrl = process.env.QB_SANDBOX_BASE_URL || 'https://sandbox-quickbooks.api.intuit.com'
+    console.log('Fetching company info for:', companyId)
+
+    // Get QB tokens from database
+    const { data: tokenData, error: tokenError } = await supabase
+      .from('qbo_tokens')
+      .select('*')
+      .eq('company_id', companyId)
+      .single()
+
+    if (tokenError || !tokenData) {
+      console.error('No QB tokens found for company:', companyId, tokenError)
+      return NextResponse.json(
+        { error: 'QuickBooks connection not found. Please reconnect your QuickBooks account.' },
+        { status: 404 }
+      )
+    }
+
+    // Check if token is expired
+    const now = new Date()
+    const expiresAt = new Date(tokenData.expires_at)
     
-    // Fetch company information from QuickBooks API
-    const response = await fetch(
-      `${baseUrl}/v3/company/${companyId}/companyinfo/${companyId}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Accept': 'application/json',
-        },
+    let accessToken = tokenData.access_token
+    let refreshToken = tokenData.refresh_token
+
+    if (now >= expiresAt) {
+      console.log('Token expired, refreshing...')
+      
+      const refreshResult = await qbService.refreshToken(refreshToken)
+      if (!refreshResult) {
+        return NextResponse.json(
+          { error: 'Unable to refresh QuickBooks token. Please reconnect your account.' },
+          { status: 401 }
+        )
       }
-    )
 
-    if (!response.ok) {
-      throw new Error(`QB API Error: ${response.status}`)
+      // Update tokens in database
+      const newExpiresAt = new Date(now.getTime() + refreshResult.expiresIn * 1000)
+      
+      await supabase
+        .from('qbo_tokens')
+        .update({
+          access_token: refreshResult.accessToken,
+          refresh_token: refreshResult.refreshToken,
+          expires_at: newExpiresAt.toISOString(),
+          updated_at: now.toISOString()
+        })
+        .eq('company_id', companyId)
+
+      accessToken = refreshResult.accessToken
+      refreshToken = refreshResult.refreshToken
     }
 
-    const data = await response.json()
-    const companyInfo = data.QueryResponse?.CompanyInfo?.[0]
-
-    if (!companyInfo) {
-      throw new Error('No company information found')
+    // Fetch company info from QuickBooks
+    const credentials = {
+      accessToken,
+      refreshToken,
+      companyId,
+      expiresAt: new Date(tokenData.expires_at)
     }
 
-    // Transform to our format
-    const transformedData = {
-      companyName: companyInfo.CompanyName || 'Unknown Company',
-      legalName: companyInfo.LegalName || companyInfo.CompanyName,
-      address: {
-        line1: companyInfo.CompanyAddr?.Line1 || '',
-        city: companyInfo.CompanyAddr?.City || '',
-        state: companyInfo.CompanyAddr?.CountrySubDivisionCode || '',
-        postalCode: companyInfo.CompanyAddr?.PostalCode || '',
-        country: companyInfo.CompanyAddr?.Country || 'US'
-      },
-      phone: companyInfo.PrimaryPhone?.FreeFormNumber || '',
-      email: companyInfo.Email?.Address || '',
-      website: companyInfo.WebAddr?.URI || '',
-      fiscalYearStart: companyInfo.FiscalYearStartMonth || 1,
-      industry: companyInfo.NameValue?.find((nv: { Name: string; Value: string }) => nv.Name === 'QBOIndustryType')?.Value || 'Other',
-      employeeCount: companyInfo.EmployeeCount || 0,
-      taxId: companyInfo.EIN || '',
-      lastUpdated: new Date().toISOString()
+    const result = await qbService.getCompanyInfo(credentials)
+
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error || 'Failed to fetch company information' },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json(transformedData)
-    
+    return NextResponse.json({
+      success: true,
+      company: result.data
+    })
+
   } catch (error) {
-    console.error('Error fetching company info:', error)
+    console.error('Error in company-info API:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch company information' }, 
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
