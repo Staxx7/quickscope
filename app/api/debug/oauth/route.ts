@@ -36,6 +36,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Overall status
+    const allGood = !!(clientId && clientSecret && redirectUri && baseUrl && 
+                      redirectUri === `${baseUrl}/api/auth/callback`)
+    
+    const statusInfo = {
+      readyForOAuth: allGood,
+      issues: allGood ? [] : [
+        !clientId && 'Missing QUICKBOOKS_CLIENT_ID',
+        !clientSecret && 'Missing QUICKBOOKS_CLIENT_SECRET', 
+        !redirectUri && 'Missing QUICKBOOKS_REDIRECT_URI',
+        !baseUrl && 'Missing NEXT_PUBLIC_BASE_URL',
+        redirectUri !== `${baseUrl}/api/auth/callback` && 'Redirect URI mismatch'
+      ].filter(Boolean)
+    }
+
     const debugInfo = {
       timestamp: new Date().toISOString(),
       environment: {
@@ -65,26 +80,9 @@ export async function GET(request: NextRequest) {
         configuredRedirectUri: redirectUri,
         authUrl: clientId ? `https://appcenter.intuit.com/connect/oauth2?client_id=${clientId}&scope=${encodeURIComponent(scope || 'com.intuit.quickbooks.accounting')}&redirect_uri=${encodeURIComponent(redirectUri || '')}&response_type=code&access_type=offline&state=debug123` : 'Cannot generate - missing client ID'
       },
-      auth: authInfo
+      auth: authInfo,
+      status: statusInfo
     }
-
-    // Overall status
-    const allGood = !!(clientId && clientSecret && redirectUri && baseUrl && 
-                      redirectUri === `${baseUrl}/api/auth/callback`)
-    
-    const statusInfo = {
-      readyForOAuth: allGood,
-      issues: allGood ? [] : [
-        !clientId && 'Missing QUICKBOOKS_CLIENT_ID',
-        !clientSecret && 'Missing QUICKBOOKS_CLIENT_SECRET', 
-        !redirectUri && 'Missing QUICKBOOKS_REDIRECT_URI',
-        !baseUrl && 'Missing NEXT_PUBLIC_BASE_URL',
-        redirectUri !== `${baseUrl}/api/auth/callback` && 'Redirect URI mismatch'
-      ].filter(Boolean)
-    }
-
-    // Add status to debugInfo
-    debugInfo.status = statusInfo
 
     return NextResponse.json(debugInfo, { 
       status: 200,
