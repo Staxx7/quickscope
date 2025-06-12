@@ -1,27 +1,31 @@
-// app/api/stripe/create-checkout/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-
-// Import Stripe constructor (not default export)
-import { Stripe } from 'stripe'
+import Stripe from 'stripe'
 
 export async function POST(request: NextRequest) {
   try {
-    const { priceId, customerEmail, customerName } = await request.json()
-    
+    const body = await request.json()
+    const { priceId, successUrl, cancelUrl } = body
+
+    if (!priceId) {
+      return NextResponse.json(
+        { error: 'Price ID is required' },
+        { status: 400 }
+      )
+    }
+
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY
-    
     if (!stripeSecretKey) {
       return NextResponse.json(
-        { error: 'Stripe secret key not configured' },
+        { error: 'Stripe configuration missing' },
         { status: 500 }
       )
     }
 
-    // Initialize Stripe with proper constructor
+    // Initialize Stripe with proper constructor and valid API version
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2025-05-28.basil'
+      apiVersion: '2023-10-16'
     })
-    
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -31,23 +35,23 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: 'subscription',
-      customer_email: customerEmail,
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/pricing`,
-      metadata: {
-        customer_name: customerName || '',
-      },
+      success_url: successUrl || `${process.env.NEXT_PUBLIC_APP_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL}/pricing`,
+      allow_promotion_codes: true,
       subscription_data: {
-        trial_period_days: 14, // 14-day free trial
+        trial_period_days: 14,
       },
     })
 
-    return NextResponse.json({ sessionId: session.id })
-    
+    return NextResponse.json({ url: session.url })
+
   } catch (error) {
-    console.error('Stripe checkout error:', error)
+    console.error('Error creating checkout session:', error)
     return NextResponse.json(
-      { error: 'Failed to create checkout session' },
+      { 
+        error: 'Failed to create checkout session',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
