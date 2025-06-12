@@ -31,7 +31,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Exchange authorization code for access token
-    console.log('Exchanging code for tokens...')
+    console.log('Exchanging code for tokens...', {
+      clientId: clientId.substring(0, 10) + '...',
+      redirectUri,
+      codeLength: code.length
+    })
+    
+    const tokenRequestBody = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: redirectUri
+    })
+
+    console.log('Token request details:', {
+      url: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
+      body: tokenRequestBody.toString(),
+      authHeader: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64').substring(0, 20)}...`
+    })
     
     const tokenResponse = await fetch('https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', {
       method: 'POST',
@@ -40,24 +56,30 @@ export async function GET(request: NextRequest) {
         'Accept': 'application/json',
         'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`
       },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: redirectUri
-      })
+      body: tokenRequestBody
+    })
+
+    const responseText = await tokenResponse.text()
+    console.log('Token response:', {
+      status: tokenResponse.status,
+      statusText: tokenResponse.statusText,
+      headers: Object.fromEntries(tokenResponse.headers.entries()),
+      body: responseText
     })
 
     if (!tokenResponse.ok) {
-      const errorText = await tokenResponse.text()
-      console.error('Token exchange failed:', {
-        status: tokenResponse.status,
-        statusText: tokenResponse.statusText,
-        error: errorText
-      })
-      return NextResponse.redirect(new URL('/connect?error=token_exchange_failed', request.url))
+      console.error('Token exchange failed with detailed response')
+      
+      // Create detailed error URL
+      const errorUrl = new URL('/connect', request.url)
+      errorUrl.searchParams.set('error', 'token_exchange_failed')
+      errorUrl.searchParams.set('status', tokenResponse.status.toString())
+      errorUrl.searchParams.set('details', responseText.substring(0, 200))
+      
+      return NextResponse.redirect(errorUrl)
     }
 
-    const tokens = await tokenResponse.json()
+    const tokens = JSON.parse(responseText)
     console.log('Tokens received successfully:', {
       hasAccessToken: !!tokens.access_token,
       hasRefreshToken: !!tokens.refresh_token,
