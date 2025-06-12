@@ -1,201 +1,275 @@
-'use client';
+// app/connect/page.tsx - QB Compliant Version
+'use client'
 
-import React, { useState } from 'react';
-import { Shield, Zap, Users, Building2, ArrowRight, CheckCircle, Clock, Target, BarChart3 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function ConnectPage() {
-  const [isConnecting, setIsConnecting] = useState(false);
-  const router = useRouter();
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    company: '',
+    phone: ''
+  })
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [isConnected, setIsConnected] = useState(false)
+  const [companyInfo, setCompanyInfo] = useState(null)
+  const router = useRouter()
+  const searchParams = useSearchParams()
 
-  const handleQuickBooksConnect = async () => {
-    setIsConnecting(true);
-    
+  // Check if user is already connected
+  useEffect(() => {
+    checkConnectionStatus()
+  }, [])
+
+  const checkConnectionStatus = async () => {
     try {
-      // For demo purposes, we'll redirect to success page after a short delay
-      setTimeout(() => {
-        router.push('/success?company=Demo%20Company');
-      }, 2000);
-      
+      // Check if user has active QB connection
+      const response = await fetch('/api/qbo/connection-status')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.connected) {
+          setIsConnected(true)
+          setCompanyInfo(data.company)
+        }
+      }
     } catch (error) {
-      console.error('Connection error:', error);
-      setIsConnecting(false);
+      console.log('No existing connection found')
     }
-  };
+  }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
-      <div className="max-w-4xl w-full">
-        
-        {/* Header Section */}
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-xl">
-              <Building2 className="w-8 h-8 text-white" />
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError('')
+
+    try {
+      console.log('Calling OAuth API directly...')
+      window.location.href = '/api/auth/login'
+    } catch (err) {
+      console.error('Form submission error:', err)
+      setError(err instanceof Error ? err.message : 'Connection failed')
+      setIsLoading(false)
+    }
+  }
+
+  const handleDisconnect = async () => {
+    try {
+      const response = await fetch('/api/auth/disconnect', { method: 'POST' })
+      if (response.ok) {
+        setIsConnected(false)
+        setCompanyInfo(null)
+      }
+    } catch (error) {
+      setError('Failed to disconnect')
+    }
+  }
+
+  // Show connected state - HIDE connect button per QB requirement
+  if (isConnected) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900">
+        <div className="container mx-auto px-4 py-12">
+          <div className="max-w-2xl mx-auto">
+            
+            <div className="text-center mb-12">
+              <h1 className="text-4xl font-bold text-white mb-4">
+                QuickBooks Connected! ✅
+              </h1>
+              <p className="text-xl text-slate-300">
+                Your QuickBooks account is successfully connected
+              </p>
             </div>
-          </div>
-          
-          <h1 className="text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
-            QUICKSCOPE
-          </h1>
-          <p className="text-xl text-gray-300 mb-8 font-medium">by STAXX</p>
-          
-          <h2 className="text-3xl lg:text-4xl font-medium text-white mb-6">
-            Connect Your QuickBooks
-          </h2>
-          
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-12 leading-relaxed">
-            Enter your details to begin comprehensive financial analysis. Our team of CFOs will analyze your 
-            financial data, and compile insights, findings, and opportunities to present to you on your scheduled Audit Call.
-          </p>
-        </div>
 
-        {/* Main Connection Card */}
-        <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-12 mb-12">
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <CheckCircle className="w-10 h-10 text-white" />
-            </div>
-            <h3 className="text-2xl font-bold text-white mb-4">Ready to Connect?</h3>
-            <p className="text-gray-300 text-lg max-w-xl mx-auto">
-              Connect your QuickBooks account to get started with your comprehensive financial analysis
-            </p>
-          </div>
-
-          {/* Security Badge */}
-          <div className="mb-8 p-6 bg-blue-500/10 border border-blue-500/20 rounded-2xl">
-            <div className="flex items-center justify-center">
-              <Shield className="w-6 h-6 text-blue-400 mr-3" />
-              <div className="text-center">
-                <div className="text-blue-200 font-medium text-lg">Secure QuickBooks OAuth Connection</div>
-                <div className="text-blue-300">
-                  Your data is encrypted and never stored on our servers
+            <div className="bg-white rounded-lg shadow-xl p-8">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
                 </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Connection Active</h2>
+                {companyInfo && (
+                  <p className="text-gray-600">Connected to: {companyInfo.name}</p>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <button
+                  onClick={() => router.push('/admin/dashboard')}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg transition-colors"
+                >
+                  🚀 Go to Dashboard
+                </button>
+                
+                <button
+                  onClick={handleDisconnect}
+                  className="w-full bg-red-100 hover:bg-red-200 text-red-800 font-semibold py-3 px-6 rounded-lg transition-colors"
+                >
+                  🔌 Disconnect QuickBooks
+                </button>
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    )
+  }
 
-          {/* Connect Button */}
-          <div className="text-center">
-            <button
-              onClick={handleQuickBooksConnect}
-              disabled={isConnecting}
-              className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white py-5 px-12 rounded-2xl font-bold text-xl transition-all duration-200 flex items-center justify-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed mx-auto shadow-xl hover:shadow-2xl hover:scale-105 transform"
-            >
-              {isConnecting ? (
-                <>
-                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Connecting to QuickBooks...</span>
-                </>
-              ) : (
-                <>
-                  <span>Connect QuickBooks Account</span>
-                  <ArrowRight className="w-6 h-6" />
-                </>
-              )}
-            </button>
+  // Show error state if connection failed
+  if (searchParams.get('error')) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900">
+        <div className="container mx-auto px-4 py-12">
+          <div className="max-w-2xl mx-auto">
+            
+            <div className="text-center mb-12">
+              <h1 className="text-4xl font-bold text-white mb-4">
+                Connection Failed
+              </h1>
+              <p className="text-xl text-slate-300">
+                There was an issue connecting your QuickBooks account
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-xl p-8">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Connection Error</h2>
+                <p className="text-red-600 mb-4">
+                  Error: {searchParams.get('error')}
+                </p>
+              </div>
+
+              <button
+                onClick={() => window.location.href = '/connect'}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg transition-colors"
+              >
+                🔄 Try Again
+              </button>
+            </div>
           </div>
         </div>
+      </div>
+    )
+  }
 
-        {/* Process Steps */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-          <div className="text-center p-6 hover:bg-white/5 rounded-2xl transition-all duration-300">
-            <div className="w-16 h-16 mx-auto mb-6 bg-blue-500/20 border border-blue-500/30 rounded-2xl flex items-center justify-center">
-              <Shield className="w-8 h-8 text-blue-400" />
-            </div>
-            <h3 className="font-bold text-white mb-3 text-xl">Secure Connection</h3>
-            <p className="text-gray-300">
-              Safe OAuth integration with your QuickBooks Account using bank-level security
-            </p>
-          </div>
-
-          <div className="text-center p-6 hover:bg-white/5 rounded-2xl transition-all duration-300">
-            <div className="w-16 h-16 mx-auto mb-6 bg-green-500/20 border border-green-500/30 rounded-2xl flex items-center justify-center">
-              <Zap className="w-8 h-8 text-green-400" />
-            </div>
-            <h3 className="font-bold text-white mb-3 text-xl">CFO Level Analysis</h3>
-            <p className="text-gray-300">
-              Deep analysis of your financial data by one of our experienced CFOs
-            </p>
-          </div>
-
-          <div className="text-center p-6 hover:bg-white/5 rounded-2xl transition-all duration-300">
-            <div className="w-16 h-16 mx-auto mb-6 bg-purple-500/20 border border-purple-500/30 rounded-2xl flex items-center justify-center">
-              <Users className="w-8 h-8 text-purple-400" />
-            </div>
-            <h3 className="font-bold text-white mb-3 text-xl">Audit Deck Creation</h3>
-            <p className="text-gray-300">
-              We will generate and present this on your scheduled audit call
-            </p>
-          </div>
-        </div>
-
-        {/* What Happens Next */}
-        <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-10">
-          <h2 className="text-2xl font-bold text-white mb-8 text-center">What Happens Next?</h2>
+  // Show connect form - ONLY when not connected per QB requirement
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900">
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-2xl mx-auto">
           
-          <div className="space-y-6">
-            <div className="flex items-start space-x-6">
-              <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                1
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-xl mb-2">Data Analysis Begins</h3>
-                <p className="text-gray-300 text-lg">
-                  Our team will start analyzing your QuickBooks data to identify key insights and opportunities.
-                </p>
-              </div>
-            </div>
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold text-white mb-4">
+              Connect Your QuickBooks
+            </h1>
+            <p className="text-xl text-slate-300">
+              Securely connect your QuickBooks Online account to get started with your financial analysis
+            </p>
+          </div>
 
-            <div className="flex items-start space-x-6">
-              <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                2
+          <div className="bg-white rounded-lg shadow-xl p-8">
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-800">{error}</p>
               </div>
-              <div>
-                <h3 className="text-white font-bold text-xl mb-2">Report Preparation</h3>
-                <p className="text-gray-300 text-lg">
-                  We'll prepare comprehensive financial reports and AI-driven insights tailored to your business.
-                </p>
-              </div>
-            </div>
+            )}
 
-            <div className="flex items-start space-x-6">
-              <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                3
-              </div>
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <h3 className="text-white font-bold text-xl mb-2">Results Delivery</h3>
-                <p className="text-gray-300 text-lg">
-                  You'll receive detailed analysis and recommendations to optimize your financial performance.
-                </p>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter your full name"
+                />
               </div>
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter your email address"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-2">
+                  Company Name *
+                </label>
+                <input
+                  type="text"
+                  id="company"
+                  required
+                  value={formData.company}
+                  onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter your company name"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter your phone number (optional)"
+                />
+              </div>
+
+              {/* QB-COMPLIANT CONNECT BUTTON - Use official QuickBooks button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Connecting...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🔗</span>
+                    <span>Connect to QuickBooks</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-500">
+                Your QuickBooks data is secured with bank-level encryption. 
+                We only access the financial data needed for your analysis.
+              </p>
             </div>
           </div>
-        </div>
-
-        {/* Footer Security Notes */}
-        <div className="text-center mt-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="flex items-center justify-center space-x-2 text-gray-300">
-              <CheckCircle className="w-5 h-5 text-green-400" />
-              <span>256-bit SSL encryption</span>
-            </div>
-            <div className="flex items-center justify-center space-x-2 text-gray-300">
-              <CheckCircle className="w-5 h-5 text-green-400" />
-              <span>Read-only access</span>
-            </div>
-            <div className="flex items-center justify-center space-x-2 text-gray-300">
-              <CheckCircle className="w-5 h-5 text-green-400" />
-              <span>Revoke access anytime</span>
-            </div>
-          </div>
-          
-          <p className="text-gray-400 text-sm max-w-2xl mx-auto">
-            By connecting, you agree to our secure data handling practices. 
-            Your financial data remains private and secure.
-          </p>
         </div>
       </div>
     </div>
-  );
+  )
 }
