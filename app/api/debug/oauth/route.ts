@@ -10,6 +10,32 @@ export async function GET(request: NextRequest) {
     const qbBaseUrl = process.env.QUICKBOOKS_BASE_URL
     const scope = process.env.QUICKBOOKS_SCOPE
 
+    // Test Basic Auth creation first
+    let authInfo
+    if (clientId && clientSecret) {
+      try {
+        const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+        authInfo = {
+          basicAuthCreated: true,
+          basicAuthPreview: `Basic ${basicAuth.substring(0, 30)}...`,
+          basicAuthLength: basicAuth.length,
+          canCreateAuth: true
+        }
+      } catch (error) {
+        authInfo = {
+          basicAuthCreated: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          canCreateAuth: false
+        }
+      }
+    } else {
+      authInfo = {
+        basicAuthCreated: false,
+        error: 'Missing client ID or secret',
+        canCreateAuth: false
+      }
+    }
+
     const debugInfo = {
       timestamp: new Date().toISOString(),
       environment: {
@@ -38,39 +64,15 @@ export async function GET(request: NextRequest) {
         expectedRedirectUri: `${baseUrl}/api/auth/callback`,
         configuredRedirectUri: redirectUri,
         authUrl: clientId ? `https://appcenter.intuit.com/connect/oauth2?client_id=${clientId}&scope=${encodeURIComponent(scope || 'com.intuit.quickbooks.accounting')}&redirect_uri=${encodeURIComponent(redirectUri || '')}&response_type=code&access_type=offline&state=debug123` : 'Cannot generate - missing client ID'
-      }
-    }
-
-    // Test Basic Auth creation
-    if (clientId && clientSecret) {
-      try {
-        const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
-        debugInfo.auth = {
-          basicAuthCreated: true,
-          basicAuthPreview: `Basic ${basicAuth.substring(0, 30)}...`,
-          basicAuthLength: basicAuth.length,
-          canCreateAuth: true
-        }
-      } catch (error) {
-        debugInfo.auth = {
-          basicAuthCreated: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-          canCreateAuth: false
-        }
-      }
-    } else {
-      debugInfo.auth = {
-        basicAuthCreated: false,
-        error: 'Missing client ID or secret',
-        canCreateAuth: false
-      }
+      },
+      auth: authInfo
     }
 
     // Overall status
     const allGood = !!(clientId && clientSecret && redirectUri && baseUrl && 
                       redirectUri === `${baseUrl}/api/auth/callback`)
     
-    debugInfo.status = {
+    const statusInfo = {
       readyForOAuth: allGood,
       issues: allGood ? [] : [
         !clientId && 'Missing QUICKBOOKS_CLIENT_ID',
@@ -80,6 +82,9 @@ export async function GET(request: NextRequest) {
         redirectUri !== `${baseUrl}/api/auth/callback` && 'Redirect URI mismatch'
       ].filter(Boolean)
     }
+
+    // Add status to debugInfo
+    debugInfo.status = statusInfo
 
     return NextResponse.json(debugInfo, { 
       status: 200,
