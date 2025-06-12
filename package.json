@@ -15,10 +15,8 @@
     "@types/react-dom": "^18",
     "eslint": "^8",
     "eslint-config-next": "15.3.3",
-    "intuit-oauth": "^4.0.6",
     "lucide-react": "^0.263.1",
     "next": "15.3.3",
-    "node-intuit-oauth": "^2.1.2",
     "react": "^18",
     "react-dom": "^18",
     "typescript": "^5"
