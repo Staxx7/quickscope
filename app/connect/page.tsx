@@ -1,8 +1,13 @@
-// app/connect/page.tsx - QB Compliant Version
+// app/connect/page.tsx - Fixed TypeScript errors
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+
+interface CompanyInfo {
+  name: string
+  id?: string
+}
 
 export default function ConnectPage() {
   const [formData, setFormData] = useState({
@@ -14,7 +19,7 @@ export default function ConnectPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [isConnected, setIsConnected] = useState(false)
-  const [companyInfo, setCompanyInfo] = useState(null)
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
 
