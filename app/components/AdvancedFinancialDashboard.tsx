@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, PieChart, AlertTriangle, CheckCircle, Brain, Zap, Target, Shield, BarChart3, Users, Calendar, ArrowUp, ArrowDown, Minus, Eye, Download, RefreshCw } from 'lucide-react';
+import { TrendingUp, FileText, TrendingDown, DollarSign, PieChart, AlertTriangle, CheckCircle, Brain, Zap, Target, Shield, BarChart3, Users, Calendar, ArrowUp, ArrowDown, Minus, Eye, Download, RefreshCw } from 'lucide-react';
 import { useToast } from './Toast';
 
 interface FinancialMetrics {
