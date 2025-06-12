@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { Download, FileText, TrendingUp, AlertTriangle, Target, CheckCircle, BarChart3, PieChart, DollarSign, Activity, Users, Calendar, ArrowUp, ArrowDown, Minus, Brain, Zap, Eye, Presentation, Star, Clock, Shield } from 'lucide-react'
+import { Download, FileText, TrendingUp, TrendingDown, AlertTriangle, Target, CheckCircle, BarChart3, PieChart, DollarSign, Activity, Users, Calendar, ArrowUp, ArrowDown, Minus, Brain, Zap, Eye, Presentation, Star, Clock, Shield } from 'lucide-react'
 import { useToast } from './Toast'
 
 interface CallInsights {
