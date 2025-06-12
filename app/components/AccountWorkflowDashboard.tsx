@@ -243,183 +243,185 @@ const AccountWorkflowDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Workflow Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <div className="bg-white/10 rounded-xl p-4 border border-white/20">
-          <div className="flex items-center justify-between mb-2">
-            <Building2 className="w-8 h-8 text-cyan-400" />
-            <span className="text-2xl font-bold text-white">{workflowStats.totalAccounts}</span>
+    <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900">
+      <div className="space-y-8 p-6">
+        {/* Workflow Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="bg-white/10 rounded-xl p-4 border border-white/20">
+            <div className="flex items-center justify-between mb-2">
+              <Building2 className="w-8 h-8 text-cyan-400" />
+              <span className="text-2xl font-bold text-white">{workflowStats.totalAccounts}</span>
+            </div>
+            <p className="text-gray-300 text-sm">Total Accounts</p>
+            <p className="text-cyan-400 text-xs">Connected QuickBooks</p>
           </div>
-          <p className="text-gray-300 text-sm">Total Accounts</p>
-          <p className="text-cyan-400 text-xs">Connected QuickBooks</p>
+
+          <div className="bg-white/10 rounded-xl p-4 border border-white/20">
+            <div className="flex items-center justify-between mb-2">
+              <Upload className="w-8 h-8 text-yellow-400" />
+              <span className="text-2xl font-bold text-white">{workflowStats.readyForTranscripts}</span>
+            </div>
+            <p className="text-gray-300 text-sm">Ready for Transcripts</p>
+            <p className="text-yellow-400 text-xs">Need call uploads</p>
+          </div>
+
+          <div className="bg-white/10 rounded-xl p-4 border border-white/20">
+            <div className="flex items-center justify-between mb-2">
+              <FileText className="w-8 h-8 text-blue-400" />
+              <span className="text-2xl font-bold text-white">{workflowStats.readyForAudit}</span>
+            </div>
+            <p className="text-gray-300 text-sm">Ready for Audit</p>
+            <p className="text-blue-400 text-xs">Can generate decks</p>
+          </div>
+
+          <div className="bg-white/10 rounded-xl p-4 border border-white/20">
+            <div className="flex items-center justify-between mb-2">
+              <CheckCircle className="w-8 h-8 text-green-400" />
+              <span className="text-2xl font-bold text-white">{workflowStats.completed}</span>
+            </div>
+            <p className="text-gray-300 text-sm">Completed</p>
+            <p className="text-green-400 text-xs">Audit decks ready</p>
+          </div>
         </div>
 
-        <div className="bg-white/10 rounded-xl p-4 border border-white/20">
-          <div className="flex items-center justify-between mb-2">
-            <Upload className="w-8 h-8 text-yellow-400" />
-            <span className="text-2xl font-bold text-white">{workflowStats.readyForTranscripts}</span>
+        {/* Search and Filters */}
+        <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search accounts, contacts, industries..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/25 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
+              />
+            </div>
+            
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-4 py-3 bg-white/10 border border-white/25 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            >
+              <option value="all">All Stages</option>
+              <option value="pending">Pending</option>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+            </select>
           </div>
-          <p className="text-gray-300 text-sm">Ready for Transcripts</p>
-          <p className="text-yellow-400 text-xs">Need call uploads</p>
         </div>
 
-        <div className="bg-white/10 rounded-xl p-4 border border-white/20">
-          <div className="flex items-center justify-between mb-2">
-            <FileText className="w-8 h-8 text-blue-400" />
-            <span className="text-2xl font-bold text-white">{workflowStats.readyForAudit}</span>
-          </div>
-          <p className="text-gray-300 text-sm">Ready for Audit</p>
-          <p className="text-blue-400 text-xs">Can generate decks</p>
-        </div>
-
-        <div className="bg-white/10 rounded-xl p-4 border border-white/20">
-          <div className="flex items-center justify-between mb-2">
-            <CheckCircle className="w-8 h-8 text-green-400" />
-            <span className="text-2xl font-bold text-white">{workflowStats.completed}</span>
-          </div>
-          <p className="text-gray-300 text-sm">Completed</p>
-          <p className="text-green-400 text-xs">Audit decks ready</p>
-        </div>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search accounts, contacts, industries..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/25 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
-            />
-          </div>
-          
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-3 bg-white/10 border border-white/25 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
-          >
-            <option value="all">All Stages</option>
-            <option value="pending">Pending</option>
-            <option value="active">Active</option>
-            <option value="completed">Completed</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Connected Accounts Table */}
-      <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 overflow-hidden">
-        <div className="p-6 border-b border-white/20">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white">Connected Accounts ({filteredAccounts.length})</h2>
-            <div className="flex items-center space-x-2">
-              <button className="p-2 text-gray-400 hover:text-white transition-colors">
-                <RefreshCw className="w-4 h-4" />
-              </button>
+        {/* Connected Accounts Table */}
+        <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 overflow-hidden">
+          <div className="p-6 border-b border-white/20">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Connected Accounts ({filteredAccounts.length})</h2>
+              <div className="flex items-center space-x-2">
+                <button className="p-2 text-gray-400 hover:text-white transition-colors">
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-white/5">
-              <tr>
-                <th className="text-left py-4 px-6 text-gray-300 font-medium">Account</th>
-                <th className="text-left py-4 px-6 text-gray-300 font-medium">Workflow Progress</th>
-                <th className="text-left py-4 px-6 text-gray-300 font-medium">Financial Snapshot</th>
-                <th className="text-left py-4 px-6 text-gray-300 font-medium">Next Step</th>
-                <th className="text-left py-4 px-6 text-gray-300 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAccounts.map((account) => {
-                const progressPercent = getWorkflowProgress(account.workflowProgress);
-                const currentStep = getWorkflowStep(account.workflowProgress);
-                
-                return (
-                  <tr key={account.id} className="border-b border-white/10 hover:bg-white/5 transition-colors">
-                    <td className="py-4 px-6">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center">
-                          <Building2 className="w-5 h-5 text-white" />
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-white/5">
+                <tr>
+                  <th className="text-left py-4 px-6 text-gray-300 font-medium">Account</th>
+                  <th className="text-left py-4 px-6 text-gray-300 font-medium">Workflow Progress</th>
+                  <th className="text-left py-4 px-6 text-gray-300 font-medium">Financial Snapshot</th>
+                  <th className="text-left py-4 px-6 text-gray-300 font-medium">Next Step</th>
+                  <th className="text-left py-4 px-6 text-gray-300 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAccounts.map((account) => {
+                  const progressPercent = getWorkflowProgress(account.workflowProgress);
+                  const currentStep = getWorkflowStep(account.workflowProgress);
+                  
+                  return (
+                    <tr key={account.id} className="border-b border-white/10 hover:bg-white/5 transition-colors">
+                      <td className="py-4 px-6">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center">
+                            <Building2 className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <div className="text-white font-medium">{account.companyName}</div>
+                            <div className="text-gray-400 text-sm">{account.contactName}</div>
+                            <div className="text-gray-500 text-xs">Connected {account.connectedDate}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-white font-medium">{account.companyName}</div>
-                          <div className="text-gray-400 text-sm">{account.contactName}</div>
-                          <div className="text-gray-500 text-xs">Connected {account.connectedDate}</div>
-                        </div>
-                      </div>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-300 text-sm">Step {currentStep.step}/{currentStep.total}</span>
-                          <span className={`px-2 py-1 rounded-full text-xs border ${getStatusColor(account.status)}`}>
-                            {account.status}
-                          </span>
-                        </div>
-                        <div className="w-full bg-white/10 rounded-full h-2">
-                          <div 
-                            className="bg-gradient-to-r from-cyan-500 to-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${progressPercent}%` }}
-                          />
-                        </div>
-                        <div className="grid grid-cols-5 gap-1 mt-2">
-                          <div className={`w-2 h-2 rounded-full ${account.workflowProgress.connected ? 'bg-green-400' : 'bg-gray-600'}`} title="Connected" />
-                          <div className={`w-2 h-2 rounded-full ${account.workflowProgress.transcriptUploaded ? 'bg-green-400' : 'bg-gray-600'}`} title="Transcript Uploaded" />
-                          <div className={`w-2 h-2 rounded-full ${account.workflowProgress.dataExtracted ? 'bg-green-400' : 'bg-gray-600'}`} title="Data Extracted" />
-                          <div className={`w-2 h-2 rounded-full ${account.workflowProgress.analysisComplete ? 'bg-green-400' : 'bg-gray-600'}`} title="Analysis Complete" />
-                          <div className={`w-2 h-2 rounded-full ${account.workflowProgress.auditDeckReady ? 'bg-green-400' : 'bg-gray-600'}`} title="Audit Deck Ready" />
-                        </div>
-                      </div>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <div className="space-y-1">
-                        <div className="text-white font-medium">Revenue: {account.financialSnapshot.revenue}</div>
-                        <div className="text-gray-300 text-sm">Net: {account.financialSnapshot.netIncome}</div>
-                        <div className="text-gray-500 text-xs">Last sync: {account.lastSync}</div>
-                      </div>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <div className="space-y-2">
-                        <div className="text-white text-sm">{account.nextStep}</div>
-                        <div className="flex items-center space-x-2">
-                          <span className={`px-2 py-1 rounded-full text-xs border ${getPriorityColor(account.priority)}`}>
-                            {account.priority} priority
-                          </span>
-                          {account.transcriptCount > 0 && (
-                            <span className="text-cyan-400 text-xs">
-                              {account.transcriptCount} transcripts
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-300 text-sm">Step {currentStep.step}/{currentStep.total}</span>
+                            <span className={`px-2 py-1 rounded-full text-xs border ${getStatusColor(account.status)}`}>
+                              {account.status}
                             </span>
-                          )}
+                          </div>
+                          <div className="w-full bg-white/10 rounded-full h-2">
+                            <div 
+                              className="bg-gradient-to-r from-cyan-500 to-blue-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${progressPercent}%` }}
+                            />
+                          </div>
+                          <div className="grid grid-cols-5 gap-1 mt-2">
+                            <div className={`w-2 h-2 rounded-full ${account.workflowProgress.connected ? 'bg-green-400' : 'bg-gray-600'}`} title="Connected" />
+                            <div className={`w-2 h-2 rounded-full ${account.workflowProgress.transcriptUploaded ? 'bg-green-400' : 'bg-gray-600'}`} title="Transcript Uploaded" />
+                            <div className={`w-2 h-2 rounded-full ${account.workflowProgress.dataExtracted ? 'bg-green-400' : 'bg-gray-600'}`} title="Data Extracted" />
+                            <div className={`w-2 h-2 rounded-full ${account.workflowProgress.analysisComplete ? 'bg-green-400' : 'bg-gray-600'}`} title="Analysis Complete" />
+                            <div className={`w-2 h-2 rounded-full ${account.workflowProgress.auditDeckReady ? 'bg-green-400' : 'bg-gray-600'}`} title="Audit Deck Ready" />
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <div className="flex items-center space-x-2">
-                        <button className="p-2 text-gray-400 hover:text-white transition-colors" title="View Details">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-white transition-colors" title="Upload Transcript">
-                          <Upload className="w-4 h-4" />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-white transition-colors" title="Generate Report">
-                          <Download className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <div className="space-y-1">
+                          <div className="text-white font-medium">Revenue: {account.financialSnapshot.revenue}</div>
+                          <div className="text-gray-300 text-sm">Net: {account.financialSnapshot.netIncome}</div>
+                          <div className="text-gray-500 text-xs">Last sync: {account.lastSync}</div>
+                        </div>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <div className="space-y-2">
+                          <div className="text-white text-sm">{account.nextStep}</div>
+                          <div className="flex items-center space-x-2">
+                            <span className={`px-2 py-1 rounded-full text-xs border ${getPriorityColor(account.priority)}`}>
+                              {account.priority} priority
+                            </span>
+                            {account.transcriptCount > 0 && (
+                              <span className="text-cyan-400 text-xs">
+                                {account.transcriptCount} transcripts
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <div className="flex items-center space-x-2">
+                          <button className="p-2 text-gray-400 hover:text-white transition-colors" title="View Details">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button className="p-2 text-gray-400 hover:text-white transition-colors" title="Upload Transcript">
+                            <Upload className="w-4 h-4" />
+                          </button>
+                          <button className="p-2 text-gray-400 hover:text-white transition-colors" title="Generate Report">
+                            <Download className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
