@@ -1,10 +1,11 @@
-// app/success/page.tsx - Updated for Direct OAuth Model
+// app/success/page.tsx - Fixed with Suspense boundary
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 
-export default function SuccessPage() {
+// Component that uses useSearchParams
+function SuccessContent() {
   const searchParams = useSearchParams()
   const [companyName, setCompanyName] = useState('Your Company')
   
@@ -63,7 +64,7 @@ export default function SuccessPage() {
               
               <div className="bg-white bg-opacity-10 rounded-lg p-6">
                 <div className="text-3xl mb-3">📧</div>
-                <h3 className="text-lg font-semibient text-white mb-2">Stay Updated</h3>
+                <h3 className="text-lg font-semibold text-white mb-2">Stay Updated</h3>
                 <p className="text-slate-300 text-sm">We'll email you when new insights and reports are available.</p>
               </div>
             </div>
@@ -107,5 +108,26 @@ export default function SuccessPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Loading component for Suspense fallback
+function SuccessLoading() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+        <p className="text-white">Loading success page...</p>
+      </div>
+    </div>
+  )
+}
+
+// Main page component with Suspense boundary
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={<SuccessLoading />}>
+      <SuccessContent />
+    </Suspense>
   )
 }
