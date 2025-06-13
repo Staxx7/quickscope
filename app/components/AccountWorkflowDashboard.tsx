@@ -58,6 +58,13 @@ interface ProspectsResponse {
   error?: string
 }
 
+interface PredictiveAnalytics {
+  total_pipeline_value: number;
+  high_probability_deals: number;
+  urgent_follow_ups: number;
+  average_closeability: number;
+}
+
 export default function AIEnhancedAccountWorkflowDashboard() {
   const router = useRouter()
   const [prospects, setProspects] = useState<Prospect[]>([])
@@ -80,10 +87,19 @@ export default function AIEnhancedAccountWorkflowDashboard() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncingProspectId, setSyncingProspectId] = useState<string | null>(null)
   const [runningAIAnalysis, setRunningAIAnalysis] = useState<string | null>(null)
+  const [predictiveAnalytics, setPredictiveAnalytics] = useState<PredictiveAnalytics | null>(null)
 
   useEffect(() => {
     fetchProspects()
   }, [])
+
+  useEffect(() => {
+    fetch('/api/admin/prospects-with-ai')
+      .then(res => res.json())
+      .then(data => {
+        setPredictiveAnalytics(data.predictive_analytics);
+      });
+  }, []);
 
   const fetchProspects = async () => {
     try {
@@ -915,6 +931,27 @@ export default function AIEnhancedAccountWorkflowDashboard() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {predictiveAnalytics && (
+        <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="glassmorphic-card">
+            <h3>Pipeline Value</h3>
+            <p>${predictiveAnalytics.total_pipeline_value?.toLocaleString()}</p>
+          </div>
+          <div className="glassmorphic-card">
+            <h3>High Probability</h3>
+            <p>{predictiveAnalytics.high_probability_deals}</p>
+          </div>
+          <div className="glassmorphic-card">
+            <h3>Urgent Follow-ups</h3>
+            <p>{predictiveAnalytics.urgent_follow_ups}</p>
+          </div>
+          <div className="glassmorphic-card">
+            <h3>Avg Closeability</h3>
+            <p>{predictiveAnalytics.average_closeability}%</p>
           </div>
         </div>
       )}

@@ -148,6 +148,18 @@ interface IntelligentAuditDeckGeneratorProps {
   onDeckGenerated?: (deck: IntelligentAuditDeck) => void
 }
 
+// In your existing IntelligentAuditDeckGenerator.tsx
+const handleGenerate = async (prospectId: string) => {
+  const response = await fetch('/api/ai/generate-audit-deck', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prospect_id: prospectId })
+  });
+  
+  const result = await response.json();
+  // Display the result.audit_deck in your existing beautiful UI
+};
+
 const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps> = ({
   prospectId,
   companyName,
