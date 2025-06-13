@@ -3,10 +3,11 @@ import { supabase } from '@/lib/supabaseClient'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const companyId = params.id
+    // Await params since they're a Promise in Next.js 15
+    const { id: companyId } = await params
 
     // Get QB token for this company
     const { data: token, error: tokenError } = await supabase
