@@ -1,6 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabaseClient'
 
+interface ProspectData {
+  id: string
+  company_name: string
+  contact_name: string
+  email: string
+  phone: string
+  industry: string
+  annual_revenue: number
+  created_at: string
+  qbo_tokens: Array<{
+    company_id: string
+    company_name: string
+    token_created_at: string
+  }>
+  ai_analyses: Array<{
+    closeability_score: number
+    financial_health_score: number
+    key_insights: string[]
+    pain_points: string[]
+    opportunities: string[]
+    analysis_date: string
+  }>
+  call_transcripts: Array<{
+    id: string
+    file_name: string
+    analysis_results: any
+    transcript_date: string
+  }>
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Fetch prospects with their associated data
@@ -28,7 +58,7 @@ export async function GET(request: NextRequest) {
           created_at as transcript_date
         )
       `)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: false }) as { data: ProspectData[] | null, error: any }
 
     if (prospectsError) {
       console.error('Error fetching prospects:', prospectsError)
@@ -39,7 +69,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform and enrich the data
-    const enrichedProspects = prospects?.map(prospect => {
+    const enrichedProspects = prospects?.map((prospect: ProspectData) => {
       // Determine workflow stage based on available data
       let workflowStage = 'discovery'
       if (prospect.qbo_tokens && prospect.qbo_tokens.length > 0) {
@@ -106,10 +136,10 @@ export async function GET(request: NextRequest) {
       }
     })
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Unexpected error in prospects API:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
@@ -157,10 +187,10 @@ export async function POST(request: NextRequest) {
       message: 'Prospect created successfully'
     }, { status: 201 })
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Unexpected error creating prospect:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

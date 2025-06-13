@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import AccountWorkflowDashboard from '@/components/AccountWorkflowDashboard'
+import AccountWorkflowDashboard from 'app/components/AccountWorkflowDashboard'
 
 export default function AdminDashboardPage() {
   return (
