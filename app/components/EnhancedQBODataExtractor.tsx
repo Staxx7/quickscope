@@ -156,6 +156,33 @@ const EnhancedQBODataExtractor: React.FC<EnhancedQBODataExtractorProps> = ({ com
     }
   ];
 
+  // Add to your existing QBO API calls
+const extractComprehensiveFinancials = async (companyId: string) => {
+  const [profitLoss, balanceSheet, cashFlow] = await Promise.all([
+    qboClient.getProfitLoss(companyId, { period: 'last_12_months' }),
+    qboClient.getBalanceSheet(companyId),
+    qboClient.getCashFlow(companyId, { period: 'last_12_months' })
+  ]);
+
+  return {
+    revenue: profitLoss.totalRevenue,
+    expenses: profitLoss.totalExpenses,
+    profit: profitLoss.netIncome,
+    assets: {
+      current_assets: balanceSheet.currentAssets,
+      fixed_assets: balanceSheet.fixedAssets,
+      total_assets: balanceSheet.totalAssets
+    },
+    liabilities: {
+      current_liabilities: balanceSheet.currentLiabilities,
+      long_term_debt: balanceSheet.longTermDebt,
+      total_liabilities: balanceSheet.totalLiabilities
+    },
+    ratios: calculateFinancialRatios(profitLoss, balanceSheet),
+    trends: calculateTrends(profitLoss, { period: 'last_24_months' })
+  };
+};
+
   // Fetch connected companies on mount
   useEffect(() => {
     fetchConnectedCompanies();

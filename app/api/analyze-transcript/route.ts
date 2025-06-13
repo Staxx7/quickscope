@@ -1,3 +1,34 @@
+// Add to top of app/api/ai/analyze-transcript/route.ts
+interface EnhancedTranscriptAnalysis {
+  transcript_id: string;
+  segments: {
+    discovery: string[];
+    pain_points: string[];
+    budget_discussion: string[];
+    decision_maker_identification: string[];
+    timeline_discussion: string[];
+    objection_handling: string[];
+  };
+  sentiment_analysis: {
+    overall_sentiment: 'positive' | 'neutral' | 'negative';
+    engagement_level: number; // 0-100
+    buying_signals: string[];
+    resistance_indicators: string[];
+  };
+  sales_intelligence: {
+    decision_maker_confidence: number; // 0-100
+    budget_authority: 'confirmed' | 'likely' | 'unknown';
+    timeline_urgency: 'immediate' | 'short_term' | 'long_term';
+    competitive_situation: string[];
+  };
+  call_outcome_prediction: {
+    likelihood_to_close: number; // 0-100
+    predicted_timeline: string;
+    next_best_action: string;
+    follow_up_strategy: string[];
+  };
+}
+
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { supabase } from '@/lib/supabaseClient'
@@ -61,7 +92,43 @@ Extract and return as JSON:
   }
 }
 
+// Add this function to app/api/ai/analyze-transcript/route.ts
+const generateTalkingPoints = (transcriptAnalysis: any, financialData: any) => {
+  const talkingPoints = {
+    pain_point_responses: [],
+    value_propositions: [],
+    roi_calculations: [],
+    success_stories: [],
+    objection_handling: []
+  };
+
+  // Match pain points to solutions
+  if (transcriptAnalysis.segments?.pain_points) {
+    transcriptAnalysis.segments.pain_points.forEach((painPoint: string) => {
+      if (painPoint.toLowerCase().includes('cash flow')) {
+        talkingPoints.pain_point_responses.push({
+          pain_point: painPoint,
+          solution: "Our cash flow forecasting shows exactly when you'll have cash shortages 90 days in advance",
+          roi_impact: `Based on your ${financialData?.revenue || 'current'} revenue, improved cash flow management typically saves 2-5% annually`
+        });
+      }
+      
+      if (painPoint.toLowerCase().includes('bookkeeping') || painPoint.toLowerCase().includes('accounting')) {
+        talkingPoints.pain_point_responses.push({
+          pain_point: painPoint,
+          solution: "We handle all bookkeeping, reconciliation, and monthly close processes",
+          roi_impact: "Clients typically save 15-20 hours per month on internal bookkeeping tasks"
+        });
+      }
+    });
+  }
+
+  return talkingPoints;
+};
+
 Focus on extracting actionable business intelligence for a fractional CFO service provider.`
+
+
 
     const response = await openai.chat.completions.create({
       model: "gpt-4",

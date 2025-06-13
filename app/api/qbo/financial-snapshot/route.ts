@@ -34,6 +34,43 @@ interface TokenRefreshResponse {
   error?: string;
 }
 
+// Update app/api/qbo/financial-snapshot/route.ts
+interface EnhancedFinancialSnapshot {
+  // Current basic fields
+  revenue: number;
+  expenses: number;
+  profit: number;
+  profit_margin: number;
+  cash_flow: number;
+  
+  // NEW: Enhanced financial metrics
+  assets: {
+    current_assets: number;
+    fixed_assets: number;
+    total_assets: number;
+  };
+  liabilities: {
+    current_liabilities: number;
+    long_term_debt: number;
+    total_liabilities: number;
+  };
+  ratios: {
+    current_ratio: number;
+    debt_to_equity: number;
+    gross_margin: number;
+    operating_margin: number;
+  };
+  trends: {
+    revenue_growth_rate: number;
+    expense_growth_rate: number;
+    profit_trend: 'increasing' | 'decreasing' | 'stable';
+  };
+  benchmarks: {
+    industry_avg_profit_margin: number;
+    performance_vs_industry: 'above' | 'below' | 'average';
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

@@ -226,6 +226,9 @@ export async function GET(request: NextRequest) {
     const highValue = enhancedProspects.filter(p => p.ai_analysis && p.ai_analysis.closeability_score >= 80).length
     const urgentFollowUp = enhancedProspects.filter(p => p.ai_analysis?.urgency_level === 'high').length
 
+    // Calculate predictive analytics
+    const predictiveAnalytics = calculatePredictiveAnalytics(enhancedProspects);
+
     return NextResponse.json({
       prospects: enhancedProspects,
       total,
@@ -233,7 +236,19 @@ export async function GET(request: NextRequest) {
       expired,
       aiAnalyzed,
       highValue,
-      urgentFollowUp
+      urgentFollowUp,
+      // NEW: Add predictive analytics
+      predictive_analytics: predictiveAnalytics,
+      insights: {
+        top_priority_prospects: enhancedProspects
+          .filter(p => p.ai_analysis?.urgency_level === 'high' || p.ai_analysis?.closeability_score > 80)
+          .slice(0, 3),
+        recommendations: [
+          urgentFollowUp > 0 ? `${urgentFollowUp} prospects need immediate follow-up` : null,
+          highValue > 0 ? `${highValue} prospects have 80%+ close probability` : null,
+          expired > 0 ? `${expired} connections need re-authorization` : null
+        ].filter(Boolean)
+      }
     })
 
   } catch (error) {
@@ -247,6 +262,36 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
+// Function to calculate predictive analytics - placed between GET and POST methods
+const calculatePredictiveAnalytics = (prospects: any[]) => {
+  const analytics = {
+    total_pipeline_value: 0,
+    weighted_pipeline: 0,
+    high_probability_deals: 0,
+    urgent_follow_ups: 0,
+    average_closeability: 0,
+    total_prospects: prospects.length
+  };
+
+  prospects.forEach(prospect => {
+    const closeability = prospect.ai_analysis?.closeability_score || 0;
+    const estimatedValue = Math.max(36000, Math.min(96000, (prospect.financial_summary?.revenue || 500000) * 0.06)); // 6% of revenue
+    const probability = closeability / 100;
+
+    analytics.total_pipeline_value += estimatedValue;
+    analytics.weighted_pipeline += estimatedValue * probability;
+    
+    if (closeability > 70) analytics.high_probability_deals++;
+    if (prospect.ai_analysis?.urgency_level === 'high') analytics.urgent_follow_ups++;
+  });
+
+  analytics.average_closeability = prospects.length > 0 
+    ? Math.round(prospects.reduce((sum, p) => sum + (p.ai_analysis?.closeability_score || 0), 0) / prospects.length)
+    : 0;
+
+  return analytics;
+};
 
 // POST endpoint for triggering AI analysis on prospects
 export async function POST(request: NextRequest) {
