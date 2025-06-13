@@ -68,37 +68,6 @@ const navigation = [
   }
 ]
 
-const quickActions = [
-  {
-    name: 'Generate Audit Deck',
-    icon: Presentation,
-    action: 'audit',
-    color: 'from-orange-500 to-red-500',
-    description: 'Create intelligent presentation'
-  },
-  {
-    name: 'Run AI Analysis',
-    icon: Brain,
-    action: 'analysis',
-    color: 'from-purple-500 to-pink-500',
-    description: 'Deep financial intelligence'
-  },
-  {
-    name: 'Process Call Recording',
-    icon: Mic,
-    action: 'transcript',
-    color: 'from-cyan-500 to-blue-500',
-    description: 'Extract call insights'
-  },
-  {
-    name: 'Extract Live Data',
-    icon: Database,
-    action: 'extract',
-    color: 'from-green-500 to-teal-500',
-    description: 'Pull latest QBO data'
-  }
-]
-
 const systemStats = {
   connectedCompanies: 12,
   reportsGenerated: 47,
@@ -115,7 +84,6 @@ interface AdminLayoutProps {
 
 export default function EnhancedAdminLayout({ children, currentPage }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [quickActionOpen, setQuickActionOpen] = useState(false)
   const pathname = usePathname()
 
   const getColorClasses = (color: string, isActive: boolean = false) => {
@@ -289,53 +257,6 @@ export default function EnhancedAdminLayout({ children, currentPage }: AdminLayo
                 )
               })}
             </nav>
-            
-            {/* Quick Actions */}
-            <div className="px-4 pt-6">
-              <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/30">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-white font-semibold text-sm">Quick Actions</h3>
-                  <button
-                    onClick={() => setQuickActionOpen(!quickActionOpen)}
-                    className="text-gray-400 hover:text-white transition-colors"
-                  >
-                    <Settings className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {quickActions.map((action) => {
-                    const Icon = action.icon
-                    return (
-                      <button
-                        key={action.name}
-                        className={`relative overflow-hidden bg-gradient-to-r ${action.color} p-3 rounded-lg text-white text-xs font-medium hover:scale-105 transition-transform duration-200`}
-                        title={action.description}
-                      >
-                        <div className="flex flex-col items-center space-y-1">
-                          <Icon className="w-4 h-4" />
-                          <span className="text-center leading-tight">{action.name}</span>
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Performance Metrics */}
-            <div className="px-4 pt-4">
-              <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/30">
-                <div className="text-center">
-                  <h3 className="text-white font-semibold mb-2 text-sm">AI Performance</h3>
-                  <div className="text-2xl font-bold text-cyan-400 mb-1">94.7%</div>
-                  <div className="text-xs text-gray-400 mb-3">Accuracy Score</div>
-                  <div className="w-full bg-white/10 rounded-full h-2">
-                    <div className="bg-gradient-to-r from-cyan-500 to-blue-600 h-2 rounded-full" style={{ width: '94.7%' }}></div>
-                  </div>
-                  <div className="text-xs text-gray-400 mt-2">Enhanced with latest models</div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -356,22 +277,6 @@ export default function EnhancedAdminLayout({ children, currentPage }: AdminLayo
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-200">
                 QuickScope Enhanced AI Dashboard
-              </div>
-              
-              {/* Real-time Indicators */}
-              <div className="hidden md:flex items-center space-x-3">
-                <div className="flex items-center space-x-1">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-gray-300">Live Data</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Brain className="w-4 h-4 text-purple-400" />
-                  <span className="text-xs text-gray-300">AI Active</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Shield className="w-4 h-4 text-blue-400" />
-                  <span className="text-xs text-gray-300">Secure</span>
-                </div>
               </div>
             </div>
           </div>
@@ -398,10 +303,6 @@ export default function EnhancedAdminLayout({ children, currentPage }: AdminLayo
                     <RefreshCw className="w-4 h-4" />
                     <span>Sync All</span>
                   </button>
-                  <button className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all text-sm flex items-center space-x-2">
-                    <Brain className="w-4 h-4" />
-                    <span>AI Assist</span>
-                  </button>
                 </div>
               </div>
             </div>
@@ -412,21 +313,6 @@ export default function EnhancedAdminLayout({ children, currentPage }: AdminLayo
             {children}
           </div>
         </main>
-      </div>
-
-      {/* Global notifications */}
-      <div className="fixed bottom-4 right-4 z-50 space-y-2">
-        {/* AI Processing Indicator */}
-        <div className="bg-purple-600/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg border border-purple-500/50 flex items-center space-x-2">
-          <Brain className="w-4 h-4 animate-pulse" />
-          <span className="text-sm">AI Processing Active</span>
-        </div>
-        
-        {/* System Health */}
-        <div className="bg-green-600/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg border border-green-500/50 flex items-center space-x-2">
-          <CheckCircle className="w-4 h-4" />
-          <span className="text-sm">All Systems Operational</span>
-        </div>
       </div>
     </div>
   )
