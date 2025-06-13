@@ -270,7 +270,7 @@ export default function AIEnhancedAccountWorkflowDashboard() {
   }
 
   const handleFinancialAnalysis = (prospect: Prospect) => {
-    router.push(`/admin/dashboard/advanced-analysis?account=${prospect.company_id}&company=${encodeURIComponent(prospect.company_name)}`)
+    router.push(`/admin/dashboard/advanced-analysis?company_id=${prospect.company_id}&company_name=${encodeURIComponent(prospect.company_name)}`)
   }
 
   const triggerSync = async (prospectId: string) => {
