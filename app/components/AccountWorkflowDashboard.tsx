@@ -89,47 +89,29 @@ export default function AIEnhancedAccountWorkflowDashboard() {
   const [runningAIAnalysis, setRunningAIAnalysis] = useState<string | null>(null)
   const [predictiveAnalytics, setPredictiveAnalytics] = useState<PredictiveAnalytics | null>(null)
 
-  useEffect(() => {
-    fetchProspects()
-  }, [])
-
-  useEffect(() => {
-    fetch('/api/admin/prospects-with-ai')
-      .then(res => res.json())
-      .then(data => {
-        setPredictiveAnalytics(data.predictive_analytics);
-      });
-  }, []);
-
   const fetchProspects = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/admin/prospects-with-ai')
+      
+      // Try the AI-enhanced endpoint first
+      let response = await fetch('/api/admin/prospects-with-ai')
       
       if (!response.ok) {
-        // Fallback to regular prospects endpoint
-        const fallbackResponse = await fetch('/api/admin/prospects')
-        if (!fallbackResponse.ok) {
-          const errorData = await fallbackResponse.json()
-          throw new Error(errorData.error || 'Failed to fetch prospects')
-        }
-        const fallbackData: ProspectsResponse = await fallbackResponse.json()
-        setProspects(fallbackData.prospects)
-        setStats({
-          total: fallbackData.total,
-          connected: fallbackData.connected,
-          expired: fallbackData.expired,
-          aiAnalyzed: 0,
-          highValue: 0,
-          urgentFollowUp: 0
-        })
-        return
+        // Fallback to the standard prospects endpoint I created
+        response = await fetch('/api/admin/prospects')
+      }
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to fetch prospects')
       }
 
       const data: ProspectsResponse = await response.json()
+      
+      // Rest of your existing logic...
       setProspects(data.prospects)
       
-      // Calculate AI-enhanced stats
+      // Calculate AI-enhanced stats (your existing logic is perfect)
       const aiAnalyzed = data.prospects.filter(p => p.ai_analysis?.analysis_status === 'completed').length
       const highValue = data.prospects.filter(p => p.ai_analysis && p.ai_analysis.closeability_score >= 80).length
       const urgentFollowUp = data.prospects.filter(p => p.ai_analysis?.urgency_level === 'high').length
@@ -148,6 +130,18 @@ export default function AIEnhancedAccountWorkflowDashboard() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchProspects()
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/admin/prospects-with-ai')
+      .then(res => res.json())
+      .then(data => {
+        setPredictiveAnalytics(data.predictive_analytics);
+      });
+  }, []);
 
   const runAIAnalysis = async (prospectId: string, companyId: string) => {
     try {
