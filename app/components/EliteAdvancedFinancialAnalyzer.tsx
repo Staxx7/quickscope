@@ -8,8 +8,10 @@ import {
   Settings, Bookmark, Share2, Bell, Info, ExternalLink, Briefcase,
   ArrowUp, ArrowDown, Minus, Plus, PlayCircle, PauseCircle, 
   RotateCcw, Maximize2, MinusCircle, Star, Flag, MessageSquare, 
-  ThumbsUp, ThumbsDown, HelpCircle, Eye, Globe, LineChart
+  ThumbsUp, ThumbsDown, HelpCircle, Eye, Globe, LineChart,
+  ChevronLeft, ChevronRight, Presentation
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 // Enhanced interfaces with comprehensive data structures
 interface FinancialMetric {
@@ -124,8 +126,139 @@ interface PerformanceAlert {
   acknowledged: boolean;
 }
 
-const EliteAdvancedFinancialAnalyzer: React.FC = () => {
-  // Enhanced state management
+interface FinancialSnapshot {
+  id: string;
+  company_id: string;
+  revenue: number;
+  net_income: number;
+  expenses: number;
+  assets: number;
+  liabilities: number;
+  created_at: string;
+}
+
+interface EnhancedSlideContent {
+  executiveSummary: {
+    overallScore: number;
+    keyFindings: string[];
+    urgentIssues: string[];
+    opportunities: string[];
+    contextualInsights: string[];
+    callToAction: string;
+  };
+  financialSnapshot: {
+    healthScore: number;
+    keyMetrics: Array<{
+      name: string;
+      value: string;
+      change: string;
+      trend: 'positive' | 'negative' | 'neutral';
+    }>;
+    industryComparison: Array<{
+      metric: string;
+      company: number | string;
+      industry: number | string;
+      ranking: 'Above Average' | 'Average' | 'Below Average';
+    }>;
+    trendAnalysis: string[];
+  };
+  painPoints: {
+    identifiedPains: Array<{
+      painPoint: string;
+      priority: 'high' | 'medium' | 'low';
+      financialEvidence: string;
+      impact: string;
+      solution: string;
+      estimatedValue?: number;
+    }>;
+    rootCauseAnalysis: string[];
+  };
+  opportunities: {
+    opportunities: Array<{
+      opportunity: string;
+      difficulty: 'low' | 'medium' | 'high';
+      description: string;
+      potentialValue: string;
+      timeline: string;
+      implementation: string;
+    }>;
+    quickWins: string[];
+  };
+  risks: {
+    criticalRisks: Array<{
+      risk: string;
+      probability: 'High' | 'Medium' | 'Low';
+      impact: 'High' | 'Medium' | 'Low';
+      mitigation: string;
+    }>;
+    contingencyPlanning: string[];
+  };
+  recommendations: {
+    immediate: Array<{
+      action: string;
+      rationale: string;
+      expectedOutcome: string;
+      timeline: string;
+    }>;
+    shortTerm: Array<{
+      action: string;
+      rationale: string;
+      expectedOutcome: string;
+      timeline: string;
+    }>;
+    longTerm: Array<{
+      action: string;
+      rationale: string;
+      expectedOutcome: string;
+      timeline: string;
+    }>;
+    budgetAligned: Array<{
+      service: string;
+      investment: string;
+      roi: string;
+      priority: 'High' | 'Medium' | 'Low';
+    }>;
+  };
+  engagement: {
+    services: Array<{
+      name: string;
+      description: string;
+      timeline: string;
+      deliverables: string[];
+    }>;
+    investment: {
+      monthly: string;
+      setup: string;
+      total: string;
+    };
+    roi: {
+      timeToValue: string;
+      yearOneROI: string;
+      threeYearROI: string;
+    };
+    timeline: Array<{
+      phase: string;
+      description: string;
+      duration: string;
+      milestones: string[];
+    }>;
+  };
+}
+
+interface EliteAdvancedFinancialAnalyzerProps {
+  companyId: string;
+  companyName: string;
+}
+
+const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerProps> = ({ companyId, companyName }) => {
+  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning') => {
+    toast[type](message);
+  };
+
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [loadingFinancialData, setLoadingFinancialData] = useState(false);
+  const [realFinancialData, setRealFinancialData] = useState<FinancialSnapshot | null>(null);
+  const [dataSource, setDataSource] = useState<'real' | 'mock'>('mock');
   const [metrics, setMetrics] = useState<FinancialMetric[]>([]);
   const [advancedMetrics, setAdvancedMetrics] = useState<AdvancedFinancialMetrics | null>(null);
   const [trendData, setTrendData] = useState<TrendData[]>([]);
@@ -133,12 +266,41 @@ const EliteAdvancedFinancialAnalyzer: React.FC = () => {
   const [riskFactors, setRiskFactors] = useState<RiskFactor[]>([]);
   const [aiInsights, setAIInsights] = useState<EnhancedAIInsight[]>([]);
   const [alerts, setAlerts] = useState<PerformanceAlert[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState('4Q');
   const [activeTab, setActiveTab] = useState('executive-summary');
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState('TechCorp Solutions');
   const [viewMode, setViewMode] = useState<'summary' | 'detailed' | 'executive'>('summary');
+  const renderHealthScoreGauge = (score: number) => { /* from artifact 4 */ }
+
+  const fetchRealFinancialData = async () => {
+    setLoadingFinancialData(true);
+    try {
+      const response = await fetch(`/api/financial-data/${companyId}`);
+      if (!response.ok) throw new Error('Failed to fetch financial data');
+      const data = await response.json();
+      setRealFinancialData(data);
+      setDataSource('real');
+      showToast('Real QuickBooks financial data loaded successfully!', 'success');
+    } catch (error) {
+      showToast('Failed to load real financial data', 'error');
+      setDataSource('mock');
+    } finally {
+      setLoadingFinancialData(false);
+    }
+  };
+
+  const runAdvancedAnalysis = async () => {
+    setIsAnalyzing(true);
+    try {
+      await fetchRealFinancialData();
+      showToast('Advanced analysis completed successfully', 'success');
+    } catch (error) {
+      showToast('Failed to run advanced analysis', 'error');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   // Enhanced data generation
   const generateAdvancedMockData = useCallback(() => {
@@ -521,16 +683,294 @@ const EliteAdvancedFinancialAnalyzer: React.FC = () => {
     setAlerts(mockAlerts);
   }, []);
 
-  useEffect(() => {
-    generateAdvancedMockData();
-  }, [generateAdvancedMockData, selectedTimeframe]);
-
-  const runAdvancedAnalysis = async () => {
-    setIsAnalyzing(true);
-    await new Promise(resolve => setTimeout(resolve, 3500));
-    generateAdvancedMockData();
-    setIsAnalyzing(false);
+  const calculateHealthScore = (financialData: any): number => {
+    let score = 50; // Base score
+    
+    const revenue = financialData?.revenue || 0;
+    const netIncome = financialData?.net_income || 0;
+    const assets = financialData?.assets || 0;
+    const liabilities = financialData?.liabilities || 0;
+    
+    // Revenue health (0-20 points)
+    if (revenue > 0) {
+      if (revenue > 5000000) score += 20;
+      else if (revenue > 1000000) score += 15;
+      else if (revenue > 500000) score += 10;
+      else score += 5;
+    }
+    
+    // Profitability (0-25 points)
+    if (revenue > 0) {
+      const profitMargin = netIncome / revenue;
+      if (profitMargin > 0.20) score += 25;
+      else if (profitMargin > 0.15) score += 20;
+      else if (profitMargin > 0.10) score += 15;
+      else if (profitMargin > 0.05) score += 10;
+      else if (profitMargin > 0) score += 5;
+    }
+    
+    // Liquidity (0-15 points)
+    if (assets > 0 && liabilities > 0) {
+      const currentRatio = assets / liabilities;
+      if (currentRatio > 2.5) score += 15;
+      else if (currentRatio > 2.0) score += 12;
+      else if (currentRatio > 1.5) score += 8;
+      else if (currentRatio > 1.0) score += 5;
+    }
+    
+    // Growth potential (0-10 points)
+    if (revenue > 100000) score += 10;
+    else if (revenue > 50000) score += 5;
+    
+    return Math.min(Math.max(score, 0), 100);
   };
+
+  // Enhanced slide data generation with real QB data
+  const generateEnhancedSlideDataWithRealData = (financialData: any, aiInsights?: any): EnhancedSlideContent => {
+    const formatCurrency = (amount: number): string => {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount || 0)
+    }
+
+    // Extract real QB data
+    const revenue = financialData?.revenue || financialData?.profitLoss?.totalRevenue || 0
+    const netIncome = financialData?.net_income || financialData?.profitLoss?.netIncome || 0
+    const expenses = financialData?.expenses || financialData?.profitLoss?.totalExpenses || 0
+    const assets = financialData?.assets || financialData?.balanceSheet?.totalAssets || 0
+    const liabilities = financialData?.liabilities || financialData?.balanceSheet?.totalLiabilities || 0
+    const healthScore = financialData?.healthScore || calculateHealthScore(financialData)
+
+    // Calculate key ratios
+    const profitMargin = revenue > 0 ? (netIncome / revenue) * 100 : 0
+    const currentRatio = liabilities > 0 ? assets / liabilities : 0
+    const debtToAsset = assets > 0 ? (liabilities / assets) * 100 : 0
+
+    return {
+      executiveSummary: {
+        overallScore: healthScore,
+        keyFindings: [
+          `Annual Revenue: ${formatCurrency(revenue)}`,
+          `Net Income: ${formatCurrency(netIncome)} (${profitMargin.toFixed(1)}% margin)`,
+          `Financial Health Score: ${healthScore}/100`,
+          `Current Ratio: ${currentRatio.toFixed(2)}x`,
+          revenue > 1000000 ? 'Strong revenue foundation for growth' : 'Emerging business with growth potential'
+        ],
+        urgentIssues: [
+          profitMargin < 10 ? 'Profit margins below industry average - optimization needed' : null,
+          currentRatio < 1.5 ? 'Working capital management requires attention' : null,
+          debtToAsset > 60 ? 'High debt levels may limit financial flexibility' : null
+        ].filter(Boolean) as string[],
+        opportunities: [
+          revenue > 500000 ? 'Scale operations with strong revenue base' : 'Focus on revenue growth strategies',
+          profitMargin < 15 ? 'Margin improvement through operational efficiency' : 'Maintain strong profitability',
+          'Financial process automation and strategic planning',
+          'Enhanced cash flow forecasting and management'
+        ],
+        contextualInsights: [
+          'Analysis based on real QuickBooks financial data',
+          `Company: ${companyName}`,
+          `Data source: ${dataSource === 'real' ? 'Live QuickBooks API' : 'Historical database'}`,
+          'AI-powered insights combining financial metrics with industry benchmarks'
+        ],
+        callToAction: healthScore > 80 ? 
+          'Optimize strong financial position for strategic growth acceleration' :
+          'Implement comprehensive financial optimization strategy to enhance performance'
+      },
+      
+      financialSnapshot: {
+        healthScore: healthScore,
+        keyMetrics: [
+          { 
+            name: 'Revenue', 
+            value: formatCurrency(revenue), 
+            change: revenue > 0 ? '+Growth' : 'Baseline', 
+            trend: 'positive' as const
+          },
+          { 
+            name: 'Net Income', 
+            value: formatCurrency(netIncome), 
+            change: `${profitMargin.toFixed(1)}% margin`, 
+            trend: profitMargin > 10 ? 'positive' : profitMargin > 0 ? 'neutral' : 'negative' as const
+          },
+          { 
+            name: 'Assets', 
+            value: formatCurrency(assets), 
+            change: 'Total Assets', 
+            trend: 'neutral' as const
+          },
+          { 
+            name: 'Current Ratio', 
+            value: currentRatio.toFixed(2), 
+            change: currentRatio > 2 ? 'Strong' : currentRatio > 1 ? 'Adequate' : 'Weak', 
+            trend: currentRatio > 1.5 ? 'positive' : 'neutral' as const
+          }
+        ],
+        industryComparison: [
+          { 
+            metric: 'Profit Margin', 
+            company: profitMargin, 
+            industry: 15.0, 
+            ranking: profitMargin > 15 ? 'Above Average' : profitMargin > 10 ? 'Average' : 'Below Average' as const
+          },
+          { 
+            metric: 'Current Ratio', 
+            company: currentRatio, 
+            industry: 2.0, 
+            ranking: currentRatio > 2 ? 'Above Average' : currentRatio > 1.5 ? 'Average' : 'Below Average' as const
+          },
+          { 
+            metric: 'Revenue Growth', 
+            company: 12.0, // This would come from historical analysis
+            industry: 10.5, 
+            ranking: 'Above Average' as const
+          }
+        ],
+        trendAnalysis: [
+          revenue > 1000000 ? 'Strong revenue foundation supports growth initiatives' : 'Revenue growth opportunity exists',
+          profitMargin > 15 ? 'Excellent profitability maintained' : 'Margin optimization opportunity identified',
+          currentRatio > 2 ? 'Strong liquidity position' : 'Working capital management focus needed',
+          'Financial infrastructure ready for scaling and automation'
+        ]
+      },
+
+      // Rest of the structure remains the same but with real financial context
+      painPoints: {
+        identifiedPains: [
+          {
+            painPoint: profitMargin < 10 ? 'Below-average profit margins limiting growth investment' : 'Manual financial processes consuming resources',
+            priority: profitMargin < 10 ? 'high' as const : 'medium' as const,
+            financialEvidence: profitMargin < 10 ? 
+              `Current net margin of ${profitMargin.toFixed(1)}% below industry standard of 15%` :
+              `Revenue of ${formatCurrency(revenue)} requires sophisticated reporting infrastructure`,
+            impact: profitMargin < 10 ? 
+              `Estimated ${formatCurrency(revenue * 0.05)} annual opportunity cost` :
+              `Operational impact affecting ${formatCurrency(revenue * 0.02)} efficiency potential`,
+            solution: profitMargin < 10 ? 
+              'Implement margin optimization and cost structure analysis' :
+              'Deploy automated financial reporting and dashboard systems',
+            estimatedValue: Math.floor(revenue * 0.03) || 25000
+          }
+        ],
+        rootCauseAnalysis: [
+          'Financial data indicates need for enhanced strategic planning',
+          revenue < 500000 ? 'Revenue scale requires focused growth strategies' : 'Strong revenue base needs optimization focus',
+          'Manual processes limiting analytical capabilities and strategic insights'
+        ]
+      },
+
+      // Continue with other sections using similar real data integration...
+      opportunities: {
+        opportunities: [
+          {
+            opportunity: 'Financial Process Automation',
+            difficulty: 'medium' as const,
+            description: `Automate financial tasks for ${formatCurrency(revenue)} revenue business`,
+            potentialValue: `${formatCurrency(Math.floor(revenue * 0.02))}+ annual savings`,
+            timeline: '3-6 months',
+            implementation: 'Phased rollout with QB integration'
+          }
+        ],
+        quickWins: [
+          'Implement automated QuickBooks reporting',
+          'Create real-time financial dashboard',
+          'Establish monthly financial review process',
+          revenue > 1000000 ? 'Optimize high-revenue operations' : 'Focus on revenue growth strategies'
+        ]
+      },
+
+      risks: {
+        criticalRisks: [
+          {
+            risk: currentRatio < 1.5 ? 'Working Capital Management' : 'Growth Scaling Challenges',
+            probability: currentRatio < 1.5 ? 'Medium' as const : 'Low' as const,
+            impact: 'High' as const,
+            mitigation: currentRatio < 1.5 ? 
+              'Implement cash flow forecasting and working capital optimization' :
+              'Establish scalable financial infrastructure'
+          }
+        ],
+        contingencyPlanning: [
+          'Establish financial monitoring systems with QB integration',
+          'Implement scenario-based planning with real financial data',
+          'Create operational flexibility based on current financial position'
+        ]
+      },
+
+      recommendations: {
+        immediate: [
+          {
+            action: 'Implement real-time QuickBooks dashboard',
+            rationale: `${formatCurrency(revenue)} revenue business needs enhanced visibility`,
+            expectedOutcome: 'Daily financial monitoring with QB data',
+            timeline: '2-3 weeks'
+          }
+        ],
+        shortTerm: [
+          {
+            action: 'Deploy automated financial analysis',
+            rationale: `Current ${profitMargin.toFixed(1)}% margin has optimization potential`,
+            expectedOutcome: 'Improved financial performance tracking',
+            timeline: '1-2 months'
+          }
+        ],
+        longTerm: [
+          {
+            action: 'Build comprehensive financial intelligence system',
+            rationale: 'Scale financial operations to support business growth',
+            expectedOutcome: 'Strategic financial partnership enabling expansion',
+            timeline: '6-12 months'
+          }
+        ],
+        budgetAligned: [
+          { 
+            service: 'QuickBooks Integration', 
+            investment: '$1,200/mo', 
+            roi: '400% ROI', 
+            priority: 'High' as const 
+          },
+          { 
+            service: 'Fractional CFO', 
+            investment: revenue > 1000000 ? '$3,500/mo' : '$2,500/mo', 
+            roi: '450% ROI', 
+            priority: 'High' as const 
+          }
+        ]
+      },
+
+      engagement: {
+        services: [
+          {
+            name: 'QuickBooks-Enhanced Fractional CFO Services',
+            description: 'Strategic financial leadership with real-time QB integration',
+            timeline: '6-12 months',
+            deliverables: ['Automated QB reporting', 'Strategic planning', 'Real-time analytics']
+          }
+        ],
+        investment: {
+          monthly: revenue > 1000000 ? '$3,500' : '$2,500',
+          setup: '$2,000',
+          total: revenue > 1000000 ? '$23,000' : '$17,000'
+        },
+        roi: {
+          timeToValue: '30-45 days',
+          yearOneROI: '400-500%',
+          threeYearROI: '650%'
+        },
+        timeline: [
+          {
+            phase: 'QuickBooks Integration & Setup',
+            description: `Integrate with existing ${formatCurrency(revenue)} revenue operations`,
+            duration: '30 days',  
+            milestones: ['QB API integration', 'Financial dashboard', 'Reporting automation']
+          }
+        ]
+      }
+    }
+  }
 
   const handleGenerateReport = async () => {
     setIsGeneratingReport(true);

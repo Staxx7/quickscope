@@ -115,6 +115,7 @@ export default function EnhancedAIReportGenerator() {
   const [generationStage, setGenerationStage] = useState<GenerationStage | null>(null);
   const [activeTab, setActiveTab] = useState('generate');
   const { showToast, ToastContainer } = useToast();
+  const [showPreview, setShowPreview] = useState(false);
 
   const reportTemplates: ReportTemplate[] = [
     {

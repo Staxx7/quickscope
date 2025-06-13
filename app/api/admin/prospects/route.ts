@@ -3,164 +3,198 @@ import { supabase } from '@/lib/supabaseClient'
 
 export async function GET(request: NextRequest) {
   try {
-    // Fetch prospects with their latest financial data
-    const { data: prospects, error } = await supabase
+    // Fetch prospects with their associated data
+    const { data: prospects, error: prospectsError } = await supabase
       .from('prospects')
       .select(`
         *,
         qbo_tokens (
           company_id,
-          access_token,
-          expires_at,
-          created_at
+          company_name,
+          created_at as token_created_at
         ),
-        financial_snapshots (
-          revenue,
-          expenses,
-          profit,
-          profit_margin,
-          cash_flow,
-          created_at
+        ai_analyses (
+          closeability_score,
+          financial_health_score,
+          key_insights,
+          pain_points,
+          opportunities,
+          created_at as analysis_date
+        ),
+        call_transcripts (
+          id,
+          file_name,
+          analysis_results,
+          created_at as transcript_date
         )
       `)
-      .order('connection_date', { ascending: false })
+      .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error('Error fetching prospects:', error)
+    if (prospectsError) {
+      console.error('Error fetching prospects:', prospectsError)
       return NextResponse.json(
-        { error: 'Failed to fetch prospects', details: error.message },
+        { error: 'Failed to fetch prospects', details: prospectsError.message },
         { status: 500 }
       )
     }
 
-    // Enhance prospects data with status calculations
-    const enhancedProspects = prospects?.map(prospect => {
-      const hasValidToken = prospect.qbo_tokens && 
-        prospect.qbo_tokens.length > 0 && 
-        new Date(prospect.qbo_tokens[0].expires_at) > new Date()
-      
-      const latestFinancialData = prospect.financial_snapshots && 
-        prospect.financial_snapshots.length > 0 ? 
-        prospect.financial_snapshots[0] : null
-
-      // Calculate workflow stage based on available data
-      let workflowStage = 'connected'
-      let nextAction = 'Extract Financial Data'
-      
-      if (latestFinancialData) {
-        workflowStage = 'data_extracted'
-        nextAction = 'Upload Call Transcript'
+    // Transform and enrich the data
+    const enrichedProspects = prospects?.map(prospect => {
+      // Determine workflow stage based on available data
+      let workflowStage = 'discovery'
+      if (prospect.qbo_tokens && prospect.qbo_tokens.length > 0) {
+        workflowStage = 'connected'
       }
-      
-      // Check if there are call transcripts (you'll need to add this table)
-      // For now, assuming no transcripts yet
-      
+      if (prospect.call_transcripts && prospect.call_transcripts.length > 0) {
+        workflowStage = 'analyzed'
+      }
+      if (prospect.ai_analyses && prospect.ai_analyses.length > 0) {
+        workflowStage = 'audit_ready'
+      }
+
+      // Get latest AI analysis
+      const latestAnalysis = prospect.ai_analyses && prospect.ai_analyses.length > 0 
+        ? prospect.ai_analyses[0] 
+        : null
+
+      // Get QB company info
+      const qbToken = prospect.qbo_tokens && prospect.qbo_tokens.length > 0 
+        ? prospect.qbo_tokens[0] 
+        : null
+
+      // Calculate next step
+      let nextStep = 'Connect QuickBooks account'
+      if (workflowStage === 'connected') {
+        nextStep = 'Upload discovery call transcript'
+      } else if (workflowStage === 'analyzed') {
+        nextStep = 'Generate audit deck'
+      } else if (workflowStage === 'audit_ready') {
+        nextStep = 'Schedule audit call'
+      }
+
       return {
-        ...prospect,
-        connection_status: hasValidToken ? 'active' : 'expired',
+        id: prospect.id,
+        company_name: prospect.company_name,
+        contact_name: prospect.contact_name,
+        email: prospect.email,
+        phone: prospect.phone,
+        industry: prospect.industry,
+        revenue: prospect.annual_revenue,
+        created_at: prospect.created_at,
+        qb_company_id: qbToken?.company_id || null,
         workflow_stage: workflowStage,
-        next_action: nextAction,
-        financial_summary: latestFinancialData ? {
-          revenue: latestFinancialData.revenue || 0,
-          expenses: latestFinancialData.expenses || 0,
-          profit: latestFinancialData.profit || 0,
-          profit_margin: latestFinancialData.profit_margin || 0,
-          cash_flow: latestFinancialData.cash_flow || 0
-        } : null,
-        days_connected: Math.floor(
-          (new Date().getTime() - new Date(prospect.connection_date).getTime()) / 
-          (1000 * 60 * 60 * 24)
-        )
+        closeability_score: latestAnalysis?.closeability_score || null,
+        financial_health_score: latestAnalysis?.financial_health_score || null,
+        last_activity: getLastActivity(prospect),
+        next_step: nextStep,
+        transcript_count: prospect.call_transcripts?.length || 0,
+        ai_insights: latestAnalysis?.key_insights || null,
+        pain_points: latestAnalysis?.pain_points || null,
+        opportunities: latestAnalysis?.opportunities || null
       }
     }) || []
 
     return NextResponse.json({
-      prospects: enhancedProspects,
-      total: enhancedProspects.length,
-      connected: enhancedProspects.filter(p => p.connection_status === 'active').length,
-      expired: enhancedProspects.filter(p => p.connection_status === 'expired').length
+      prospects: enrichedProspects,
+      total: enrichedProspects.length,
+      summary: {
+        total_accounts: enrichedProspects.length,
+        connected_accounts: enrichedProspects.filter(p => p.workflow_stage !== 'discovery').length,
+        ready_for_transcripts: enrichedProspects.filter(p => p.workflow_stage === 'connected').length,
+        ready_for_audit: enrichedProspects.filter(p => p.workflow_stage === 'audit_ready').length,
+        completed: enrichedProspects.filter(p => p.workflow_stage === 'completed').length
+      }
     })
 
   } catch (error) {
-    console.error('Error in prospects API:', error)
+    console.error('Unexpected error in prospects API:', error)
     return NextResponse.json(
-      { 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     )
   }
 }
 
-// Add a POST endpoint for updating prospect data
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { action, prospect_id, data } = body
+    const { company_name, contact_name, email, phone, industry, annual_revenue } = body
 
-    switch (action) {
-      case 'update_notes':
-        const { data: updatedProspect, error: updateError } = await supabase
-          .from('prospects')
-          .update({ 
-            notes: data.notes,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', prospect_id)
-          .select()
-
-        if (updateError) {
-          return NextResponse.json(
-            { error: 'Failed to update notes' },
-            { status: 500 }
-          )
-        }
-
-        return NextResponse.json({ success: true, prospect: updatedProspect[0] })
-
-      case 'trigger_sync':
-        // Trigger a data refresh for this prospect
-        // This would typically queue a background job to fetch latest QB data
-        const { data: syncUpdate, error: syncError } = await supabase
-          .from('prospects')
-          .update({ 
-            last_sync: new Date().toISOString(),
-            status: 'syncing'
-          })
-          .eq('id', prospect_id)
-          .select()
-
-        if (syncError) {
-          return NextResponse.json(
-            { error: 'Failed to trigger sync' },
-            { status: 500 }
-          )
-        }
-
-        // TODO: Here you would trigger your QB data extraction API
-        // For now, just update the status back to connected
-        setTimeout(async () => {
-          await supabase
-            .from('prospects')
-            .update({ status: 'connected' })
-            .eq('id', prospect_id)
-        }, 2000)
-
-        return NextResponse.json({ success: true, message: 'Sync triggered' })
-
-      default:
-        return NextResponse.json(
-          { error: 'Invalid action' },
-          { status: 400 }
-        )
+    // Validate required fields
+    if (!company_name || !contact_name || !email) {
+      return NextResponse.json(
+        { error: 'Missing required fields: company_name, contact_name, email' },
+        { status: 400 }
+      )
     }
 
+    // Create new prospect
+    const { data: prospect, error: insertError } = await supabase
+      .from('prospects')
+      .insert([{
+        company_name,
+        contact_name,
+        email,
+        phone,
+        industry,
+        annual_revenue,
+        workflow_stage: 'discovery',
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single()
+
+    if (insertError) {
+      console.error('Error creating prospect:', insertError)
+      return NextResponse.json(
+        { error: 'Failed to create prospect', details: insertError.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      prospect,
+      message: 'Prospect created successfully'
+    }, { status: 201 })
+
   } catch (error) {
-    console.error('Error in prospects POST:', error)
+    console.error('Unexpected error creating prospect:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     )
+  }
+}
+
+function getLastActivity(prospect: any): string {
+  const dates = []
+  
+  if (prospect.qbo_tokens && prospect.qbo_tokens.length > 0) {
+    dates.push(new Date(prospect.qbo_tokens[0].token_created_at))
+  }
+  
+  if (prospect.ai_analyses && prospect.ai_analyses.length > 0) {
+    dates.push(new Date(prospect.ai_analyses[0].analysis_date))
+  }
+  
+  if (prospect.call_transcripts && prospect.call_transcripts.length > 0) {
+    dates.push(new Date(prospect.call_transcripts[0].transcript_date))
+  }
+  
+  if (dates.length === 0) {
+    return 'Never'
+  }
+  
+  const latestDate = new Date(Math.max(...dates.map(d => d.getTime())))
+  const now = new Date()
+  const diffTime = Math.abs(now.getTime() - latestDate.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  
+  if (diffDays === 1) {
+    return '1 day ago'
+  } else if (diffDays < 30) {
+    return `${diffDays} days ago`
+  } else {
+    return latestDate.toLocaleDateString()
   }
 }

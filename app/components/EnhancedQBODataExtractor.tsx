@@ -92,7 +92,7 @@ const EnhancedQBODataExtractor: React.FC<EnhancedQBODataExtractorProps> = ({ com
   const [filterType, setFilterType] = useState('all');
   const [aiAnalysisProgress, setAiAnalysisProgress] = useState<AIAnalysisProgress | null>(null);
   const [extractionMode, setExtractionMode] = useState<'live' | 'file'>('live');
-  
+
   // Enhanced data type selection
   const [selectedDataTypes, setSelectedDataTypes] = useState<string[]>([
     'profit_loss', 'balance_sheet', 'cash_flow', 'chart_of_accounts'
