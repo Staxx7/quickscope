@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
           created_at
         )
       `)
-      .order('connection_date', { ascending: false })
+      .order('created_at', { ascending: false })
 
     if (error) {
       console.error('Error fetching prospects:', error)
@@ -211,9 +211,9 @@ export async function GET(request: NextRequest) {
           cash_flow: latestFinancialData.cash_flow || 0
         } : null,
         days_connected: Math.floor(
-          (new Date().getTime() - new Date(prospect.connection_date).getTime()) / 
-          (1000 * 60 * 60 * 24)
-        ),
+            (new Date().getTime() - new Date(prospect.created_at).getTime()) / 
+            (1000 * 60 * 60 * 24)
+          ),
         ai_analysis: aiAnalysisSummary
       }
     }) || []
