@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
-import AdvancedFinancialDashboard from '@/app/components/AdvancedFinancialDashboard'
+import EliteAdvancedFinancialAnalyzer from '@/app/components/EliteAdvancedFinancialAnalyzer'
 
 function AdvancedAnalysisContent() {
   const searchParams = useSearchParams()
@@ -10,7 +10,7 @@ function AdvancedAnalysisContent() {
   const companyName = searchParams.get('company_name') || 'Selected Company'
 
   return (
-    <AdvancedFinancialDashboard 
+    <EliteAdvancedFinancialAnalyzer 
       companyId={companyId}
       companyName={companyName}
     />
