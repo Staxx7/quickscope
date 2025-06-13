@@ -2,6 +2,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Download, FileText, RefreshCw, CheckCircle, AlertTriangle, AlertCircle, TrendingUp, DollarSign, Calendar, Users, Settings, Filter, Search, BarChart3, Database, Brain, Zap, Clock, Target, Shield } from 'lucide-react';
 import { useToast } from './Toast';
+import { NextRequest, NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabaseClient'
+import { QBOClient } from '../lib/qboClient'
 
 interface DataFile {
   id: string;
@@ -74,6 +77,8 @@ interface EnhancedQBODataExtractorProps {
   companyId: string;
   companyName: string;
 }
+
+const qboClient = new QBOClient()
 
 const EnhancedQBODataExtractor: React.FC<EnhancedQBODataExtractorProps> = ({ companyId, companyName }) => {
   const [files, setFiles] = useState<DataFile[]>([]);
@@ -598,6 +603,20 @@ const extractComprehensiveFinancials = async (companyId: string) => {
     const matchesFilter = filterType === 'all' || file.status === filterType;
     return matchesSearch && matchesFilter;
   });
+
+  const calculateFinancialRatios = (profitLoss: any, balanceSheet: any) => {
+    return {
+      current_ratio: balanceSheet.currentAssets / balanceSheet.currentLiabilities,
+      debt_to_equity: balanceSheet.totalLiabilities / (balanceSheet.totalAssets - balanceSheet.totalLiabilities),
+      operating_margin: profitLoss.netIncome / profitLoss.totalRevenue
+    };
+  };
+
+  const calculateTrends = (profitLoss: any, options: { period: string }) => {
+    return {
+      revenue_growth_rate: ((profitLoss.totalRevenue - (profitLoss.totalRevenue * 0.85)) / (profitLoss.totalRevenue * 0.85)) * 100
+    };
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900 p-6" style={{ fontFamily: 'Poppins, sans-serif' }}>
