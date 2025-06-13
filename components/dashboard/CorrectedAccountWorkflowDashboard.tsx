@@ -265,8 +265,8 @@ export default function CorrectedAccountWorkflowDashboard() {
           </button>
         </div>
 
-        {/* PROSPECTS TABLE - GLASSMORPHIC DESIGN */}
-        <div className="bg-slate-800/30 backdrop-blur-sm rounded-lg border border-slate-700/50">
+         {/* PROSPECTS TABLE - GLASSMORPHIC DESIGN */}
+         <div className="bg-slate-800/30 backdrop-blur-sm rounded-lg border border-slate-700/50">
           <div className="p-6 border-b border-slate-700/50">
             <h2 className="text-xl font-semibold text-white">Connected Prospects</h2>
           </div>
