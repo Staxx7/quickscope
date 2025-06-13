@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     // Step 1: Gather all available data
     const [financialData, transcriptData] = await Promise.all([
       includeFinancials ? getFinancialData(companyId) : null,
-      includeTranscripts ? (await getTranscriptData(companyId)) : []
+      includeTranscripts ? getTranscriptData(companyId) : null
     ])
 
     // Step 2: Generate intelligent audit deck
@@ -101,7 +101,7 @@ async function getTranscriptData(companyId: string) {
     return transcripts || []
   } catch (error) {
     console.error('Error fetching transcript data:', error)
-    return [] // Always return an empty array instead of null
+    return []
   }
 }
 
@@ -109,9 +109,10 @@ async function generateIntelligentAuditDeck(params: {
   companyId: string
   companyName: string
   financialData: any
-  transcriptData: any[]
+  transcriptData: any[] | null
 }) {
-  const { companyId, companyName, financialData, transcriptData } = params
+  const { companyId, companyName, financialData, transcriptData: rawTranscriptData } = params
+  const transcriptData = rawTranscriptData || []
 
   // Prepare AI prompt with all available data
   const prompt = `
@@ -121,7 +122,7 @@ FINANCIAL DATA:
 ${financialData ? JSON.stringify(financialData, null, 2) : 'Not available'}
 
 CALL TRANSCRIPT ANALYSIS:
-${transcriptData?.length > 0 ? JSON.stringify(transcriptData.map(t => t.transcript_analyses?.[0] || {}), null, 2) : 'Not available'}
+${transcriptData.length > 0 ? JSON.stringify(transcriptData.map(t => t.transcript_analyses?.[0] || {}), null, 2) : 'Not available'}
 
 Create a compelling, professional audit deck that will help close this prospect. Structure it as follows:
 
