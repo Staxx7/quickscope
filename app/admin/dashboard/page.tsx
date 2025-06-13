@@ -1,8 +1,8 @@
 // app/admin/dashboard/page.tsx
 'use client'
 
-import CorrectedAccountWorkflowDashboard from '@/components/dashboard/CorrectedAccountWorkflowDashboard'
+import ProspectWorkflowDashboard from 'app/components/ProspectWorkflowDashboard'
 
 export default function DashboardPage() {
-  return <CorrectedAccountWorkflowDashboard />
+  return <ProspectWorkflowDashboard />
 }
