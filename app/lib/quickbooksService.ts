@@ -56,6 +56,32 @@ class QuickBooksService {
       cashFlow: {}
     };
   }
+
+  async getQBOToken(companyId: string): Promise<string> {
+    const { data: tokenData, error } = await supabase
+      .from('qbo_tokens')
+      .select('access_token, refresh_token, expires_at')
+      .eq('company_id', companyId)
+      .single();
+
+    if (error || !tokenData) {
+      throw new Error('No valid QuickBooks connection found');
+    }
+
+    // Check if token needs refresh
+    const now = new Date();
+    const expiresAt = new Date(tokenData.expires_at);
+    
+    if (now >= expiresAt) {
+      const refreshResult = await refreshQBOToken(tokenData.refresh_token, companyId);
+      if (!refreshResult.success) {
+        throw new Error('QuickBooks connection expired');
+      }
+      return refreshResult.access_token!;
+    }
+
+    return tokenData.access_token;
+  }
 }
 
 let qbServiceInstance: QuickBooksService | null = null;
@@ -65,4 +91,54 @@ export function getQuickBooksService(): QuickBooksService {
     qbServiceInstance = new QuickBooksService();
   }
   return qbServiceInstance;
+}
+
+export async function getQBOToken(companyId: string): Promise<string> {
+  return getQuickBooksService().getQBOToken(companyId);
+}
+
+async function refreshQBOToken(refreshToken: string, companyId: string): Promise<{ success: boolean; access_token?: string; error?: string }> {
+  try {
+    const tokenEndpoint = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
+    const response = await fetch(tokenEndpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${process.env.QUICKBOOKS_CLIENT_ID}:${process.env.QUICKBOOKS_CLIENT_SECRET}`).toString('base64')}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        'grant_type': 'refresh_token',
+        'refresh_token': refreshToken
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Token refresh failed: ${response.statusText}`);
+    }
+
+    const tokenData = await response.json();
+    const expiresAt = new Date(Date.now() + (tokenData.expires_in * 1000));
+    
+    await supabase
+      .from('qbo_tokens')
+      .update({
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token,
+        expires_at: expiresAt.toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('company_id', companyId);
+
+    return {
+      success: true,
+      access_token: tokenData.access_token
+    };
+
+  } catch (error) {
+    console.error('Error refreshing QBO token:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
 } 

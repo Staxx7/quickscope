@@ -1,81 +1,120 @@
 import { NextRequest, NextResponse } from 'next/server'
+import OpenAI from 'openai'
+import { supabase } from '@/lib/supabaseClient'
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
 
 export async function POST(request: NextRequest) {
   try {
     const { transcript, companyId, companyName } = await request.json()
 
-    if (!transcript) {
-      return NextResponse.json({ error: 'Transcript required' }, { status: 400 })
+    if (!transcript || !companyId) {
+      return NextResponse.json(
+        { error: 'Transcript and company ID are required' },
+        { status: 400 }
+      )
     }
 
-    // Simple analysis logic (you can enhance with AI/ML services)
-    const analysis = analyzeTranscriptContent(transcript, companyName)
+    // Analyze transcript with OpenAI
+    const analysisPrompt = `Analyze this business discovery call transcript and extract key insights:
 
-    return NextResponse.json(analysis)
+TRANSCRIPT:
+${transcript}
 
-  } catch (error) {
-    console.error('Error analyzing transcript:', error)
-    return NextResponse.json({ error: 'Analysis failed' }, { status: 500 })
+Extract and return as JSON:
+{
+  "painPoints": {
+    "operational": ["list of operational pain points"],
+    "financial": ["list of financial challenges"],
+    "strategic": ["list of strategic issues"],
+    "technology": ["list of technology problems"]
+  },
+  "businessObjectives": {
+    "shortTerm": ["immediate goals"],
+    "longTerm": ["future objectives"],
+    "growthTargets": ["growth goals"],
+    "efficiency": ["efficiency improvements"]
+  },
+  "decisionMakers": [
+    {
+      "name": "person name",
+      "role": "their role",
+      "influence": "high/medium/low",
+      "concerns": ["their concerns"],
+      "priorities": ["their priorities"]
+    }
+  ],
+  "urgencySignals": {
+    "timeline": "mentioned timeline",
+    "pressurePoints": ["urgent issues"],
+    "catalysts": ["reasons for urgency"],
+    "budget": "budget information"
+  },
+  "salesIntelligence": {
+    "buyingSignals": ["positive indicators"],
+    "objections": ["concerns or objections"],
+    "nextSteps": ["recommended actions"],
+    "closeability": 85,
+    "recommendedStrategy": "approach recommendation"
   }
 }
 
-function analyzeTranscriptContent(transcript: string, companyName: string) {
-  const text = transcript.toLowerCase()
+Focus on extracting actionable business intelligence for a fractional CFO service provider.`
 
-  // Extract key points based on keywords
-  const keyPoints = []
-  const painPoints = []
-  const opportunities = []
-  const financialContext = []
-  const actionItems = []
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: "You are a business analyst specializing in B2B sales for fractional CFO services. Extract actionable insights from discovery calls."
+        },
+        {
+          role: "user",
+          content: analysisPrompt
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.3
+    })
 
-  // Pain point indicators
-  if (text.includes('cash flow') || text.includes('cash problem')) {
-    painPoints.push('Cash flow challenges mentioned')
-    actionItems.push('Prioritize cash flow management solutions')
-  }
-  
-  if (text.includes('bookkeeping') || text.includes('accounting mess')) {
-    painPoints.push('Bookkeeping/accounting issues identified')
-    actionItems.push('Recommend bookkeeping cleanup and standardization')
-  }
+    const analysis = JSON.parse(response.choices[0].message.content || '{}')
 
-  if (text.includes('growth') || text.includes('scaling')) {
-    opportunities.push('Company is in growth/scaling phase')
-    actionItems.push('Present growth-focused financial strategies')
-  }
+    // Store analysis in database
+    const { data: savedAnalysis, error: saveError } = await supabase
+      .from('transcript_analyses')
+      .insert({
+        prospect_id: companyId,
+        company_name: companyName || 'Unknown',
+        transcript_text: transcript,
+        analysis_data: analysis,
+        closeability_score: analysis.salesIntelligence?.closeability || 50,
+        urgency_level: analysis.urgencySignals?.timeline?.includes('urgent') ? 'high' : 'medium',
+        pain_points_count: Object.values(analysis.painPoints || {}).flat().length,
+        buying_signals_count: (analysis.salesIntelligence?.buyingSignals || []).length,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single()
 
-  if (text.includes('profit') || text.includes('margin')) {
-    financialContext.push('Profitability concerns discussed')
-  }
+    if (saveError) {
+      console.error('Failed to save transcript analysis:', saveError)
+    }
 
-  if (text.includes('tax') || text.includes('irs')) {
-    painPoints.push('Tax-related concerns mentioned')
-    actionItems.push('Offer tax optimization strategies')
-  }
+    return NextResponse.json({
+      success: true,
+      analysis,
+      analysisId: savedAnalysis?.id || null,
+      companyId,
+      timestamp: new Date().toISOString()
+    })
 
-  // Sentiment analysis (basic)
-  const positiveWords = ['good', 'great', 'excited', 'interested', 'yes', 'definitely']
-  const negativeWords = ['bad', 'terrible', 'concerned', 'worried', 'no', 'problem']
-  
-  const positiveCount = positiveWords.filter(word => text.includes(word)).length
-  const negativeCount = negativeWords.filter(word => text.includes(word)).length
-  
-  let sentiment: 'positive' | 'neutral' | 'negative' = 'neutral'
-  if (positiveCount > negativeCount + 1) sentiment = 'positive'
-  else if (negativeCount > positiveCount + 1) sentiment = 'negative'
-
-  // Add generic insights
-  keyPoints.push(`Discovery call completed for ${companyName}`)
-  actionItems.push('Schedule follow-up audit call')
-  actionItems.push('Prepare customized audit deck')
-
-  return {
-    keyPoints,
-    painPoints,
-    opportunities,
-    financialContext,
-    actionItems,
-    sentiment
+  } catch (error) {
+    console.error('Transcript analysis error:', error)
+    return NextResponse.json(
+      { error: 'Failed to analyze transcript' },
+      { status: 500 }
+    )
   }
 }

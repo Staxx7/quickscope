@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { Download, FileText, TrendingUp, TrendingDown, AlertTriangle, Target, CheckCircle, BarChart3, PieChart, DollarSign, Activity, Users, Calendar, ArrowUp, ArrowDown, Minus, Brain, Zap, Eye, Presentation, Star, Clock, Shield } from 'lucide-react'
+import { Download, FileText, TrendingUp, TrendingDown, AlertTriangle, Target, CheckCircle, BarChart3, PieChart, DollarSign, Activity, Users, Calendar, ArrowUp, ArrowDown, Minus, Brain, Zap, Eye, Presentation, Star, Clock, Shield, MessageSquare } from 'lucide-react'
 import { useToast } from './Toast'
 
 interface CallInsights {
@@ -67,7 +67,7 @@ interface IntelligentAuditDeck {
   }
   financialSnapshot: {
     healthScore: number
-    keyMetrics: Array<{ name: string; value: string; trend: string; benchmark: string; status: string }>
+    keyMetrics: Array<{ name: string; value: string; trend: string; benchmark: string; status: string; aiInsight?: string }>
     industryComparison: Array<{ metric: string; company: number; industry: number; ranking: string }>
     trendAnalysis: string[]
   }
@@ -113,6 +113,23 @@ interface IntelligentAuditDeck {
     roi: { timeToValue: string; yearOneROI: string; threeYearROI: string }
     successMetrics: string[]
   }
+  aiInsights?: {
+    transcriptHighlights: string[]
+    financialEvidence: string[]
+    recommendedApproach: string[]
+    talkingPoints: string[]
+  }
+  metadata?: {
+    generatedAt: string
+    dataSource: string
+    version: string
+    companyName: string
+    aiAnalysisId?: string | null
+    closeabilityScore?: number | null
+    urgencyLevel?: string
+    hasTranscriptData?: boolean
+    analysisType?: string
+  }
 }
 
 interface GenerationStage {
@@ -143,83 +160,580 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
   const [generating, setGenerating] = useState(false)
   const [currentSlide, setCurrentSlide] = useState(0)
   const [generationStage, setGenerationStage] = useState<GenerationStage | null>(null)
-  const [selectedTemplate, setSelectedTemplate] = useState('comprehensive')
+  const [selectedTemplate, setSelectedTemplate] = useState('ai-enhanced')
   const [realFinancialData, setRealFinancialData] = useState<FinancialSnapshot | null>(null)
   const [loadingFinancialData, setLoadingFinancialData] = useState(false)
-  const [dataSource, setDataSource] = useState<'real' | 'mock'>('mock')
+  const [dataSource, setDataSource] = useState<'real' | 'mock' | 'ai_enhanced'>('mock')
   const { showToast, ToastContainer } = useToast()
 
-  // Fetch real financial data from QuickBooks if companyId is provided
+  // Utility functions
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount)
+  }
+
+  // AI-Enhanced Deck Generation
+  const generateAIEnhancedDeck = async () => {
+    if (!companyId && !prospectId) {
+      showToast('Company ID or Prospect ID required for AI analysis', 'error');
+      return;
+    }
+
+    setGenerating(true);
+    setGenerationStage({ 
+      stage: 'Initializing AI-enhanced analysis...', 
+      progress: 5, 
+      message: 'Connecting to AI intelligence pipeline' 
+    });
+
+    try {
+      // Step 1: Get enhanced financial data
+      setGenerationStage({ 
+        stage: 'Fetching comprehensive financial data...', 
+        progress: 15, 
+        message: 'Retrieving QuickBooks financial intelligence' 
+      });
+
+      let enhancedFinancialData = null;
+      if (companyId) {
+        try {
+          const financialResponse = await fetch(`/api/qbo/enhanced-financials?companyId=${companyId}`);
+          if (financialResponse.ok) {
+            enhancedFinancialData = await financialResponse.json();
+          }
+        } catch (error) {
+          console.log('Enhanced financial data not available, using existing data');
+        }
+      }
+
+      // Step 2: Get existing transcript analysis if available
+      setGenerationStage({ 
+        stage: 'Analyzing call transcripts...', 
+        progress: 30, 
+        message: 'Processing sales intelligence from discovery calls' 
+      });
+
+      let transcriptData = null;
+      try {
+        const transcriptResponse = await fetch(`/api/ai/process-transcript?prospectId=${prospectId}`);
+        if (transcriptResponse.ok) {
+          const transcriptResult = await transcriptResponse.json();
+          transcriptData = transcriptResult.analyses?.[0]; // Get most recent analysis
+        }
+      } catch (error) {
+        console.log('No transcript data available, proceeding with financial analysis only');
+      }
+
+      // Step 3: Run comprehensive AI analysis
+      setGenerationStage({ 
+        stage: 'Generating AI business insights...', 
+        progress: 50, 
+        message: 'AI combining financial data with sales intelligence' 
+      });
+
+      const aiAnalysisResponse = await fetch('/api/ai/analyze-prospect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prospectId: prospectId || `temp-${Date.now()}`,
+          transcriptText: transcriptData?.transcript_text || '',
+          financialData: enhancedFinancialData || (realFinancialData ? convertToEnhancedFormat(realFinancialData) : null),
+          companyInfo: {
+            name: companyName,
+            industry: enhancedFinancialData?.companyInfo?.industry || 'Business Services',
+            yearEstablished: enhancedFinancialData?.companyInfo?.yearEstablished || new Date().getFullYear() - 5
+          },
+          analysisType: transcriptData ? 'comprehensive' : 'financial-only'
+        })
+      });
+
+      if (!aiAnalysisResponse.ok) {
+        throw new Error('AI analysis failed');
+      }
+
+      const aiResults = await aiAnalysisResponse.json();
+
+      // Step 4: Generate AI-enhanced audit deck
+      setGenerationStage({ 
+        stage: 'Creating intelligent audit presentation...', 
+        progress: 75, 
+        message: 'Building AI-powered audit deck with personalized insights' 
+      });
+
+      const aiEnhancedDeck = generateAIEnhancedAuditDeck(
+        aiResults.results, 
+        enhancedFinancialData || realFinancialData,
+        transcriptData
+      );
+
+      setGenerationStage({ 
+        stage: 'AI analysis complete!', 
+        progress: 100, 
+        message: 'Intelligent audit deck ready with AI-powered insights and talking points' 
+      });
+
+      setAuditDeck(aiEnhancedDeck);
+      setDataSource('ai_enhanced');
+      onDeckGenerated?.(aiEnhancedDeck);
+      
+      showToast('AI-enhanced audit deck generated successfully!', 'success');
+
+    } catch (error: unknown) {
+      console.error('AI-enhanced generation failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      showToast(`AI analysis failed: ${errorMessage}. Falling back to standard generation.`, 'warning');
+      
+      // Fall back to your existing generation method
+      await generateIntelligentDeck();
+    } finally {
+      setGenerating(false);
+      setTimeout(() => setGenerationStage(null), 2000);
+    }
+  };
+
+  const generateAIEnhancedAuditDeck = (
+    aiResults: any, 
+    financialData: any, 
+    transcriptData?: any
+  ): IntelligentAuditDeck => {
+    const { transcriptAnalysis, financialIntelligence, businessInsights, auditDeckIntelligence } = aiResults;
+    const revenue = financialData?.profitLoss?.totalRevenue || financialData?.revenue || 0;
+    const netIncome = financialData?.profitLoss?.netIncome || financialData?.net_income || 0;
+    
+    return {
+      executiveSummary: {
+        overallScore: financialIntelligence?.healthScore || 75,
+        keyFindings: businessInsights?.keyFindings || [
+          `AI analysis reveals revenue of ${formatCurrency(revenue)}`,
+          `Financial health score: ${financialIntelligence?.healthScore || 75}/100`,
+          'AI-identified optimization opportunities worth significant ROI',
+          transcriptData ? 'Discovery call insights integrated into analysis' : 'Comprehensive financial data analysis completed'
+        ],
+        urgentIssues: businessInsights?.riskAssessment || [
+          'Financial infrastructure gaps limiting growth potential',
+          'Manual processes consuming valuable time and resources'
+        ],
+        opportunities: businessInsights?.growthOpportunities || [
+          'Process automation implementation',
+          'Working capital optimization',
+          'Strategic financial planning enhancement'
+        ],
+        contextualInsights: [
+          `Analysis powered by AI combining ${transcriptData ? 'call transcript insights + ' : ''}real QuickBooks data`,
+          `Closeability score: ${transcriptAnalysis?.salesIntelligence?.closeability || 'N/A'}${transcriptAnalysis?.salesIntelligence?.closeability ? '/100' : ''}`,
+          `Urgency level: ${transcriptAnalysis?.urgencySignals?.timeline || 'Standard business timeline'}`,
+          'Personalized recommendations based on AI analysis of business context'
+        ],
+        callToAction: businessInsights?.executiveSummary || 
+          'Implement AI-recommended financial optimization strategy to enhance operational efficiency and accelerate growth'
+      },
+      financialSnapshot: {
+        healthScore: financialIntelligence?.healthScore || 75,
+        keyMetrics: generateAIEnhancedMetrics(financialData, financialIntelligence),
+        industryComparison: financialIntelligence?.industryBenchmarks ? 
+          Object.entries(financialIntelligence.industryBenchmarks).map(([metric, data]: [string, any]) => ({
+            metric: metric.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
+            company: data.company,
+            industry: data.industry,
+            ranking: data.percentile > 70 ? 'Above Average' : data.percentile > 30 ? 'Average' : 'Below Average'
+          })) : [
+            { metric: 'Revenue Growth', company: 15.0, industry: 12.5, ranking: 'Above Average' },
+            { metric: 'Net Margin', company: 18.0, industry: 15.0, ranking: 'Above Average' }
+          ],
+        trendAnalysis: [
+          `AI analysis indicates ${revenue > 1000000 ? 'strong' : 'moderate'} revenue foundation`,
+          'Financial infrastructure optimization opportunities identified',
+          transcriptData ? 'Sales intelligence integrated for comprehensive assessment' : 'Comprehensive financial data analysis completed'
+        ]
+      },
+      painPointAnalysis: {
+        identifiedPains: generateAIPainPointAnalysis(transcriptAnalysis, financialData).map(pain => ({
+          ...pain,
+          priority: (pain.priority.toLowerCase() === 'high' ? 'high' : 
+                    pain.priority.toLowerCase() === 'medium' ? 'medium' : 'low') as 'high' | 'medium' | 'low'
+        })),
+        rootCauseAnalysis: businessInsights?.riskAssessment || [
+          'AI analysis reveals operational scaling challenges',
+          'Limited financial infrastructure relative to business complexity',
+          'Manual processes creating inefficiencies and growth bottlenecks'
+        ]
+      },
+      opportunityMatrix: {
+        opportunities: generateAIOpportunityMatrix(financialIntelligence, businessInsights, financialData),
+        priorityRanking: auditDeckIntelligence?.slideRecommendations?.map((slide: { title: string }) => slide.title) || [
+          'Immediate: Financial process automation (High impact, medium effort)',
+          'Short-term: Working capital optimization (Medium impact, low effort)',
+          'Long-term: Strategic financial planning (High impact, high effort)'
+        ]
+      },
+      riskProfile: {
+        criticalRisks: (financialIntelligence?.riskFactors || []).map((risk: any) => ({
+          risk: risk.risk || risk,
+          probability: risk.likelihood ? `${risk.likelihood}%` : 'Medium',
+          impact: risk.severity || 'Medium',
+          mitigation: risk.mitigation || 'Strategic optimization recommended'
+        })),
+        mitigationStrategies: [
+          { 
+            strategy: 'AI-recommended financial infrastructure enhancement', 
+            timeline: '3-6 months', 
+            investment: '$15K-25K setup', 
+            expectedOutcome: 'Automated reporting and real-time visibility' 
+          }
+        ],
+        contingencyPlanning: businessInsights?.strategicRecommendations || [
+          'Establish AI-powered financial monitoring systems',
+          'Implement scenario-based planning and stress testing',
+          'Create operational flexibility for market adaptation'
+        ]
+      },
+      personalizedRecommendations: {
+        immediate: (businessInsights?.urgentActions || []).map((action: string) => ({
+          action,
+          rationale: 'AI analysis indicates high-priority intervention needed',
+          expectedOutcome: 'Measurable improvement in operational efficiency',
+          timeline: '2-4 weeks'
+        })),
+        shortTerm: (businessInsights?.strategicRecommendations || []).slice(0, 3).map((rec: string) => ({
+          action: rec,
+          rationale: 'AI-identified opportunity with strong ROI potential',
+          expectedOutcome: 'Enhanced financial performance and visibility',
+          timeline: '2-3 months'
+        })),
+        longTerm: [
+          {
+            action: 'Implement comprehensive AI-powered financial intelligence system',
+            rationale: 'Long-term competitive advantage through advanced analytics',
+            expectedOutcome: 'Industry-leading financial performance and scalability',
+            timeline: '6-12 months'
+          }
+        ],
+        budgetAligned: transcriptAnalysis?.urgencySignals?.budget ? [
+          { 
+            service: 'AI-Enhanced Fractional CFO Services', 
+            investment: transcriptAnalysis.urgencySignals.budget,
+            roi: '350-450% Year 1', 
+            priority: 'High' 
+          }
+        ] : [
+          { service: 'Fractional CFO Services', investment: '$8,000-12,000/month', roi: '400% Year 1', priority: 'High' }
+        ]
+      },
+      proposedEngagement: {
+        services: [
+          {
+            name: 'AI-Enhanced Fractional CFO Services',
+            description: 'Strategic financial leadership with AI-powered insights',
+            deliverables: ['Weekly AI-generated financial reports', 'Monthly strategic planning', 'Real-time performance monitoring'],
+            timeline: 'Ongoing monthly engagement'
+          }
+        ],
+        phasedApproach: [
+          {
+            phase: 'AI Analysis & Setup (Month 1)',
+            duration: '30 days',
+            objectives: ['Complete financial infrastructure assessment', 'Implement AI monitoring systems'],
+            deliverables: ['AI-powered dashboard', 'Automated reporting systems', 'Performance benchmarking']
+          }
+        ],
+        investment: {
+          monthly: transcriptAnalysis?.urgencySignals?.budget?.match(/\d+,?\d*/)?.[0] || '$10,000',
+          setup: '$15,000',
+          total: '$75,000 (6 months)'
+        },
+        expectedOutcomes: [
+          `AI-optimized financial performance based on ${transcriptData ? 'call insights + ' : ''}QuickBooks analysis`,
+          'Automated reporting reducing manual effort by 80%',
+          'Enhanced decision-making through AI-powered insights',
+          transcriptData ? 'Customized solutions addressing specific concerns raised in discovery' : 'Comprehensive financial optimization'
+        ],
+        roi: {
+          timeToValue: auditDeckIntelligence?.presentationStrategy?.duration || '30 days',
+          yearOneROI: '400-500% return on investment',
+          threeYearROI: '750% cumulative return'
+        },
+        successMetrics: [
+          'AI-generated financial reports delivered within 24 hours',
+          'Real-time performance monitoring with 95% accuracy',
+          transcriptData ? `Address ${(transcriptAnalysis?.painPoints?.operational?.length || 0) + (transcriptAnalysis?.painPoints?.financial?.length || 0)} identified pain points` : 'Comprehensive financial optimization',
+          'Measurable improvement in all key financial ratios within 90 days'
+        ]
+      },
+      aiInsights: {
+        transcriptHighlights: transcriptData ? [
+          ...((transcriptAnalysis?.salesIntelligence?.buyingSignals || []).map((signal: string) => `Buying signal: ${signal}`)),
+          ...((transcriptAnalysis?.urgencySignals?.pressurePoints || []).map((point: string) => `Pressure point: ${point}`)),
+          transcriptAnalysis?.urgencySignals?.timeline ? `Timeline mentioned: ${transcriptAnalysis.urgencySignals.timeline}` : null
+        ].filter(Boolean) : ['No transcript data available - analysis based on financial data only'],
+        financialEvidence: [
+          `AI health score: ${financialIntelligence?.healthScore || 75}/100`,
+          `Revenue analysis: ${formatCurrency(revenue)}`,
+          ...(financialIntelligence?.opportunities || []).map((opp: any) => 
+            `Opportunity: ${opp.opportunity} - ${formatCurrency(opp.estimatedValue || opp.potential || 50000)} potential value`
+          )
+        ],
+        recommendedApproach: auditDeckIntelligence?.narrativeStructure ? [
+          auditDeckIntelligence.narrativeStructure.openingHook,
+          auditDeckIntelligence.narrativeStructure.problemStatement,
+          auditDeckIntelligence.narrativeStructure.solutionFramework
+        ] : [
+          'Lead with AI-powered financial intelligence',
+          'Demonstrate comprehensive understanding of business challenges',
+          'Present data-driven solutions with quantified outcomes'
+        ],
+        talkingPoints: transcriptAnalysis?.salesIntelligence ? [
+          ...(transcriptAnalysis.salesIntelligence.buyingSignals || []),
+          `Closeability assessment: ${transcriptAnalysis.salesIntelligence.closeability || 'TBD'}/100`,
+          transcriptAnalysis.salesIntelligence.recommendedStrategy || 'Data-driven engagement strategy'
+        ] : ['Focus on AI-powered financial insights', 'Emphasize ROI and measurable outcomes']
+      },
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        dataSource: 'ai_enhanced_real_quickbooks',
+        version: '4.0',
+        companyName,
+        aiAnalysisId: aiResults.analysisId || null,
+        closeabilityScore: transcriptAnalysis?.salesIntelligence?.closeability || null,
+        urgencyLevel: transcriptAnalysis?.urgencySignals ? 
+          (transcriptAnalysis.urgencySignals.timeline?.includes('urgent') ? 'high' : 'medium') : 'standard',
+        hasTranscriptData: !!transcriptData,
+        analysisType: transcriptData ? 'comprehensive' : 'financial-only'
+      }
+    };
+  };
+
+  // Helper functions for AI-enhanced analysis
+  const generateAIEnhancedMetrics = (financialData: any, financialIntelligence: any) => {
+    const revenue = financialData?.profitLoss?.totalRevenue || financialData?.revenue || 0;
+    const netIncome = financialData?.profitLoss?.netIncome || financialData?.net_income || 0;
+    const totalAssets = financialData?.balanceSheet?.totalAssets || financialData?.assets || 0;
+    
+    return [
+      { 
+        name: 'Revenue', 
+        value: formatCurrency(revenue), 
+        trend: revenue > 0 ? 'up' : 'stable', 
+        benchmark: 'Industry Avg', 
+        status: revenue > 1000000 ? 'excellent' : revenue > 500000 ? 'good' : 'adequate',
+        aiInsight: financialIntelligence?.keyMetrics?.revenue?.insights?.[0] || 'AI analysis indicates growth potential'
+      },
+      { 
+        name: 'Net Margin', 
+        value: revenue > 0 ? `${((netIncome / revenue) * 100).toFixed(1)}%` : '0%', 
+        trend: netIncome > 0 ? 'up' : 'stable', 
+        benchmark: '15.0%', 
+        status: (netIncome / revenue) > 0.15 ? 'excellent' : (netIncome / revenue) > 0.1 ? 'good' : 'adequate',
+        aiInsight: financialIntelligence?.keyMetrics?.profitability?.insights?.[0] || 'Margin optimization opportunities identified'
+      },
+      { 
+        name: 'Financial Health', 
+        value: `${financialIntelligence?.healthScore || 75}/100`, 
+        trend: 'stable', 
+        benchmark: '80+', 
+        status: (financialIntelligence?.healthScore || 75) > 80 ? 'excellent' : 
+                (financialIntelligence?.healthScore || 75) > 60 ? 'good' : 'adequate',
+        aiInsight: 'AI-calculated comprehensive health assessment'
+      }
+    ];
+  };
+
+  const generateAIPainPointAnalysis = (transcriptAnalysis: any, financialData: any) => {
+    const painPoints = [];
+    
+    // Add transcript-identified pain points
+    if (transcriptAnalysis?.painPoints) {
+      Object.entries(transcriptAnalysis.painPoints).forEach(([category, points]: [string, any]) => {
+        (points || []).forEach((pain: string, index: number) => {
+          painPoints.push({
+            painPoint: pain,
+            financialEvidence: getFinancialEvidence(pain, financialData),
+            impact: calculatePainImpact(pain, financialData),
+            solution: generateSolution(pain, transcriptAnalysis),
+            priority: index < 2 ? 'high' : 'medium',
+            estimatedValue: Math.floor(50000 + Math.random() * 100000)
+          });
+        });
+      });
+    }
+    
+    // Add financial data-derived pain points if no transcript
+    if (painPoints.length === 0) {
+      const revenue = financialData?.profitLoss?.totalRevenue || financialData?.revenue || 0;
+      const netMargin = revenue > 0 ? (financialData?.profitLoss?.netIncome || financialData?.net_income || 0) / revenue : 0;
+      
+      if (netMargin < 0.1) {
+        painPoints.push({
+          painPoint: 'Below-average profit margins limiting growth investment',
+          financialEvidence: `Current net margin of ${(netMargin * 100).toFixed(1)}% below industry standard`,
+          impact: `Estimated ${formatCurrency(revenue * 0.05)} annual opportunity cost`,
+          solution: 'Implement margin optimization and cost structure analysis',
+          priority: 'high',
+          estimatedValue: Math.floor(revenue * 0.03)
+        });
+      }
+    }
+    
+    return painPoints;
+  };
+
+  const generateAIOpportunityMatrix = (financialIntelligence: any, businessInsights: any, financialData: any) => {
+    if (financialIntelligence?.opportunities) {
+      return financialIntelligence.opportunities;
+    }
+    
+    const revenue = financialData?.profitLoss?.totalRevenue || financialData?.revenue || 0;
+    
+    return [
+      {
+        opportunity: 'AI-Powered Financial Automation',
+        financialBasis: `Revenue base of ${formatCurrency(revenue)} supports automation investment`,
+        estimatedValue: Math.floor(revenue * 0.05),
+        difficulty: 'medium',
+        timeline: '3-6 months',
+        alignsWithGoals: true,
+        roi: 450
+      },
+      {
+        opportunity: 'Strategic Financial Planning Implementation',
+        financialBasis: 'AI analysis reveals planning infrastructure gaps',
+        estimatedValue: Math.floor(revenue * 0.08),
+        difficulty: 'low',
+        timeline: '2-4 months',
+        alignsWithGoals: true,
+        roi: 380
+      }
+    ];
+  };
+
+  // Enhanced financial data fetching
   useEffect(() => {
-    const fetchRealFinancialData = async () => {
+    const fetchEnhancedFinancialData = async () => {
       if (!companyId) return
 
       setLoadingFinancialData(true)
       try {
-        const response = await fetch(`/api/financial-snapshots?realm_id=${companyId}`)
+        // Try enhanced-financials endpoint first
+        const response = await fetch(`/api/qbo/enhanced-financials?companyId=${companyId}`)
         
-        if (!response.ok) {
-          throw new Error('Failed to fetch financial data')
-        }
+        if (response.ok) {
+          const enhancedData = await response.json()
+          
+          // Convert enhanced QB data to your existing format
+          const convertedSnapshot: FinancialSnapshot = {
+            id: Date.now().toString(),
+            company_id: companyId,
+            revenue: enhancedData.profitLoss?.totalRevenue || 0,
+            net_income: enhancedData.profitLoss?.netIncome || 0,
+            expenses: enhancedData.profitLoss?.totalExpenses || 0,
+            assets: enhancedData.balanceSheet?.totalAssets || 0,
+            liabilities: enhancedData.balanceSheet?.totalLiabilities || 0,
+            created_at: new Date().toISOString()
+          }
 
-        const snapshots = await response.json()
-        if (snapshots && snapshots.length > 0) {
-          setRealFinancialData(snapshots[0])
+          setRealFinancialData(convertedSnapshot)
           setDataSource('real')
-          showToast('Real QuickBooks financial data loaded successfully!', 'success')
+          showToast('Enhanced QuickBooks financial data loaded successfully!', 'success')
+          
+          // Store the full enhanced data for more detailed analysis
+          localStorage.setItem(`enhanced-qb-data-${companyId}`, JSON.stringify(enhancedData))
+        } else {
+          throw new Error('Enhanced data not available')
         }
+        
       } catch (error) {
-        console.error('Error fetching financial data:', error)
-        showToast('Using demo data - QuickBooks data unavailable', 'info')
-        setDataSource('mock')
+        console.error('Error fetching enhanced financial data:', error)
+        
+        // Fallback to regular financial snapshots
+        try {
+          const fallbackResponse = await fetch(`/api/financial-snapshots?realm_id=${companyId}`)
+          if (fallbackResponse.ok) {
+            const snapshots = await fallbackResponse.json()
+            if (snapshots && snapshots.length > 0) {
+              setRealFinancialData(snapshots[0])
+              setDataSource('real')
+              showToast('QuickBooks financial data loaded successfully!', 'success')
+            }
+          }
+        } catch (fallbackError) {
+          console.error('Fallback financial data fetch failed:', fallbackError)
+          showToast('Using demo data - QuickBooks data unavailable', 'info')
+          setDataSource('mock')
+        }
       } finally {
         setLoadingFinancialData(false)
       }
     }
 
-    fetchRealFinancialData()
+    fetchEnhancedFinancialData()
   }, [companyId, showToast])
 
-  // Convert real financial data to QBO dataset format
+  const convertToEnhancedFormat = (snapshot: FinancialSnapshot) => {
+    return {
+      profitLoss: {
+        totalRevenue: snapshot.revenue,
+        netIncome: snapshot.net_income,
+        totalExpenses: snapshot.expenses
+      },
+      balanceSheet: {
+        totalAssets: snapshot.assets,
+        totalLiabilities: snapshot.liabilities
+      },
+      companyInfo: {
+        name: companyName,
+        industry: 'Business Services'
+      }
+    }
+  }
+
   const convertToQBODataSet = (snapshot: FinancialSnapshot): QBODataSet => {
-    const netMargin = snapshot.revenue > 0 ? snapshot.net_income / snapshot.revenue : 0
-    const grossMargin = snapshot.revenue > 0 ? (snapshot.revenue - snapshot.expenses * 0.7) / snapshot.revenue : 0 // Estimate COGS as 70% of expenses
-    const currentRatio = snapshot.liabilities > 0 ? snapshot.assets / snapshot.liabilities : 2.0
-    const debtToEquity = snapshot.assets > 0 ? snapshot.liabilities / (snapshot.assets - snapshot.liabilities) : 0.3
+    const revenue = snapshot.revenue
+    const netIncome = snapshot.net_income
+    const totalAssets = snapshot.assets
+    const totalLiabilities = snapshot.liabilities
+    const totalExpenses = snapshot.expenses
+
+    const grossMargin = revenue > 0 ? (revenue - totalExpenses * 0.7) / revenue : 0
+    const currentRatio = totalLiabilities > 0 ? (totalAssets * 0.4) / (totalLiabilities * 0.6) : 2.0
 
     return {
       companyInfo: {
         name: companyName,
-        industry: 'Business Services', // Could be enhanced with industry detection
-        revenue: snapshot.revenue,
-        employees: Math.floor(snapshot.revenue / 150000) || 1, // Rough estimate: $150K revenue per employee
-        establishedYear: new Date().getFullYear() - 5 // Default to 5 years old
+        industry: 'Business Services',
+        revenue,
+        employees: Math.floor(revenue / 150000) || 1,
+        establishedYear: new Date().getFullYear() - 5
       },
       financialMetrics: {
         revenue: { 
-          current: snapshot.revenue, 
-          growth: 0.15, // Default to 15% growth - could be calculated from historical data
-          trend: snapshot.revenue > 0 ? 'increasing' : 'stable' 
+          current: revenue, 
+          growth: 0.15,
+          trend: revenue > 0 ? 'increasing' : 'stable' 
         },
         profitability: { 
           grossMargin, 
-          netMargin, 
-          ebitda: snapshot.net_income + (snapshot.expenses * 0.1) // Rough EBITDA estimate
+          netMargin: revenue > 0 ? netIncome / revenue : 0,
+          ebitda: netIncome + (totalExpenses * 0.1)
         },
         liquidity: { 
           currentRatio, 
           quickRatio: currentRatio * 0.8, 
-          cashOnHand: snapshot.assets * 0.2 // Estimate cash as 20% of assets
+          cashOnHand: totalAssets * 0.2
         },
         efficiency: { 
-          assetTurnover: snapshot.assets > 0 ? snapshot.revenue / snapshot.assets : 1.0,
-          receivablesDays: 45, // Industry standard estimate
-          inventoryTurnover: 6 // Industry standard estimate
+          assetTurnover: totalAssets > 0 ? revenue / totalAssets : 1.0,
+          receivablesDays: 45,
+          inventoryTurnover: 6
         },
         leverage: { 
-          debtToEquity, 
-          interestCoverage: snapshot.net_income > 0 ? snapshot.net_income / (snapshot.expenses * 0.05) : 5,
-          debtServiceCoverage: 2.5 
+          debtToEquity: totalAssets > 0 ? totalLiabilities / (totalAssets - totalLiabilities) : 0.3,
+          interestCoverage: 10,
+          debtServiceCoverage: 2.5
         }
       },
       healthScore: calculateHealthScore(snapshot),
@@ -228,39 +742,29 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
       benchmarks: {
         revenueGrowth: { company: 15, industry: 12.5, percentile: 65 },
         grossMargin: { company: grossMargin * 100, industry: 65.0, percentile: grossMargin > 0.65 ? 75 : 45 },
-        netMargin: { company: netMargin * 100, industry: 15.0, percentile: netMargin > 0.15 ? 70 : 40 }
+        netMargin: { company: (netIncome / revenue) * 100, industry: 15.0, percentile: (netIncome / revenue) > 0.15 ? 70 : 40 }
       }
     }
   }
 
   const calculateHealthScore = (snapshot: FinancialSnapshot): number => {
-    let score = 50 // Base score
-
-    // Revenue health (30% of score)
-    if (snapshot.revenue > 1000000) score += 15
-    else if (snapshot.revenue > 500000) score += 10
-    else if (snapshot.revenue > 100000) score += 5
-
-    // Profitability (25% of score)
-    const netMargin = snapshot.revenue > 0 ? snapshot.net_income / snapshot.revenue : 0
-    if (netMargin > 0.2) score += 15
-    else if (netMargin > 0.1) score += 10
-    else if (netMargin > 0) score += 5
-
-    // Asset efficiency (20% of score)
-    const assetTurnover = snapshot.assets > 0 ? snapshot.revenue / snapshot.assets : 0
-    if (assetTurnover > 1.5) score += 10
-    else if (assetTurnover > 1.0) score += 7
-    else if (assetTurnover > 0.5) score += 4
-
-    // Financial stability (25% of score)
-    const debtRatio = snapshot.assets > 0 ? snapshot.liabilities / snapshot.assets : 0
-    if (debtRatio < 0.3) score += 15
-    else if (debtRatio < 0.5) score += 10
-    else if (debtRatio < 0.7) score += 5
-
-    return Math.min(Math.max(score, 0), 100)
-  }
+    let score = 50; // Base score
+    
+    // Revenue health
+    if (snapshot.revenue > 0) score += 10;
+    
+    // Profitability
+    const profitMargin = snapshot.net_income / snapshot.revenue;
+    if (profitMargin > 0.15) score += 15;
+    else if (profitMargin > 0) score += 10;
+    
+    // Liquidity
+    const currentRatio = snapshot.assets / snapshot.liabilities;
+    if (currentRatio > 2) score += 15;
+    else if (currentRatio > 1) score += 10;
+    
+    return Math.min(score, 100);
+  };
 
   const generateRiskFactors = (snapshot: FinancialSnapshot): string[] => {
     const risks: string[] = []
@@ -682,6 +1186,12 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
           'Stakeholder satisfaction >4.5/5',
           'Financial team productivity increase >40%'
         ]
+      },
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        dataSource: dataSource === 'real' ? 'real_quickbooks' : 'demonstration_data',
+        version: '3.0',
+        companyName
       }
     }
   }
@@ -702,499 +1212,747 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
   }
 
   const generateSolution = (pain: string, insights: CallInsights): string => {
-    if (pain.includes('manual')) return 'Deploy automated financial reporting platform with real-time analytics and dashboards'
-    if (pain.includes('cash flow')) return 'Implement 13-week rolling cash flow forecasting with scenario planning and alerts'
-    if (pain.includes('close')) return 'Standardize month-end close process with automated reconciliations and variance analysis'
-    return 'Comprehensive financial operations transformation with strategic CFO guidance'
+    if (pain.includes('manual')) return 'Implement automated financial reporting and dashboard systems'
+    if (pain.includes('cash flow')) return 'Deploy real-time cash flow monitoring and forecasting tools'
+    if (pain.includes('close')) return 'Install streamlined month-end close process with automation'
+    if (pain.includes('forecasting')) return 'Establish comprehensive financial planning and analysis framework'
+    if (pain.includes('scaling')) return 'Build scalable financial infrastructure with growth capacity'
+    return 'Develop comprehensive financial optimization strategy addressing core operational challenges'
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
-
-  const exportDeck = async (format: 'pdf' | 'pptx' | 'html') => {
+  // Export functions
+  const exportDeck = (format: 'pdf' | 'html' | 'pptx') => {
     if (!auditDeck) return
-
-    showToast(`Generating ${format.toUpperCase()} export...`, 'info')
     
-    // Simulate export generation
-    await new Promise(resolve => setTimeout(resolve, 3000))
+    const filename = `${companyName}_Audit_Deck_${new Date().toISOString().split('T')[0]}`
     
-    const exportContent = generateExportContent(auditDeck, format)
-    const blob = new Blob([exportContent], { 
-      type: format === 'pdf' ? 'application/pdf' : 
-           format === 'pptx' ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation' : 
-           'text/html' 
-    })
-    
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `intelligent-audit-deck-${companyName.replace(/\s+/g, '-')}-${dataSource}.${format}`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-
-    showToast(`${format.toUpperCase()} export completed successfully`, 'success')
-  }
-
-  const generateExportContent = (deck: IntelligentAuditDeck, format: string): string => {
-    if (format === 'html') {
-      return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Intelligent Financial Audit - ${companyName}</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background: #fff; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
-        .header { text-align: center; margin-bottom: 50px; padding: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 15px; }
-        .header h1 { font-size: 2.5rem; margin-bottom: 10px; }
-        .header p { font-size: 1.2rem; opacity: 0.9; }
-        .data-source { background: ${dataSource === 'real' ? '#10B981' : '#F59E0B'}; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; margin-top: 10px; display: inline-block; }
-        .section { margin: 40px 0; padding: 30px; background: #f8f9fa; border-radius: 10px; border-left: 5px solid #667eea; }
-        .section h2 { color: #667eea; margin-bottom: 20px; font-size: 1.8rem; }
-        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0; }
-        .metric-card { background: white; padding: 20px; border-radius: 10px; border: 1px solid #e9ecef; text-align: center; }
-        .metric-value { font-size: 2rem; font-weight: bold; color: #667eea; margin-bottom: 5px; }
-        .metric-label { color: #6c757d; font-size: 0.9rem; }
-        .findings-list { list-style: none; }
-        .findings-list li { margin: 10px 0; padding: 15px; background: white; border-radius: 8px; border-left: 4px solid #28a745; }
-        .footer { text-align: center; margin-top: 50px; padding: 30px; background: #343a40; color: white; border-radius: 10px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Intelligent Financial Audit</h1>
-            <p>${companyName} • Executive Assessment & Strategic Recommendations</p>
-            <div class="data-source">${dataSource === 'real' ? '✅ Based on Real QuickBooks Data' : '📊 Demonstration Analysis'}</div>
-            <p style="margin-top: 15px;">Generated: ${new Date().toLocaleDateString()}</p>
-        </div>
-
-        <div class="section">
-            <h2>Executive Summary</h2>
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <div class="metric-value">${deck.executiveSummary.overallScore}/100</div>
-                    <div class="metric-label">Overall Health Score</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">${deck.financialSnapshot.keyMetrics[0]?.value || 'N/A'}</div>
-                    <div class="metric-label">${deck.financialSnapshot.keyMetrics[0]?.name || 'Revenue'}</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">${deck.opportunityMatrix.opportunities.length}</div>
-                    <div class="metric-label">Opportunities Identified</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">${deck.proposedEngagement.roi.yearOneROI}</div>
-                    <div class="metric-label">Year 1 ROI</div>
-                </div>
-            </div>
-            <ul class="findings-list">
-                ${deck.executiveSummary.keyFindings.map(finding => `<li>${finding}</li>`).join('')}
-            </ul>
-        </div>
-
-        <div class="section">
-            <h2>Financial Analysis</h2>
-            <p><strong>Data Source:</strong> ${dataSource === 'real' ? 'Live QuickBooks Integration' : 'Comprehensive Demo Analysis'}</p>
-            <div class="metrics-grid">
-                ${deck.financialSnapshot.keyMetrics.map(metric => `
-                <div class="metric-card">
-                    <h3 style="color: #667eea; margin-bottom: 10px;">${metric.name}</h3>
-                    <div class="metric-value">${metric.value}</div>
-                    <div class="metric-label">Status: ${metric.status}</div>
-                </div>
-                `).join('')}
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>Strategic Opportunities</h2>
-            <div class="metrics-grid">
-                ${deck.opportunityMatrix.opportunities.map(opp => `
-                <div class="metric-card">
-                    <h3 style="color: #667eea; margin-bottom: 10px;">${opp.opportunity}</h3>
-                    <div class="metric-value">${formatCurrency(opp.estimatedValue)}</div>
-                    <div class="metric-label">Estimated Value</div>
-                    <p style="margin-top: 10px; font-size: 0.9rem; color: #6c757d;">${opp.financialBasis}</p>
-                </div>
-                `).join('')}
-            </div>
-        </div>
-
-        <div class="footer">
-            <h3>Ready to Transform Your Financial Operations?</h3>
-            <p>This analysis demonstrates the power of ${dataSource === 'real' ? 'real-time QuickBooks integration' : 'our comprehensive analytical framework'}.</p>
-            <p style="margin-top: 15px; font-size: 0.9rem; opacity: 0.8;">
-                Generated using AI-powered financial intelligence with ${dataSource === 'real' ? 'live QuickBooks data' : 'demonstration capabilities'}.
-            </p>
-        </div>
-    </div>
-</body>
-</html>`
+    switch (format) {
+      case 'html':
+        const htmlContent = generateHTML(auditDeck)
+        const blob = new Blob([htmlContent], { type: 'text/html' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${filename}.html`
+        a.click()
+        break
+      case 'pdf':
+        // Implementation would depend on PDF library
+        showToast('PDF export functionality to be implemented', 'info')
+        break
+      case 'pptx':
+        // Implementation would depend on PowerPoint library
+        showToast('PowerPoint export functionality to be implemented', 'info')
+        break
     }
-    
-    return JSON.stringify({
-      type: format,
-      dataSource,
-      data: deck,
-      company: companyName,
-      generatedAt: new Date().toISOString()
-    }, null, 2)
   }
 
-  // Rest of your existing component code for slides, navigation, etc.
-  const slides = [
-    { title: 'Executive Summary', key: 'summary', icon: Star },
-    { title: 'Financial Snapshot', key: 'financial', icon: BarChart3 },
-    { title: 'Pain Point Analysis', key: 'painpoints', icon: AlertTriangle },
-    { title: 'Opportunity Matrix', key: 'opportunities', icon: Target },
-    { title: 'Risk Assessment', key: 'risks', icon: Shield },
-    { title: 'Recommendations', key: 'recommendations', icon: CheckCircle },
-    { title: 'Proposed Engagement', key: 'engagement', icon: Presentation }
-  ]
-
-  return (
-    <div className="bg-white rounded-lg shadow-lg">
-      <ToastContainer />
-      
-      {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-t-lg">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold mb-2">Intelligent Audit Deck Generator</h2>
-            <p className="text-purple-100">AI-powered financial analysis for {companyName}</p>
-            {loadingFinancialData && (
-              <div className="flex items-center space-x-2 mt-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-sm">Loading QuickBooks data...</span>
-              </div>
-            )}
-            {!loadingFinancialData && (
-              <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium mt-2 ${
-                dataSource === 'real' 
-                  ? 'bg-green-500 text-white' 
-                  : 'bg-yellow-500 text-black'
-              }`}>
-                {dataSource === 'real' ? '✅ Real QuickBooks Data' : '📊 Demo Data'}
-              </div>
-            )}
-          </div>
-          <div className="flex items-center space-x-3">
-            <Brain className="h-12 w-12 text-purple-200" />
-            <div className="text-right">
-              <div className="text-sm text-purple-200">Powered by</div>
-              <div className="font-semibold">AI Intelligence</div>
-            </div>
-          </div>
+  const generateHTML = (deck: IntelligentAuditDeck): string => {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>${deck.metadata?.companyName} Financial Audit</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .slide { page-break-after: always; margin-bottom: 50px; }
+        .metric { display: inline-block; margin: 10px; padding: 15px; border: 1px solid #ddd; }
+        h1 { color: #2563eb; }
+        h2 { color: #1e40af; }
+      </style>
+    </head>
+    <body>
+      <div class="slide">
+        <h1>Executive Summary</h1>
+        <p><strong>Overall Score:</strong> ${deck.executiveSummary.overallScore}/100</p>
+        <h3>Key Findings:</h3>
+        <ul>${deck.executiveSummary.keyFindings.map(finding => `<li>${finding}</li>`).join('')}</ul>
+      </div>
+      <div class="slide">
+        <h1>Financial Snapshot</h1>
+        <div>
+          ${deck.financialSnapshot.keyMetrics.map(metric => 
+            `<div class="metric">
+              <strong>${metric.name}:</strong> ${metric.value}<br>
+              <small>Benchmark: ${metric.benchmark} | Status: ${metric.status}</small>
+            </div>`
+          ).join('')}
         </div>
       </div>
+      <!-- Additional slides would be generated here -->
+    </body>
+    </html>
+    `
+  }
 
-      <div className="p-6">
-        {/* Generation Progress */}
-        {generationStage && (
-          <div className="mb-6 p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
-            <div className="flex items-center space-x-4">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-purple-800 mb-1">{generationStage.stage}</h3>
-                <p className="text-purple-600 text-sm mb-2">{generationStage.message}</p>
-                <div className="w-full bg-purple-200 rounded-full h-3">
-                  <div
-                    className="bg-gradient-to-r from-purple-500 to-blue-500 h-3 rounded-full transition-all duration-1000"
-                    style={{ width: `${generationStage.progress}%` }}
-                  />
+  const slides = auditDeck ? [
+    { id: 'executive', title: 'Executive Summary', content: auditDeck.executiveSummary },
+    { id: 'financial', title: 'Financial Snapshot', content: auditDeck.financialSnapshot },
+    { id: 'painpoints', title: 'Pain Point Analysis', content: auditDeck.painPointAnalysis },
+    { id: 'opportunities', title: 'Opportunity Matrix', content: auditDeck.opportunityMatrix },
+    { id: 'risks', title: 'Risk Profile', content: auditDeck.riskProfile },
+    { id: 'recommendations', title: 'Personalized Recommendations', content: auditDeck.personalizedRecommendations },
+    { id: 'engagement', title: 'Proposed Engagement', content: auditDeck.proposedEngagement }
+  ] : []
+
+  const nextSlide = () => {
+    if (currentSlide < slides.length - 1) {
+      setCurrentSlide(currentSlide + 1)
+    }
+  }
+
+  const previousSlide = () => {
+    if (currentSlide > 0) {
+      setCurrentSlide(currentSlide - 1)
+    }
+  }
+
+  const renderSlideContent = (slide: any) => {
+    switch (slide.id) {
+      case 'executive':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">Executive Summary</h2>
+              <div className="flex items-center space-x-2">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">{slide.content.overallScore}</span>
                 </div>
-                <div className="text-right text-sm text-purple-600 mt-1">{generationStage.progress}%</div>
-                {generationStage.insights && (
-                  <div className="mt-3 space-y-1">
-                    {generationStage.insights.map((insight, index) => (
-                      <div key={index} className="text-xs text-purple-700 flex items-center">
-                        <Zap className="w-3 h-3 mr-1" />
-                        {insight}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <span className="text-sm text-gray-600">Overall Score</span>
               </div>
             </div>
-          </div>
-        )}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-green-800 mb-2 flex items-center">
+                  <CheckCircle className="w-5 h-5 mr-2" />
+                  Key Findings
+                </h3>
+                <ul className="space-y-1">
+                  {slide.content.keyFindings.map((finding: string, index: number) => (
+                    <li key={index} className="text-sm text-green-700">• {finding}</li>
+                  ))}
+                </ul>
+              </div>
+              
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-blue-800 mb-2 flex items-center">
+                  <Target className="w-5 h-5 mr-2" />
+                  Opportunities
+                </h3>
+                <ul className="space-y-1">
+                  {slide.content.opportunities.map((opp: string, index: number) => (
+                    <li key={index} className="text-sm text-blue-700">• {opp}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
 
-        {/* Generation Controls */}
-        {!auditDeck && !generating && (
-          <div className="mb-6 text-center">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Generate Intelligent Audit</h3>
-              <p className="text-gray-600 mb-4">
-                {dataSource === 'real' 
-                  ? 'Using real QuickBooks financial data for accurate analysis' 
-                  : 'Using comprehensive demonstration data to showcase capabilities'
-                }
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  { id: 'comprehensive', name: 'Comprehensive Analysis', desc: 'Full financial audit with strategic recommendations' },
-                  { id: 'focused', name: 'Focused Assessment', desc: 'Targeted analysis of key issues and opportunities' },
-                  { id: 'investor', name: 'Investor Ready', desc: 'Presentation-ready deck for stakeholder meetings' }
-                ].map((template) => (
-                  <div
-                    key={template.id}
-                    onClick={() => setSelectedTemplate(template.id)}
-                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                      selectedTemplate === template.id
-                        ? 'border-purple-500 bg-purple-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <h4 className="font-semibold text-gray-900 mb-1">{template.name}</h4>
-                    <p className="text-sm text-gray-600">{template.desc}</p>
+            {slide.content.urgentIssues.length > 0 && (
+              <div className="bg-amber-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-amber-800 mb-2 flex items-center">
+                  <AlertTriangle className="w-5 h-5 mr-2" />
+                  Urgent Issues
+                </h3>
+                <ul className="space-y-1">
+                  {slide.content.urgentIssues.map((issue: string, index: number) => (
+                    <li key={index} className="text-sm text-amber-700">• {issue}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-gray-800 mb-2">Call to Action</h3>
+              <p className="text-gray-700">{slide.content.callToAction}</p>
+            </div>
+          </div>
+        )
+
+      case 'financial':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">Financial Snapshot</h2>
+              <div className="flex items-center space-x-2">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-r from-green-500 to-blue-600 flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">{slide.content.healthScore}</span>
+                </div>
+                <span className="text-sm text-gray-600">Health Score</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {slide.content.keyMetrics.map((metric: any, index: number) => (
+                <div key={index} className="bg-white p-4 rounded-lg border shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-600">{metric.name}</span>
+                    <div className="flex items-center">
+                      {metric.trend === 'up' && <TrendingUp className="w-4 h-4 text-green-500" />}
+                      {metric.trend === 'down' && <TrendingDown className="w-4 h-4 text-red-500" />}
+                      {metric.trend === 'stable' && <Minus className="w-4 h-4 text-gray-400" />}
+                    </div>
+                  </div>
+                  <div className="text-xl font-bold text-gray-900">{metric.value}</div>
+                  <div className="text-xs text-gray-500">vs {metric.benchmark}</div>
+                  <div className={`text-xs mt-1 px-2 py-1 rounded ${
+                    metric.status === 'excellent' ? 'bg-green-100 text-green-800' :
+                    metric.status === 'good' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {metric.status}
+                  </div>
+                  {metric.aiInsight && (
+                    <div className="text-xs text-purple-600 mt-2 flex items-center">
+                      <Brain className="w-3 h-3 mr-1" />
+                      {metric.aiInsight}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white p-4 rounded-lg border">
+              <h3 className="font-semibold text-gray-800 mb-3">Industry Comparison</h3>
+              <div className="space-y-3">
+                {slide.content.industryComparison.map((comp: any, index: number) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <span className="font-medium">{comp.metric}</span>
+                    <div className="flex items-center space-x-4">
+                      <span className="text-sm text-gray-600">
+                        Company: {typeof comp.company === 'number' ? comp.company.toFixed(1) : comp.company}
+                      </span>
+                      <span className="text-sm text-gray-600">
+                        Industry: {typeof comp.industry === 'number' ? comp.industry.toFixed(1) : comp.industry}
+                      </span>
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        comp.ranking === 'Above Average' ? 'bg-green-100 text-green-800' :
+                        comp.ranking === 'Average' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {comp.ranking}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
-            
-            <button
-              onClick={generateIntelligentDeck}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all flex items-center space-x-2 mx-auto"
-              disabled={loadingFinancialData}
-            >
-              <Brain className="w-5 h-5" />
-              <span>Generate Intelligent Audit Deck</span>
-            </button>
           </div>
-        )}
+        )
 
-        {/* Generated Deck Display */}
-        {auditDeck && (
-          <div>
-            {/* Export Controls */}
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Intelligent Audit Deck Generated</h3>
-                <p className="text-sm text-gray-600">
-                  Analysis based on {dataSource === 'real' ? 'real QuickBooks data' : 'demonstration data'}
-                </p>
+      case 'painpoints':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-900">Pain Point Analysis</h2>
+            
+            <div className="space-y-4">
+              {slide.content.identifiedPains.map((pain: any, index: number) => (
+                <div key={index} className="bg-white p-4 rounded-lg border-l-4 border-red-500">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-semibold text-gray-900">{pain.painPoint}</h3>
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      pain.priority === 'high' ? 'bg-red-100 text-red-800' :
+                      pain.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {pain.priority} priority
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">Financial Evidence:</span>
+                      <p className="text-gray-800">{pain.financialEvidence}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Impact:</span>
+                      <p className="text-gray-800">{pain.impact}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Solution:</span>
+                      <p className="text-gray-800">{pain.solution}</p>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-sm text-green-600 font-medium">
+                    Estimated Value: {formatCurrency(pain.estimatedValue)}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-gray-800 mb-2">Root Cause Analysis</h3>
+              <ul className="space-y-1">
+                {slide.content.rootCauseAnalysis.map((cause: string, index: number) => (
+                  <li key={index} className="text-sm text-gray-700">• {cause}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )
+
+      case 'opportunities':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-900">Opportunity Matrix</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {slide.content.opportunities.map((opp: any, index: number) => (
+                <div key={index} className="bg-white p-4 rounded-lg border shadow-sm">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-semibold text-gray-900">{opp.opportunity}</h3>
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      opp.difficulty === 'low' ? 'bg-green-100 text-green-800' :
+                      opp.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {opp.difficulty} effort
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">{opp.financialBasis}</p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Value:</span>
+                      <span className="font-medium text-green-600">{formatCurrency(opp.estimatedValue)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Timeline:</span>
+                      <span className="font-medium">{opp.timeline}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">ROI:</span>
+                      <span className="font-medium text-blue-600">{opp.roi}%</span>
+                    </div>
+                  </div>
+                  {opp.alignsWithGoals && (
+                    <div className="mt-2 flex items-center text-xs text-green-600">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Aligns with business goals
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-blue-800 mb-2">Priority Ranking</h3>
+              <ol className="space-y-1">
+                {slide.content.priorityRanking.map((priority: string, index: number) => (
+                  <li key={index} className="text-sm text-blue-700">{index + 1}. {priority}</li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        )
+
+      case 'recommendations':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-900">Personalized Recommendations</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-red-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-red-800 mb-3 flex items-center">
+                  <Zap className="w-5 h-5 mr-2" />
+                  Immediate Actions
+                </h3>
+                <div className="space-y-3">
+                  {slide.content.immediate.map((action: any, index: number) => (
+                    <div key={index} className="text-sm">
+                      <div className="font-medium text-red-900">{action.action}</div>
+                      <div className="text-red-700 mt-1">{action.rationale}</div>
+                      <div className="text-xs text-red-600 mt-1">Timeline: {action.timeline}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
+
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-yellow-800 mb-3 flex items-center">
+                  <Calendar className="w-5 h-5 mr-2" />
+                  Short-term (2-6 months)
+                </h3>
+                <div className="space-y-3">
+                  {slide.content.shortTerm.map((action: any, index: number) => (
+                    <div key={index} className="text-sm">
+                      <div className="font-medium text-yellow-900">{action.action}</div>
+                      <div className="text-yellow-700 mt-1">{action.rationale}</div>
+                      <div className="text-xs text-yellow-600 mt-1">Timeline: {action.timeline}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-green-800 mb-3 flex items-center">
+                  <Target className="w-5 h-5 mr-2" />
+                  Long-term (6+ months)
+                </h3>
+                <div className="space-y-3">
+                  {slide.content.longTerm.map((action: any, index: number) => (
+                    <div key={index} className="text-sm">
+                      <div className="font-medium text-green-900">{action.action}</div>
+                      <div className="text-green-700 mt-1">{action.rationale}</div>
+                      <div className="text-xs text-green-600 mt-1">Timeline: {action.timeline}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-lg border">
+              <h3 className="font-semibold text-gray-800 mb-3">Budget-Aligned Services</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {slide.content.budgetAligned.map((service: any, index: number) => (
+                  <div key={index} className="text-center p-3 rounded border">
+                    <div className="font-medium text-gray-900">{service.service}</div>
+                    <div className="text-lg font-bold text-blue-600 my-1">{service.investment}</div>
+                    <div className="text-sm text-green-600">{service.roi} ROI</div>
+                    <div className={`text-xs mt-1 px-2 py-1 rounded ${
+                      service.priority === 'High' ? 'bg-red-100 text-red-800' :
+                      service.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {service.priority} Priority
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+
+      case 'engagement':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-900">Proposed Engagement</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white p-4 rounded-lg border">
+                <h3 className="font-semibold text-gray-800 mb-3">Services Overview</h3>
+                <div className="space-y-4">
+                  {slide.content.services.map((service: any, index: number) => (
+                    <div key={index} className="border-l-4 border-blue-500 pl-4">
+                      <h4 className="font-medium text-gray-900">{service.name}</h4>
+                      <p className="text-sm text-gray-600 mt-1">{service.description}</p>
+                      <div className="text-xs text-gray-500 mt-2">
+                        <span className="font-medium">Timeline:</span> {service.timeline}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        <span className="font-medium">Key Deliverables:</span> {service.deliverables.join(', ')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white p-4 rounded-lg border">
+                <h3 className="font-semibold text-gray-800 mb-3">Investment & ROI</h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="p-3 bg-blue-50 rounded">
+                      <div className="text-lg font-bold text-blue-600">{slide.content.investment.monthly}</div>
+                      <div className="text-xs text-blue-800">Monthly</div>
+                    </div>
+                    <div className="p-3 bg-green-50 rounded">
+                      <div className="text-lg font-bold text-green-600">{slide.content.investment.setup}</div>
+                      <div className="text-xs text-green-800">Setup</div>
+                    </div>
+                    <div className="p-3 bg-purple-50 rounded">
+                      <div className="text-lg font-bold text-purple-600">{slide.content.investment.total}</div>
+                      <div className="text-xs text-purple-800">Total (6mo)</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Time to Value:</span>
+                      <span className="text-sm font-medium">{slide.content.roi.timeToValue}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Year 1 ROI:</span>
+                      <span className="text-sm font-medium text-green-600">{slide.content.roi.yearOneROI}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">3-Year ROI:</span>
+                      <span className="text-sm font-medium text-green-600">{slide.content.roi.threeYearROI}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-lg border">
+              <h3 className="font-semibold text-gray-800 mb-3">Phased Implementation</h3>
+              <div className="space-y-4">
+                {slide.content.phasedApproach.map((phase: any, index: number) => (
+                  <div key={index} className="flex items-start space-x-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h4 className="font-medium text-gray-900">{phase.phase}</h4>
+                        <span className="text-xs text-gray-500">({phase.duration})</span>
+                      </div>
+                      <div className="text-sm text-gray-600 mb-2">
+                        <span className="font-medium">Objectives:</span> {phase.objectives.join(', ')}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">Deliverables:</span> {phase.deliverables.join(', ')}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-green-800 mb-3">Success Metrics</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {slide.content.successMetrics.map((metric: string, index: number) => (
+                  <div key={index} className="flex items-center text-sm text-green-700">
+                    <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                    {metric}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+
+      default:
+        return <div>Content not available</div>
+    }
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto p-6 bg-gray-50">
+      <ToastContainer />
+      
+      {/* Header */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Intelligent Audit Deck Generator</h1>
+            <p className="text-gray-600">
+              Company: {companyName} | {dataSource === 'real' ? 'Real QuickBooks Data' : dataSource === 'ai_enhanced' ? 'AI-Enhanced Analysis' : 'Demo Data'}
+            </p>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            {loadingFinancialData && (
+              <div className="flex items-center space-x-2 text-blue-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                <span className="text-sm">Loading financial data...</span>
+              </div>
+            )}
+            
+            {!generating && !auditDeck && (
               <div className="flex space-x-2">
                 <button
+                  onClick={generateIntelligentDeck}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  <span>Generate Standard Deck</span>
+                </button>
+                
+                <button
+                  onClick={generateAIEnhancedDeck}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                >
+                  <Brain className="w-4 h-4" />
+                  <span>AI-Enhanced Analysis</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Generation Progress */}
+      {generationStage && (
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex items-center space-x-4">
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">{generationStage.stage}</span>
+                <span className="text-sm text-gray-500">{generationStage.progress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${generationStage.progress}%` }}
+                ></div>
+              </div>
+              <p className="text-xs text-gray-600 mt-1">{generationStage.message}</p>
+              
+              {generationStage.insights && (
+                <div className="mt-2 text-xs text-blue-600">
+                  {generationStage.insights.map((insight, index) => (
+                    <div key={index}>• {insight}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Audit Deck Presentation */}
+      {auditDeck && (
+        <div className="space-y-6">
+          {/* Deck Header */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  {companyName} - Financial Audit Deck
+                </h2>
+                <p className="text-gray-600 text-sm">
+                  Generated {new Date(auditDeck.metadata?.generatedAt || '').toLocaleDateString()} • 
+                  {auditDeck.metadata?.hasTranscriptData ? ' With Call Analysis' : ' Financial Analysis Only'} •
+                  Version {auditDeck.metadata?.version || '1.0'}
+                </p>
+                
+                {auditDeck.aiInsights && (
+                  <div className="mt-2 flex items-center space-x-4 text-sm">
+                    {auditDeck.metadata?.closeabilityScore && (
+                      <div className="flex items-center space-x-1">
+                        <Star className="w-4 h-4 text-yellow-500" />
+                        <span>Closeability: {auditDeck.metadata.closeabilityScore}/100</span>
+                      </div>
+                    )}
+                    
+                    {auditDeck.metadata?.urgencyLevel && (
+                      <div className="flex items-center space-x-1">
+                        <Clock className="w-4 h-4 text-red-500" />
+                        <span>Urgency: {auditDeck.metadata.urgencyLevel}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <button
                   onClick={() => exportDeck('html')}
-                  className="bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 text-sm flex items-center space-x-1"
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm flex items-center space-x-1"
                 >
                   <Download className="w-4 h-4" />
-                  <span>HTML</span>
+                  <span>Export HTML</span>
                 </button>
+                
                 <button
                   onClick={() => exportDeck('pdf')}
-                  className="bg-red-600 text-white px-3 py-2 rounded-md hover:bg-red-700 text-sm flex items-center space-x-1"
+                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm flex items-center space-x-1"
                 >
-                  <Download className="w-4 h-4" />
-                  <span>PDF</span>
+                  <FileText className="w-4 h-4" />
+                  <span>Export PDF</span>
                 </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Slide Navigation */}
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex space-x-2">
+                {slides.map((slide, index) => (
+                  <button
+                    key={slide.id}
+                    onClick={() => setCurrentSlide(index)}
+                    className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                      currentSlide === index
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {slide.title}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => exportDeck('pptx')}
-                  className="bg-orange-600 text-white px-3 py-2 rounded-md hover:orange-700 text-sm flex items-center space-x-1"
+                  onClick={previousSlide}
+                  disabled={currentSlide === 0}
+                  className="p-2 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Download className="w-4 h-4" />
-                  <span>PowerPoint</span>
+                  <ArrowDown className="w-4 h-4 rotate-90" />
+                </button>
+                
+                <span className="text-sm text-gray-600">
+                  {currentSlide + 1} of {slides.length}
+                </span>
+                
+                <button
+                  onClick={nextSlide}
+                  disabled={currentSlide === slides.length - 1}
+                  className="p-2 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ArrowDown className="w-4 h-4 -rotate-90" />
                 </button>
               </div>
             </div>
+          </div>
 
-            {/* Slide Navigation */}
-            <div className="border-b border-gray-200 mb-6">
-              <nav className="flex overflow-x-auto">
-                {slides.map((slide, index) => {
-                  const Icon = slide.icon
-                  return (
-                    <button
-                      key={slide.key}
-                      onClick={() => setCurrentSlide(index)}
-                      className={`flex items-center space-x-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap ${
-                        currentSlide === index
-                          ? 'border-purple-500 text-purple-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span>{slide.title}</span>
-                    </button>
-                  )
-                })}
-              </nav>
-            </div>
+          {/* Current Slide Content */}
+          <div className="bg-white rounded-lg shadow-sm p-6 min-h-[600px]">
+            {renderSlideContent(slides[currentSlide])}
+          </div>
 
-            {/* Slide Content - keeping your existing comprehensive slide content */}
-            <div className="min-h-96">
-              {/* Executive Summary */}
-              {currentSlide === 0 && (
-                <div className="space-y-6">
-                  <div className="text-center mb-8">
-                    <h2 className="text-3xl font-bold text-gray-900 mb-4">Executive Summary</h2>
-                    <div className="flex items-center justify-center space-x-8">
-                      <div className="text-center">
-                        <div className={`text-4xl font-bold px-6 py-3 rounded-full inline-block ${
-                          auditDeck.executiveSummary.overallScore >= 80 ? 'bg-green-100 text-green-800' :
-                          auditDeck.executiveSummary.overallScore >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {auditDeck.executiveSummary.overallScore}/100
-                        </div>
-                        <p className="text-sm text-gray-600 mt-2">Overall Health Score</p>
+          {/* AI Insights Panel */}
+          {auditDeck.aiInsights && (
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Brain className="w-5 h-5 mr-2 text-purple-600" />
+                AI-Powered Sales Intelligence
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-medium text-gray-800 mb-2">Recommended Talking Points</h4>
+                  <ul className="space-y-1 text-sm">
+                    {auditDeck.aiInsights.talkingPoints.map((point, index) => (
+                      <li key={index} className="text-gray-700 flex items-start">
+                        <MessageSquare className="w-3 h-3 mr-2 mt-1 text-blue-500 flex-shrink-0" />
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium text-gray-800 mb-2">Key Financial Evidence</h4>
+                  <ul className="space-y-1 text-sm">
+                    {auditDeck.aiInsights.financialEvidence.map((evidence, index) => (
+                      <li key={index} className="text-gray-700 flex items-start">
+                        <DollarSign className="w-3 h-3 mr-2 mt-1 text-green-500 flex-shrink-0" />
+                        {evidence}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              
+              {auditDeck.aiInsights.transcriptHighlights.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="font-medium text-gray-800 mb-2">Call Transcript Highlights</h4>
+                  <div className="text-sm text-gray-700 space-y-1">
+                    {auditDeck.aiInsights.transcriptHighlights.map((highlight, index) => (
+                      <div key={index} className="flex items-start">
+                        <Eye className="w-3 h-3 mr-2 mt-1 text-purple-500 flex-shrink-0" />
+                        {highlight}
                       </div>
-                      <div className="text-center">
-                        <div className="text-4xl font-bold text-purple-600">
-                          {auditDeck.proposedEngagement.roi.yearOneROI}
-                        </div>
-                        <p className="text-sm text-gray-600 mt-2">Expected Year 1 ROI</p>
-                      </div>
-                    </div>
-                    <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mt-4 ${
-                      dataSource === 'real' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-blue-100 text-blue-800'
-                    }`}>
-                      {dataSource === 'real' ? '✅ Analysis based on real QuickBooks data' : '📊 Comprehensive demonstration analysis'}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-green-50 p-6 rounded-lg border border-green-200">
-                      <h4 className="text-lg font-semibold text-green-800 mb-4 flex items-center">
-                        <CheckCircle className="w-5 h-5 mr-2" />
-                        Key Findings
-                      </h4>
-                      <ul className="space-y-2">
-                        {auditDeck.executiveSummary.keyFindings.map((finding, index) => (
-                          <li key={index} className="text-sm text-green-700">• {finding}</li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className="bg-red-50 p-6 rounded-lg border border-red-200">
-                      <h4 className="text-lg font-semibold text-red-800 mb-4 flex items-center">
-                        <AlertTriangle className="w-5 h-5 mr-2" />
-                        Urgent Issues
-                      </h4>
-                      <ul className="space-y-2">
-                        {auditDeck.executiveSummary.urgentIssues.map((issue, index) => (
-                          <li key={index} className="text-sm text-red-700">• {issue}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-                    <h4 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
-                      <Target className="w-5 h-5 mr-2" />
-                      Strategic Opportunities
-                    </h4>
-                    <ul className="space-y-2">
-                      {auditDeck.executiveSummary.opportunities.map((opportunity, index) => (
-                        <li key={index} className="text-sm text-blue-700">• {opportunity}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
-                    <h4 className="text-lg font-semibold text-purple-800 mb-4 flex items-center">
-                      <Brain className="w-5 h-5 mr-2" />
-                      Contextual Intelligence
-                    </h4>
-                    <ul className="space-y-2">
-                      {auditDeck.executiveSummary.contextualInsights.map((insight, index) => (
-                        <li key={index} className="text-sm text-purple-700">• {insight}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="bg-gradient-to-r from-purple-100 to-blue-100 p-6 rounded-lg border border-purple-300">
-                    <h4 className="text-lg font-semibold text-purple-800 mb-2">Strategic Call to Action</h4>
-                    <p className="text-purple-700">{auditDeck.executiveSummary.callToAction}</p>
+                    ))}
                   </div>
                 </div>
               )}
-
-              {/* Add other slide content here - Financial Snapshot, Pain Points, etc. */}
-              {/* For brevity, I'm showing just the Executive Summary slide, but you'd include all your existing slide content */}
             </div>
-
-            {/* Navigation */}
-            <div className="border-t border-gray-200 pt-6 mt-8 flex justify-between items-center">
-              <button
-                onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))}
-                disabled={currentSlide === 0}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              
-              <span className="text-sm text-gray-500">
-                {currentSlide + 1} of {slides.length}
-              </span>
-              
-              <button
-                onClick={() => setCurrentSlide(Math.min(slides.length - 1, currentSlide + 1))}
-                disabled={currentSlide === slides.length - 1}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Prerequisites Check */}
-        {!auditDeck && !generating && (
-          <div className="text-center py-8">
-            <Brain className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Intelligent Audit Deck Ready</h3>
-            <p className="text-gray-600 mb-6">
-              {dataSource === 'real' 
-                ? 'Ready to generate analysis using your real QuickBooks financial data.' 
-                : 'Demo mode ready with comprehensive sample data to showcase full capabilities.'}
-            </p>
-            <div className="space-y-2 text-sm text-gray-500 mb-6">
-              <div className="flex items-center justify-center">
-                <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
-                {dataSource === 'real' ? 'Real QuickBooks financial data integration' : 'Financial data analysis capabilities'}
-              </div>
-              <div className="flex items-center justify-center">
-                <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
-                Call transcript insights integration
-              </div>
-              <div className="flex items-center justify-center">
-                <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
-                AI-powered recommendation engine
-              </div>
-              <div className="flex items-center justify-center">
-                <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
-                Professional presentation export
-              </div>
-              {dataSource === 'real' && (
-                <div className="flex items-center justify-center">
-                  <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
-                  Live financial snapshot: {realFinancialData ? formatCurrency(realFinancialData.revenue) : 'Loading...'}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
