@@ -1,7 +1,7 @@
 'use client'
 
-import SafeAccountWorkflowDashboard from '@/components/dashboard/SafeAccountWorkflowDashboard'
+import StreamlinedAccountWorkflowDashboard from '@/components/dashboard/StreamlinedAccountWorkflowDashboard'
 
 export default function DashboardPage() {
-  return <SafeAccountWorkflowDashboard />
+  return <StreamlinedAccountWorkflowDashboard />
 }
