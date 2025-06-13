@@ -1,4 +1,4 @@
-// components/dashboard/StreamlinedAccountWorkflowDashboard.tsx
+// components/dashboard/CorrectedAccountWorkflowDashboard.tsx
 'use client'
 
 import React, { useState, useEffect } from 'react'
@@ -24,7 +24,7 @@ interface DashboardStats {
   averageCloseability: number
 }
 
-export default function StreamlinedAccountWorkflowDashboard() {
+export default function CorrectedAccountWorkflowDashboard() {
   const [prospects, setProspects] = useState<Prospect[]>([])
   const [stats, setStats] = useState<DashboardStats>({
     totalPipelineValue: 0,
@@ -169,105 +169,14 @@ export default function StreamlinedAccountWorkflowDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex">
-      
-      {/* STREAMLINED SIDEBAR */}
-      <div className="w-64 bg-slate-800/30 backdrop-blur-sm border-r border-slate-700">
-        <div className="p-6">
-          <div className="flex items-center space-x-3 mb-8">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">Q</span>
-            </div>
-            <div>
-              <h1 className="text-white font-semibold">QuickScope</h1>
-              <p className="text-slate-400 text-sm">AI Platform</p>
-            </div>
-          </div>
-
-          {/* STREAMLINED SYSTEM STATUS */}
-          <div className="mb-8">
-            <div className="text-slate-400 text-sm mb-3">System Status</div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-300 text-sm">Companies</span>
-                <span className="text-slate-400 text-sm">12</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-300 text-sm">Reports</span>
-                <span className="text-slate-400 text-sm">47</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-300 text-sm">AI Insights</span>
-                <span className="text-slate-400 text-sm">156</span>
-              </div>
-            </div>
-          </div>
-
-          {/* STREAMLINED NAVIGATION */}
-          <nav className="space-y-2">
-            <div className="text-slate-400 text-sm mb-3">Navigation</div>
-            
-            <div className="bg-blue-600/20 text-blue-400 p-3 rounded-lg border border-blue-600/30">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                <span className="text-sm font-medium">Account Workflow</span>
-              </div>
-              <p className="text-xs text-blue-300 mt-1">Connected accounts with progress tracking</p>
-            </div>
-
-            <button 
-              onClick={() => router.push('/admin/dashboard/call-transcripts')}
-              className="w-full text-left p-3 rounded-lg hover:bg-slate-700/50 transition-colors"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
-                <span className="text-slate-300 text-sm">Call Transcripts</span>
-              </div>
-              <p className="text-xs text-slate-400 mt-1">Upload and analyze client call transcripts</p>
-            </button>
-
-            <button 
-              onClick={() => router.push('/admin/dashboard/data-extraction')}
-              className="w-full text-left p-3 rounded-lg hover:bg-slate-700/50 transition-colors"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
-                <span className="text-slate-300 text-sm">Data Extraction</span>
-              </div>
-              <p className="text-xs text-slate-400 mt-1">Extract live QuickBooks financial data</p>
-            </button>
-
-            <button 
-              onClick={() => router.push('/admin/advanced-analysis')}
-              className="w-full text-left p-3 rounded-lg hover:bg-slate-700/50 transition-colors"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
-                <span className="text-slate-300 text-sm">Financial Analysis</span>
-              </div>
-              <p className="text-xs text-slate-400 mt-1">AI-powered financial insights</p>
-            </button>
-
-            <button 
-              onClick={() => router.push('/admin/dashboard/report-generation')}
-              className="w-full text-left p-3 rounded-lg hover:bg-slate-700/50 transition-colors"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
-                <span className="text-slate-300 text-sm">Report Generation</span>
-              </div>
-              <p className="text-xs text-slate-400 mt-1">Generate audit decks and financial reports</p>
-            </button>
-          </nav>
-        </div>
-      </div>
-
-      {/* MAIN CONTENT */}
-      <div className="flex-1 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="p-6">
         {/* HEADER */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Account Workflow Dashboard</h1>
-          <p className="text-slate-400">AI-Enhanced Prospect Intelligence Platform</p>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            🎯 AI-Enhanced Account Workflow
+          </h1>
+          <p className="text-slate-400">Intelligent prospect management with AI-powered insights and sales intelligence</p>
           {error && (
             <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded text-yellow-400 text-sm">
               ⚠️ Using demo data due to: {error}
@@ -275,35 +184,96 @@ export default function StreamlinedAccountWorkflowDashboard() {
           )}
         </div>
 
-        {/* STATS CARDS */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-6 border border-slate-700">
-            <div className="text-2xl font-bold text-blue-400">${stats.totalPipelineValue.toLocaleString()}</div>
-            <div className="text-slate-400 text-sm">Total Pipeline Value</div>
+        {/* STATS CARDS - GLASSMORPHIC DESIGN */}
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-8">
+          <div className="bg-slate-800/30 backdrop-blur-sm rounded-lg p-6 border border-slate-700/50">
+            <div className="flex items-center space-x-3">
+              <div className="text-blue-400">👥</div>
+              <div>
+                <div className="text-2xl font-bold text-white">2</div>
+                <div className="text-slate-400 text-sm">Total Prospects</div>
+              </div>
+            </div>
           </div>
-          <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-6 border border-slate-700">
-            <div className="text-2xl font-bold text-blue-400">{stats.highProbabilityDeals}</div>
-            <div className="text-slate-400 text-sm">High Probability Deals</div>
+          <div className="bg-slate-800/30 backdrop-blur-sm rounded-lg p-6 border border-slate-700/50">
+            <div className="flex items-center space-x-3">
+              <div className="text-emerald-400">✅</div>
+              <div>
+                <div className="text-2xl font-bold text-white">0</div>
+                <div className="text-slate-400 text-sm">Active</div>
+              </div>
+            </div>
           </div>
-          <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-6 border border-slate-700">
-            <div className="text-2xl font-bold text-blue-400">{stats.urgentFollowUps}</div>
-            <div className="text-slate-400 text-sm">Urgent Follow-ups</div>
+          <div className="bg-slate-800/30 backdrop-blur-sm rounded-lg p-6 border border-slate-700/50">
+            <div className="flex items-center space-x-3">
+              <div className="text-purple-400">🧠</div>
+              <div>
+                <div className="text-2xl font-bold text-white">0</div>
+                <div className="text-slate-400 text-sm">AI Analyzed</div>
+              </div>
+            </div>
           </div>
-          <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-6 border border-slate-700">
-            <div className="text-2xl font-bold text-blue-400">{stats.averageCloseability}%</div>
-            <div className="text-slate-400 text-sm">Avg Closeability</div>
+          <div className="bg-slate-800/30 backdrop-blur-sm rounded-lg p-6 border border-slate-700/50">
+            <div className="flex items-center space-x-3">
+              <div className="text-yellow-400">⭐</div>
+              <div>
+                <div className="text-2xl font-bold text-white">0</div>
+                <div className="text-slate-400 text-sm">High Value</div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-slate-800/30 backdrop-blur-sm rounded-lg p-6 border border-slate-700/50">
+            <div className="flex items-center space-x-3">
+              <div className="text-red-400">🔥</div>
+              <div>
+                <div className="text-2xl font-bold text-white">0</div>
+                <div className="text-slate-400 text-sm">Urgent</div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-slate-800/30 backdrop-blur-sm rounded-lg p-6 border border-slate-700/50">
+            <div className="flex items-center space-x-3">
+              <div className="text-orange-400">⚠️</div>
+              <div>
+                <div className="text-2xl font-bold text-white">0</div>
+                <div className="text-slate-400 text-sm">Expired</div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* PROSPECTS TABLE */}
-        <div className="bg-slate-800/30 backdrop-blur-sm rounded-lg border border-slate-700">
-          <div className="p-6 border-b border-slate-700">
+        {/* SEARCH AND FILTERS */}
+        <div className="mb-8 flex space-x-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Search prospects, companies, emails..."
+              className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <select className="px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option>All Connections</option>
+          </select>
+          <select className="px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option>All AI Status</option>
+          </select>
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            🔄 Refresh
+          </button>
+          <button className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
+            ✅ Sync All
+          </button>
+        </div>
+
+        {/* PROSPECTS TABLE - GLASSMORPHIC DESIGN */}
+        <div className="bg-slate-800/30 backdrop-blur-sm rounded-lg border border-slate-700/50">
+          <div className="p-6 border-b border-slate-700/50">
             <h2 className="text-xl font-semibold text-white">Connected Prospects</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-700">
+                <tr className="border-b border-slate-700/50">
                   <th className="text-left p-4 text-slate-300">Company</th>
                   <th className="text-left p-4 text-slate-300">Industry</th>
                   <th className="text-left p-4 text-slate-300">Status</th>
@@ -315,7 +285,7 @@ export default function StreamlinedAccountWorkflowDashboard() {
               </thead>
               <tbody>
                 {prospects.map((prospect) => (
-                  <tr key={prospect.id} className="border-b border-slate-700 hover:bg-slate-700/30">
+                  <tr key={prospect.id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
                     <td className="p-4">
                       <div className="text-white font-medium">{prospect.name}</div>
                       <div className="text-slate-400 text-sm">{prospect.email}</div>
@@ -323,9 +293,9 @@ export default function StreamlinedAccountWorkflowDashboard() {
                     <td className="p-4 text-slate-300">{prospect.industry || 'N/A'}</td>
                     <td className="p-4">
                       <span className={`px-2 py-1 rounded-full text-xs ${
-                        prospect.status === 'analysis_complete' ? 'bg-blue-500/20 text-blue-400' :
-                        prospect.status === 'transcript_uploaded' ? 'bg-slate-500/20 text-slate-400' :
-                        'bg-slate-500/20 text-slate-400'
+                        prospect.status === 'analysis_complete' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                        prospect.status === 'transcript_uploaded' ? 'bg-slate-500/20 text-slate-400 border border-slate-500/30' :
+                        'bg-slate-500/20 text-slate-400 border border-slate-500/30'
                       }`}>
                         {prospect.status?.replace(/_/g, ' ') || 'Connected'}
                       </span>
@@ -335,9 +305,9 @@ export default function StreamlinedAccountWorkflowDashboard() {
                     </td>
                     <td className="p-4">
                       <span className={`px-2 py-1 rounded-full text-xs ${
-                        prospect.urgency_level === 'high' ? 'bg-blue-500/20 text-blue-400' :
-                        prospect.urgency_level === 'medium' ? 'bg-slate-500/20 text-slate-400' :
-                        'bg-slate-500/20 text-slate-400'
+                        prospect.urgency_level === 'high' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                        prospect.urgency_level === 'medium' ? 'bg-slate-500/20 text-slate-400 border border-slate-500/30' :
+                        'bg-slate-500/20 text-slate-400 border border-slate-500/30'
                       }`}>
                         {prospect.urgency_level || 'Low'}
                       </span>

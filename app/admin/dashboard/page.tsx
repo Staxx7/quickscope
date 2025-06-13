@@ -1,7 +1,8 @@
+// app/admin/dashboard/page.tsx
 'use client'
 
-import StreamlinedAccountWorkflowDashboard from '@/components/dashboard/StreamlinedAccountWorkflowDashboard'
+import CorrectedAccountWorkflowDashboard from '@/components/dashboard/CorrectedAccountWorkflowDashboard'
 
 export default function DashboardPage() {
-  return <StreamlinedAccountWorkflowDashboard />
+  return <CorrectedAccountWorkflowDashboard />
 }
