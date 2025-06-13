@@ -1,4 +1,4 @@
-import AccountWorkflowDashboard from '../../components/AccountWorkflowDashboard'
+import AccountWorkflowDashboard from '@/app/components/AccountWorkflowDashboard'
 
 export default function DashboardPage() {
   return <AccountWorkflowDashboard />
