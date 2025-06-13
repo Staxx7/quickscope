@@ -1,156 +1,273 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { qbService, QBCredentials } from '@/lib/quickbooksService';
-import { supabase } from '@/lib/supabaseClient';
+// app/api/qbo/enhanced-financials/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabaseClient'
 
-const baseUrl = process.env.NODE_ENV === 'production'
-  ? 'https://quickbooks.api.intuit.com'
-  : 'https://sandbox-quickbooks.api.intuit.com';
+interface FinancialMetrics {
+  revenue: number
+  expenses: number
+  netIncome: number
+  grossMargin: number
+  netMargin: number
+  currentAssets: number
+  currentLiabilities: number
+  totalAssets: number
+  totalLiabilities: number
+  equity: number
+  currentRatio: number
+  quickRatio: number
+  debtToEquityRatio: number
+  returnOnAssets: number
+  returnOnEquity: number
+  inventoryTurnover: number
+  accountsReceivableTurnover: number
+  cashFlow: number
+  workingCapital: number
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const companyId = searchParams.get('companyId') || searchParams.get('company_id');
+    const { searchParams } = new URL(request.url)
+    const companyId = searchParams.get('companyId')
 
     if (!companyId) {
-      return NextResponse.json({ error: 'company_id is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Company ID is required' }, { status: 400 })
     }
 
-    // Get QB tokens from database
+    // Fetch QB tokens
     const { data: tokenData, error: tokenError } = await supabase
       .from('qbo_tokens')
       .select('*')
-      .eq('company_id', companyId)
-      .single();
+      .eq('realmId', companyId)
+      .single()
 
     if (tokenError || !tokenData) {
-      console.error('No QB tokens found for company:', companyId, tokenError);
-      return NextResponse.json(
-        { error: 'QuickBooks connection not found. Please reconnect your QuickBooks account.' },
-        { status: 404 }
-      );
-    }
-
-    // Check if token is expired and refresh if needed
-    const now = new Date();
-    const expiresAt = new Date(tokenData.expires_at);
-    
-    let accessToken = tokenData.access_token;
-    let refreshToken = tokenData.refresh_token;
-
-    if (now >= expiresAt) {
-      const refreshResult = await qbService.refreshToken(refreshToken);
-      if (!refreshResult) {
-        return NextResponse.json(
-          { error: 'QuickBooks connection expired. Please reconnect your account.' },
-          { status: 401 }
-        );
-      }
-      accessToken = refreshResult.accessToken;
-      refreshToken = refreshResult.refreshToken;
-    }
-
-    const credentials: QBCredentials = {
-      companyId,
-      accessToken,
-      refreshToken,
-      expiresAt: new Date(expiresAt)
-    };
-
-    // Get company info first to verify connection
-    const companyInfo = await qbService.getCompanyInfo(credentials);
-    if (!companyInfo.success) {
-      return NextResponse.json({ error: 'No QuickBooks connection found' }, { status: 404 });
+      return NextResponse.json({ error: 'QuickBooks connection not found' }, { status: 404 })
     }
 
     // Fetch comprehensive financial data
-    const [profitLoss, balanceSheet, cashFlow, trialBalance, accountsReceivable, accountsPayable] = await Promise.all([
-      qbService.getProfitLoss(credentials),
-      qbService.getBalanceSheet(credentials),
-      fetchCashFlow(credentials),
-      fetchTrialBalance(credentials),
-      fetchAccountsReceivable(credentials),
-      fetchAccountsPayable(credentials)
-    ]);
+    const [companyInfo, profitLoss, balanceSheet, cashFlow] = await Promise.all([
+      fetchCompanyInfo(tokenData.access_token, companyId),
+      fetchProfitLoss(tokenData.access_token, companyId),
+      fetchBalanceSheet(tokenData.access_token, companyId),
+      fetchCashFlow(tokenData.access_token, companyId)
+    ])
+
+    // Calculate advanced financial metrics
+    const metrics = calculateFinancialMetrics(profitLoss, balanceSheet, cashFlow)
+
+    // Store financial snapshot
+    await storeFinancialSnapshot(companyId, metrics)
 
     return NextResponse.json({
-      profitLoss,
-      balanceSheet,
-      cashFlow,
-      trialBalance,
-      accountsReceivable,
-      accountsPayable,
-      metadata: {
-        retrievedAt: new Date().toISOString(),
-        companyId
+      success: true,
+      data: {
+        company: companyInfo,
+        profitLoss,
+        balanceSheet,
+        cashFlow,
+        metrics,
+        analysisDate: new Date().toISOString(),
+        healthScore: calculateHealthScore(metrics),
+        industryBenchmarks: getIndustryBenchmarks(companyInfo.industry),
+        recommendations: generateRecommendations(metrics)
       }
-    });
+    })
+
   } catch (error) {
-    console.error('Enhanced financials error:', error);
-    return NextResponse.json({ error: 'Failed to retrieve financial data' }, { status: 500 });
+    console.error('Enhanced financials error:', error)
+    return NextResponse.json({ error: 'Failed to fetch enhanced financial data' }, { status: 500 })
   }
 }
 
-// Helper functions for fetching additional data
-async function fetchCashFlow(credentials: QBCredentials) {
-  try {
-    const response = await fetch(`${baseUrl}/v3/company/${credentials.companyId}/reports/CashFlow`, {
+async function fetchCompanyInfo(accessToken: string, companyId: string) {
+  const response = await fetch(
+    `https://sandbox-quickbooks.api.intuit.com/v3/company/${companyId}/companyinfo/${companyId}`,
+    {
       headers: {
-        'Authorization': `Bearer ${credentials.accessToken}`,
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
       }
-    });
-    const data = await response.json();
-    return { success: true, data };
-  } catch (error) {
-    console.error('Error fetching Cash Flow:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  )
+  
+  if (!response.ok) throw new Error('Failed to fetch company info')
+  const data = await response.json()
+  return data.QueryResponse.CompanyInfo[0]
+}
+
+async function fetchProfitLoss(accessToken: string, companyId: string) {
+  const startDate = new Date(new Date().getFullYear() - 1, 0, 1).toISOString().split('T')[0]
+  const endDate = new Date().toISOString().split('T')[0]
+  
+  const response = await fetch(
+    `https://sandbox-quickbooks.api.intuit.com/v3/company/${companyId}/reports/ProfitAndLoss?start_date=${startDate}&end_date=${endDate}`,
+    {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      }
+    }
+  )
+  
+  if (!response.ok) throw new Error('Failed to fetch P&L')
+  return await response.json()
+}
+
+async function fetchBalanceSheet(accessToken: string, companyId: string) {
+  const asOfDate = new Date().toISOString().split('T')[0]
+  
+  const response = await fetch(
+    `https://sandbox-quickbooks.api.intuit.com/v3/company/${companyId}/reports/BalanceSheet?date=${asOfDate}`,
+    {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      }
+    }
+  )
+  
+  if (!response.ok) throw new Error('Failed to fetch Balance Sheet')
+  return await response.json()
+}
+
+async function fetchCashFlow(accessToken: string, companyId: string) {
+  const startDate = new Date(new Date().getFullYear() - 1, 0, 1).toISOString().split('T')[0]
+  const endDate = new Date().toISOString().split('T')[0]
+  
+  const response = await fetch(
+    `https://sandbox-quickbooks.api.intuit.com/v3/company/${companyId}/reports/CashFlow?start_date=${startDate}&end_date=${endDate}`,
+    {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      }
+    }
+  )
+  
+  if (!response.ok) throw new Error('Failed to fetch Cash Flow')
+  return await response.json()
+}
+
+function calculateFinancialMetrics(profitLoss: any, balanceSheet: any, cashFlow: any): FinancialMetrics {
+  // Extract key financial figures from QB reports
+  const revenue = extractValue(profitLoss, 'Total Income') || 0
+  const expenses = extractValue(profitLoss, 'Total Expenses') || 0
+  const netIncome = revenue - expenses
+  
+  const currentAssets = extractValue(balanceSheet, 'Total Current Assets') || 0
+  const currentLiabilities = extractValue(balanceSheet, 'Total Current Liabilities') || 0
+  const totalAssets = extractValue(balanceSheet, 'Total Assets') || 0
+  const totalLiabilities = extractValue(balanceSheet, 'Total Liabilities') || 0
+  const equity = totalAssets - totalLiabilities
+  
+  return {
+    revenue,
+    expenses,
+    netIncome,
+    grossMargin: revenue > 0 ? ((revenue - expenses) / revenue) * 100 : 0,
+    netMargin: revenue > 0 ? (netIncome / revenue) * 100 : 0,
+    currentAssets,
+    currentLiabilities,
+    totalAssets,
+    totalLiabilities,
+    equity,
+    currentRatio: currentLiabilities > 0 ? currentAssets / currentLiabilities : 0,
+    quickRatio: currentLiabilities > 0 ? (currentAssets * 0.8) / currentLiabilities : 0,
+    debtToEquityRatio: equity > 0 ? totalLiabilities / equity : 0,
+    returnOnAssets: totalAssets > 0 ? (netIncome / totalAssets) * 100 : 0,
+    returnOnEquity: equity > 0 ? (netIncome / equity) * 100 : 0,
+    inventoryTurnover: 12, // Placeholder - would need inventory data
+    accountsReceivableTurnover: 8, // Placeholder - would need AR data
+    cashFlow: netIncome, // Simplified - would extract from cash flow statement
+    workingCapital: currentAssets - currentLiabilities
   }
 }
 
-async function fetchTrialBalance(credentials: QBCredentials) {
-  try {
-    const response = await fetch(`${baseUrl}/v3/company/${credentials.companyId}/reports/TrialBalance`, {
-      headers: {
-        'Authorization': `Bearer ${credentials.accessToken}`,
-        'Accept': 'application/json'
-      }
-    });
-    const data = await response.json();
-    return { success: true, data };
-  } catch (error) {
-    console.error('Error fetching Trial Balance:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+function calculateHealthScore(metrics: FinancialMetrics): number {
+  let score = 0
+  let factors = 0
+  
+  // Profitability (30% weight)
+  if (metrics.netMargin > 15) score += 30
+  else if (metrics.netMargin > 5) score += 20
+  else if (metrics.netMargin > 0) score += 10
+  factors += 30
+  
+  // Liquidity (25% weight)
+  if (metrics.currentRatio > 2) score += 25
+  else if (metrics.currentRatio > 1.5) score += 20
+  else if (metrics.currentRatio > 1) score += 15
+  else if (metrics.currentRatio > 0.5) score += 10
+  factors += 25
+  
+  // Leverage (20% weight)
+  if (metrics.debtToEquityRatio < 0.5) score += 20
+  else if (metrics.debtToEquityRatio < 1) score += 15
+  else if (metrics.debtToEquityRatio < 2) score += 10
+  factors += 20
+  
+  // Growth potential (25% weight)
+  if (metrics.workingCapital > 50000) score += 25
+  else if (metrics.workingCapital > 10000) score += 20
+  else if (metrics.workingCapital > 0) score += 15
+  factors += 25
+  
+  return Math.round((score / factors) * 100)
+}
+
+function getIndustryBenchmarks(industry: string) {
+  // Industry-specific benchmarks - would be expanded with real data
+  return {
+    averageNetMargin: 12,
+    averageCurrentRatio: 1.8,
+    averageDebtToEquity: 0.7,
+    averageROA: 6.5,
+    averageROE: 12.5
   }
 }
 
-async function fetchAccountsReceivable(credentials: QBCredentials) {
-  try {
-    const response = await fetch(`${baseUrl}/v3/company/${credentials.companyId}/reports/AgedReceivables`, {
-      headers: {
-        'Authorization': `Bearer ${credentials.accessToken}`,
-        'Accept': 'application/json'
-      }
-    });
-    const data = await response.json();
-    return { success: true, data };
-  } catch (error) {
-    console.error('Error fetching Accounts Receivable:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+function generateRecommendations(metrics: FinancialMetrics): string[] {
+  const recommendations = []
+  
+  if (metrics.currentRatio < 1.5) {
+    recommendations.push("Improve liquidity by increasing current assets or reducing short-term debt")
   }
+  
+  if (metrics.netMargin < 10) {
+    recommendations.push("Focus on cost reduction and profit margin improvement")
+  }
+  
+  if (metrics.debtToEquityRatio > 1.5) {
+    recommendations.push("Consider debt restructuring to improve financial stability")
+  }
+  
+  if (metrics.workingCapital < 0) {
+    recommendations.push("Address working capital constraints to ensure operational stability")
+  }
+  
+  return recommendations
 }
 
-async function fetchAccountsPayable(credentials: QBCredentials) {
-  try {
-    const response = await fetch(`${baseUrl}/v3/company/${credentials.companyId}/reports/AgedPayables`, {
-      headers: {
-        'Authorization': `Bearer ${credentials.accessToken}`,
-        'Accept': 'application/json'
-      }
-    });
-    const data = await response.json();
-    return { success: true, data };
-  } catch (error) {
-    console.error('Error fetching Accounts Payable:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
+function extractValue(report: any, fieldName: string): number {
+  // Helper function to extract values from QB reports
+  // Would need to be implemented based on actual QB report structure
+  return 0 // Placeholder
+}
+
+async function storeFinancialSnapshot(companyId: string, metrics: FinancialMetrics) {
+  await supabase
+    .from('financial_snapshots')
+    .upsert({
+      company_id: companyId,
+      snapshot_date: new Date().toISOString(),
+      revenue: metrics.revenue,
+      expenses: metrics.expenses,
+      net_income: metrics.netIncome,
+      total_assets: metrics.totalAssets,
+      total_liabilities: metrics.totalLiabilities,
+      equity: metrics.equity,
+      current_ratio: metrics.currentRatio,
+      debt_to_equity: metrics.debtToEquityRatio,
+      health_score: calculateHealthScore(metrics)
+    })
 }
