@@ -185,7 +185,7 @@ export default function AIEnhancedAccountWorkflowDashboard() {
 
   const filteredProspects = prospects.filter(prospect => {
     const matchesSearch = prospect.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         prospect.email.toLowerCase().includes(searchTerm.toLowerCase())
+                     prospect.email.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesStatus = filterStatus === 'all' || prospect.connection_status === filterStatus
     
