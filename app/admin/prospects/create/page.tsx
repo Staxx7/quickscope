@@ -28,43 +28,76 @@ function CreateProspectForm() {
     setError('')
 
     try {
-      // First, create the prospect record
-      const { data: prospect, error: prospectError } = await supabase
+      // Check if a prospect already exists for this email
+      const { data: existingProspects, error: checkError } = await supabase
         .from('prospects')
-        .insert({
-          company_name: company_name,
-          contact_name: formData.contact_name,
-          email: formData.email,
-          phone: formData.phone || null,
-          industry: formData.industry || null,
-          annual_revenue: formData.annual_revenue ? parseFloat(formData.annual_revenue) : null,
-          employee_count: formData.employee_count ? parseInt(formData.employee_count) : null,
-          workflow_stage: 'connected',
-          user_type: 'prospect',
-          qb_company_id: company_id
-        })
-        .select()
+        .select('*')
+        .eq('email', formData.email)
         .single()
 
-      if (prospectError) throw prospectError
+      let prospectId
 
-      // Then update the qbo_token to link to this prospect
-      if (prospect && company_id) {
+      if (existingProspects) {
+        // Update existing prospect
+        const { data: updatedProspect, error: updateError } = await supabase
+          .from('prospects')
+          .update({
+            company_name: company_name,
+            contact_name: formData.contact_name,
+            phone: formData.phone || null,
+            industry: formData.industry || null,
+            annual_revenue: formData.annual_revenue ? parseFloat(formData.annual_revenue) : null,
+            employee_count: formData.employee_count ? parseInt(formData.employee_count) : null,
+            qb_company_id: company_id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingProspects.id)
+          .select()
+          .single()
+
+        if (updateError) throw updateError
+        prospectId = existingProspects.id
+      } else {
+        // Create new prospect
+        const { data: prospect, error: prospectError } = await supabase
+          .from('prospects')
+          .insert({
+            company_name: company_name,
+            contact_name: formData.contact_name,
+            email: formData.email,
+            phone: formData.phone || null,
+            industry: formData.industry || null,
+            annual_revenue: formData.annual_revenue ? parseFloat(formData.annual_revenue) : null,
+            employee_count: formData.employee_count ? parseInt(formData.employee_count) : null,
+            workflow_stage: 'connected',
+            user_type: 'prospect',
+            qb_company_id: company_id
+          })
+          .select()
+          .single()
+
+        if (prospectError) throw prospectError
+        prospectId = prospect.id
+      }
+
+      // Update the qbo_token to link to this prospect
+      if (prospectId && company_id) {
         const { error: updateError } = await supabase
           .from('qbo_tokens')
-          .update({ prospect_id: prospect.id })
+          .update({ prospect_id: prospectId })
           .eq('company_id', company_id)
 
         if (updateError) {
           console.error('Error linking prospect to QB token:', updateError)
+          // Don't throw here, the prospect was created successfully
         }
       }
 
       // Redirect back to dashboard
       router.push('/dashboard')
     } catch (err) {
-      console.error('Error creating prospect:', err)
-      setError(err instanceof Error ? err.message : 'Failed to create prospect')
+      console.error('Error creating/updating prospect:', err)
+      setError(err instanceof Error ? err.message : 'Failed to save contact information')
     } finally {
       setIsSubmitting(false)
     }

@@ -60,16 +60,16 @@ export default function ConnectedCompaniesWorkflow({ companies }: Props) {
 
     switch (action) {
       case 'sync':
-        router.push(`/admin/dashboard/data-extraction?${params.toString()}`)
+        router.push(`/dashboard/data-extraction?${params.toString()}`)
         break
       case 'transcript':
-        router.push(`/admin/dashboard/call-transcripts?${params.toString()}`)
+        router.push(`/dashboard/call-transcripts?${params.toString()}`)
         break
       case 'analysis':
-        router.push(`/admin/dashboard/advanced-analysis?${params.toString()}`)
+        router.push(`/dashboard/advanced-analysis?${params.toString()}`)
         break
       case 'report':
-        router.push(`/admin/dashboard/report-generation?${params.toString()}`)
+        router.push(`/dashboard/report-generation?${params.toString()}`)
         break
       case 'prospect':
         router.push(`/admin/prospects/create?company_id=${company.company_id}&company_name=${encodeURIComponent(company.company_name)}`)

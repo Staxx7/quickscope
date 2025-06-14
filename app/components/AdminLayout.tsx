@@ -28,7 +28,7 @@ import {
 const navigation = [
   {
     name: 'Account Workflow',
-    href: '/admin',  // Changed from /admin/dashboard/main
+    href: '/dashboard',
     icon: Target,
     description: 'Connected accounts with workflow progress tracking',
     badge: null,
@@ -36,7 +36,7 @@ const navigation = [
   },
   {
     name: 'Call Transcripts',
-    href: '/admin/dashboard/call-transcripts',
+    href: '/dashboard/call-transcripts',
     icon: Mic,
     description: 'Upload and analyze client call transcripts',
     badge: 'New',
@@ -44,7 +44,7 @@ const navigation = [
   },
   {
     name: 'Data Extraction',
-    href: '/admin/dashboard/data-extraction',
+    href: '/dashboard/data-extraction',
     icon: Database,
     description: 'Extract live QuickBooks financial data',
     badge: 'Live Data',
@@ -52,7 +52,7 @@ const navigation = [
   },
   {
     name: 'Financial Analysis',
-    href: '/admin/dashboard/advanced-analysis',
+    href: '/dashboard/advanced-analysis',
     icon: Brain,
     description: 'AI-powered financial insights and analysis',
     badge: 'AI-Powered',
@@ -60,7 +60,7 @@ const navigation = [
   },
   {
     name: 'Report Generation',
-    href: '/admin/dashboard/report-generation',
+    href: '/dashboard/report-generation',
     icon: FileText,
     description: 'Generate audit decks and financial reports',
     badge: 'Pro',
