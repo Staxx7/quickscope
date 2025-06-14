@@ -2,41 +2,46 @@
 
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import AccountWorkflowDashboard from '@/app/components/AccountWorkflowDashboard'
-
-interface CompanyConnection {
-  id: string
-  company_name: string
-  status: string
-}
+import ConnectedCompaniesWorkflow from '@/app/components/ConnectedCompaniesWorkflow'
 
 export default function DashboardPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
-  const [companies, setCompanies] = useState<CompanyConnection[]>([])
+  const [companies, setCompanies] = useState([])
   const [error, setError] = useState<string | null>(null)
+  const [userType, setUserType] = useState<string | null>(null)
 
   useEffect(() => {
-    const checkConnections = async () => {
+    const checkUserAndFetchCompanies = async () => {
       try {
-        // Check for any connected QuickBooks companies
-        const response = await fetch('/api/companies')
+        // Check user type
+        const storedUserType = sessionStorage.getItem('user_type')
+        setUserType(storedUserType)
+
+        // If internal user, show admin dashboard
+        if (storedUserType === 'internal') {
+          router.push('/admin/dashboard')
+          return
+        }
+
+        // Fetch connected companies using the new endpoint
+        const response = await fetch('/api/admin/connected-companies')
         
         if (!response.ok) {
-          throw new Error('Failed to fetch companies')
+          throw new Error('Failed to fetch connected companies')
         }
 
         const data = await response.json()
         
-        if (data.companies && data.companies.length > 0) {
-          // Filter for active companies
-          const activeCompanies = data.companies.filter((c: any) => c.status === 'active')
+        if (data.success && data.companies && data.companies.length > 0) {
+          // Filter for active companies only
+          const activeCompanies = data.companies.filter((c: any) => c.connection_status === 'active')
           
           if (activeCompanies.length > 0) {
             setCompanies(activeCompanies)
             // Set a flag that we have authenticated companies
             sessionStorage.setItem('authenticated', 'true')
-            sessionStorage.setItem('active_company_id', activeCompanies[0].id)
+            sessionStorage.setItem('active_company_id', activeCompanies[0].company_id)
           } else {
             // All companies are expired
             router.push('/connect?reason=expired')
@@ -53,7 +58,7 @@ export default function DashboardPage() {
       }
     }
 
-    checkConnections()
+    checkUserAndFetchCompanies()
   }, [router])
 
   // Show loading state
@@ -88,7 +93,7 @@ export default function DashboardPage() {
 
   // Show dashboard if we have companies
   if (companies.length > 0) {
-    return <AccountWorkflowDashboard />
+    return <ConnectedCompaniesWorkflow companies={companies} />
   }
 
   // This shouldn't be reached due to redirect, but just in case
