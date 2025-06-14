@@ -116,32 +116,34 @@ function SuccessContent() {
     
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-        <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl p-8 max-w-md w-full">
+        <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl p-10 max-w-md w-full">
           <div className="text-center">
-            {/* Success Icon with glassmorphic style */}
-            <div className="mb-6">
-              <div className="w-20 h-20 bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur rounded-full flex items-center justify-center mx-auto border border-green-500/30">
-                <svg className="w-10 h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            {/* Success Icon - Large green checkmark in circle */}
+            <div className="mb-8">
+              <div className="w-24 h-24 bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur rounded-full flex items-center justify-center mx-auto border-2 border-green-500/30">
+                <svg className="w-12 h-12 text-green-400" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
             </div>
 
-            {/* Success Message */}
-            <h2 className="text-3xl font-bold text-white mb-4">Successfully Connected!</h2>
-            <p className="text-lg text-slate-300 mb-8">
+            {/* Main Success Message */}
+            <h1 className="text-4xl font-bold text-white mb-6">Successfully Connected!</h1>
+            
+            {/* Subtitle */}
+            <p className="text-xl text-slate-300 mb-10">
               Your QuickBooks account has been linked successfully.
             </p>
 
-            {/* Info Box with glassmorphic style */}
-            <div className="bg-white/5 backdrop-blur rounded-xl p-6 mb-8 border border-white/10">
-              <p className="text-slate-200">
+            {/* Gray Info Box */}
+            <div className="bg-slate-800/50 backdrop-blur rounded-2xl p-6 mb-10 border border-slate-700/50">
+              <p className="text-slate-200 leading-relaxed">
                 We'll email you the results of your financial audit within the next 24-48 hours.
               </p>
             </div>
 
             {/* Thank You Message */}
-            <p className="text-slate-300 text-sm mb-6">
+            <p className="text-slate-400 text-base">
               Thank you for choosing our services!
             </p>
 
@@ -149,7 +151,7 @@ function SuccessContent() {
             {isPaidUser && (
               <a
                 href="/dashboard"
-                className="inline-block w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 px-6 rounded-lg transition-all duration-200 font-medium shadow-lg transform hover:scale-[1.02]"
+                className="inline-block mt-8 w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 px-6 rounded-lg transition-all duration-200 font-medium shadow-lg transform hover:scale-[1.02]"
               >
                 Open Your Dashboard
               </a>
