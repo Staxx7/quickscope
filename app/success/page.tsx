@@ -98,87 +98,54 @@ function SuccessContent() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900 flex items-center justify-center p-4">
-        <div className="max-w-2xl w-full">
-          {/* Success Animation */}
-          <div className="flex justify-center mb-8">
-            <div className="relative">
-              <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center animate-pulse">
-                <div className="w-16 h-16 bg-green-500/30 rounded-full flex items-center justify-center">
-                  <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-white mb-4">
-              Connection Successful!
-            </h1>
-            <p className="text-xl text-slate-300">
-              Your QuickBooks account has been securely connected to QuickScope
-            </p>
-          </div>
-
-          {/* What's Next Card */}
-          <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-8 border border-slate-700 mb-8">
-            <h3 className="text-2xl font-semibold text-white mb-6 text-center">
-              What Happens Next?
-            </h3>
-            
-            <div className="space-y-6">
-              <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0 w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                  <span className="text-blue-400 font-semibold">1</span>
-                </div>
-                <div>
-                  <h4 className="text-white font-semibold mb-1">Financial Analysis Begins</h4>
-                  <p className="text-slate-400">Our AI-powered system will analyze your financial data to identify opportunities and insights</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0 w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                  <span className="text-blue-400 font-semibold">2</span>
-                </div>
-                <div>
-                  <h4 className="text-white font-semibold mb-1">Custom Report Generation</h4>
-                  <p className="text-slate-400">We'll prepare a comprehensive financial audit report tailored to your business</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0 w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                  <span className="text-blue-400 font-semibold">3</span>
-                </div>
-                <div>
-                  <h4 className="text-white font-semibold mb-1">Expert Consultation</h4>
-                  <p className="text-slate-400">Our team will schedule a call to discuss findings and strategic recommendations</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
-              <p className="text-blue-400 text-center">
-                <span className="font-semibold">Expected Timeline:</span> You'll hear from us within 24-48 hours
-              </p>
-            </div>
-          </div>
-
-          {/* CTA Button */}
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
           <div className="text-center">
+            {/* Success Icon */}
+            <div className="mb-6">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Success Message */}
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Success!</h2>
+            <p className="text-lg text-gray-600 mb-8">
+              Your QuickBooks account has been successfully connected.
+            </p>
+
+            {/* What's Next */}
+            <div className="bg-blue-50 rounded-lg p-6 mb-8 text-left">
+              <h3 className="font-semibold text-gray-800 mb-3">What happens next?</h3>
+              <ul className="space-y-2 text-gray-600 text-sm">
+                <li className="flex items-start">
+                  <span className="text-blue-600 mr-2">✓</span>
+                  <span>Our team will analyze your financial data</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-600 mr-2">✓</span>
+                  <span>We'll prepare a comprehensive audit report</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-600 mr-2">✓</span>
+                  <span>You'll receive an email within 24-48 hours</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-600 mr-2">✓</span>
+                  <span>We'll schedule a call to discuss our findings</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* CTA Button */}
             <a
               href="/"
-              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
+              className="inline-block w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
-              Return to Homepage
+              Return to Home
             </a>
-            <p className="mt-4 text-slate-500 text-sm">
-              Thank you for trusting QuickScope with your financial data
-            </p>
           </div>
         </div>
       </div>
