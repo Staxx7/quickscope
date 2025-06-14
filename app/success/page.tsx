@@ -224,7 +224,7 @@ function SuccessContent() {
             </div>
 
             {/* Final Message */}
-            <div className="mt-8 text-center bg-slate-800/50 rounded-xl p-6">
+            <div className="mt-8 text-center bg-white/5 backdrop-blur-xl rounded-xl p-6 border border-white/10">
               <h3 className="text-xl font-semibold text-white mb-2">No Further Action Needed!</h3>
               <p className="text-slate-300">
                 We'll get to work and look forward to presenting more details on your scheduled audit call!

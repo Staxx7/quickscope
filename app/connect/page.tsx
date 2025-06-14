@@ -1,4 +1,4 @@
-// app/connect/page.tsx - Previous design with glassmorphic styling
+// app/connect/page.tsx - Previous design with exact text and glassmorphic styling
 'use client'
 
 import { useState, Suspense, useEffect } from 'react'
@@ -113,178 +113,153 @@ function ConnectContent() {
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-5xl mx-auto">
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-2xl mx-auto">
           
-          {/* Two Column Layout */}
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            
-            {/* Left Column - Branding and Info */}
-            <div className="text-center lg:text-left">
-              {/* Logo and Company Name */}
-              <div className="flex items-center justify-center lg:justify-start space-x-3 mb-8">
-                {/* Logo - Previous design */}
-                <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-lg">
-                  <span className="text-4xl">📊</span>
-                </div>
-                <h1 className="text-3xl font-bold text-white">QUICKSCOPE</h1>
-              </div>
-              
-              {/* Main Heading */}
-              <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
-                Get Your Free Financial Audit
-              </h2>
-              
-              {/* Subheading */}
-              <p className="text-xl text-slate-300 mb-8">
-                Connect your accounting software to receive a comprehensive financial health assessment.
-              </p>
-              
-              {/* Feature Points */}
-              <div className="space-y-4 mb-8">
-                <div className="flex items-center justify-center lg:justify-start space-x-3">
-                  <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+          {/* Header with exact logo and text from previous design */}
+          <div className="text-center mb-12">
+            <div className="flex items-center justify-center space-x-3 mb-6">
+              {/* Logo - matching the style from previous screenshot */}
+              <div className="relative">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3">
+                  <div className="w-12 h-12 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center transform -rotate-3">
+                    <span className="text-white text-2xl font-bold">Q</span>
                   </div>
-                  <span className="text-slate-300">No credit card required</span>
-                </div>
-                <div className="flex items-center justify-center lg:justify-start space-x-3">
-                  <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <span className="text-slate-300">Results delivered in 24-48 hours</span>
-                </div>
-                <div className="flex items-center justify-center lg:justify-start space-x-3">
-                  <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <span className="text-slate-300">100% secure and confidential</span>
                 </div>
               </div>
+              <h1 className="text-3xl font-bold text-white tracking-wider">QUICKSCOPE</h1>
             </div>
+            <h2 className="text-4xl font-bold text-white mb-4">
+              Get Your Free Financial Audit
+            </h2>
+            <p className="text-xl text-slate-300">
+              Connect your accounting software to receive a comprehensive
+            </p>
+            <p className="text-xl text-slate-300">
+              financial health assessment.
+            </p>
+          </div>
 
-            {/* Right Column - Form */}
-            <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl p-8">
-              <h3 className="text-2xl font-semibold text-white mb-6">Start Your Free Audit</h3>
-              
-              {/* Error Display */}
-              {(error || errorParam) && (
-                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl backdrop-blur-sm">
-                  <h4 className="text-red-400 font-semibold mb-2">Connection Failed</h4>
-                  <p className="text-red-300 mb-2">{error || errorParam}</p>
-                  {errorDetails && (
-                    <details className="mt-2">
-                      <summary className="text-red-400 cursor-pointer text-sm">View technical details</summary>
-                      <pre className="text-xs text-red-300 mt-2 p-2 bg-red-500/10 rounded overflow-auto">
-                        {decodeURIComponent(errorDetails)}
-                      </pre>
-                    </details>
-                  )}
-                  <p className="text-sm text-red-400 mt-2">
-                    If this error persists, please contact support.
-                  </p>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-2">
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    placeholder="John Smith"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
-                    Business Email *
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    placeholder="john@company.com"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="company" className="block text-sm font-medium text-slate-300 mb-2">
-                    Company Name *
-                  </label>
-                  <input
-                    type="text"
-                    id="company"
-                    required
-                    value={formData.company}
-                    onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
-                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    placeholder="Acme Corporation"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-slate-300 mb-2">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    placeholder="(555) 123-4567"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:scale-100 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg mt-6"
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      <span>Connecting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                      </svg>
-                      <span>Connect to QuickBooks</span>
-                    </>
-                  )}
-                </button>
-              </form>
-
-              <div className="mt-6 text-center">
-                <div className="flex items-center justify-center text-sm text-green-400 mb-2">
-                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                  </svg>
-                  Your data is encrypted and secure
-                </div>
-                <p className="text-sm text-slate-400">
-                  We use bank-level security to protect your information
+          {/* Glassmorphic Form Container */}
+          <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl p-8">
+            {/* Error Display */}
+            {(error || errorParam) && (
+              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl backdrop-blur-sm">
+                <h4 className="text-red-400 font-semibold mb-2">Connection Failed</h4>
+                <p className="text-red-300 mb-2">{error || errorParam}</p>
+                {errorDetails && (
+                  <details className="mt-2">
+                    <summary className="text-red-400 cursor-pointer text-sm">View technical details</summary>
+                    <pre className="text-xs text-red-300 mt-2 p-2 bg-red-500/10 rounded overflow-auto">
+                      {decodeURIComponent(errorDetails)}
+                    </pre>
+                  </details>
+                )}
+                <p className="text-sm text-red-400 mt-2">
+                  If this error persists, please contact support.
                 </p>
               </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-2">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="John Smith"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
+                  Business Email *
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="john@company.com"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="company" className="block text-sm font-medium text-slate-300 mb-2">
+                  Company Name *
+                </label>
+                <input
+                  type="text"
+                  id="company"
+                  required
+                  value={formData.company}
+                  onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
+                  className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="Acme Corporation"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-slate-300 mb-2">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:scale-100 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Connecting...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    <span>Connect to QuickBooks</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="mt-8 text-center">
+              <div className="flex items-center justify-center text-sm text-green-400 mb-2">
+                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+                Your data is encrypted and secure
+              </div>
+              <p className="text-sm text-slate-400">
+                We use bank-level security to protect your information
+              </p>
             </div>
+          </div>
+
+          {/* Trust Indicators */}
+          <div className="mt-8 text-center">
+            <p className="text-sm text-slate-500">
+              No credit card required • Results in 24-48 hours • 100% confidential
+            </p>
           </div>
         </div>
       </div>
