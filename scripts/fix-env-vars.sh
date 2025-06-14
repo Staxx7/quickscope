@@ -5,9 +5,10 @@
 
 echo "🔧 Starting environment variable standardization..."
 
-# Create backup
+# Create backup in a temp directory outside the app folder
 echo "📁 Creating backup..."
-cp -r app app.backup.$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
+mkdir -p /tmp/ledgr-backup
+cp -r app /tmp/ledgr-backup/app.$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
 
 # Replace QUICKBOOKS_ with QB_ in environment variable references
 echo "🔄 Replacing QUICKBOOKS_ prefixes with QB_..."
@@ -45,3 +46,4 @@ echo "📝 Modified $CHANGES files to use QB_ prefix"
 echo ""
 echo "⚠️  Remember to update your .env file with the new variable names!"
 echo "📄 Use .env.example as a template"
+echo "📁 Backup saved to /tmp/ledgr-backup/"
