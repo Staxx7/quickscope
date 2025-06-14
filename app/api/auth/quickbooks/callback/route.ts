@@ -33,34 +33,76 @@ export async function GET(request: NextRequest) {
     }
 
     // Exchange authorization code for access token
-    const tokenData = await exchangeCodeForTokens(code, realmId)
+    const tokenResponse = await exchangeCodeForTokens(code, realmId)
     
-    if (!tokenData.success) {
+    if (!tokenResponse.success) {
       return NextResponse.redirect(`${config.app.url}/error?message=token_exchange_failed`)
     }
 
     // Get company information from QuickBooks
-    const companyInfo = await getCompanyInfo(realmId, tokenData.access_token)
+    const companyInfo = await getCompanyInfo(realmId, tokenResponse.access_token)
 
     // Store tokens and company info in database
     const supabase = getSupabase()
-    const { error: dbError } = await supabase
+    
+    console.log('Attempting to store tokens for company:', realmId)
+    console.log('Company info:', companyInfo)
+    
+    const tokenDataToSave = {
+      company_id: realmId,
+      company_name: companyInfo.name || `Company ${realmId}`,
+      access_token: tokenResponse.access_token,
+      refresh_token: tokenResponse.refresh_token,
+      expires_at: new Date(Date.now() + (tokenResponse.expires_in * 1000)).toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+    
+    console.log('Token data to be saved:', { ...tokenDataToSave, access_token: '[REDACTED]', refresh_token: '[REDACTED]' })
+    
+    const { data: savedToken, error: dbError } = await supabase
       .from('qbo_tokens')
-      .upsert({
-        company_id: realmId,
-        company_name: companyInfo.name || `Company ${realmId}`,
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token,
-        expires_at: new Date(Date.now() + (tokenData.expires_in * 1000)).toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }, {
+      .upsert(tokenDataToSave, {
         onConflict: 'company_id'
       })
+      .select()
+      .single()
 
     if (dbError) {
       console.error('Error storing QB tokens:', dbError)
-      return NextResponse.redirect(`${config.app.url}/error?message=database_error`)
+      console.error('Full error details:', JSON.stringify(dbError, null, 2))
+      return NextResponse.redirect(`${config.app.url}/error?message=database_error&details=${encodeURIComponent(dbError.message)}`)
+    }
+    
+    console.log('Successfully saved token:', savedToken?.company_id)
+
+    // Create/update prospect record with QuickBooks company ID
+    const prospectData = {
+      company_name: companyInfo.name || `Company ${realmId}`,
+      contact_name: companyInfo.name || 'Unknown',
+      email: `contact@${(companyInfo.name || 'company').toLowerCase().replace(/\s+/g, '')}.com`,
+      qb_company_id: realmId,
+      workflow_stage: 'connected',
+      user_type: 'prospect', // Default to prospect
+      updated_at: new Date().toISOString()
+    }
+    
+    console.log('Creating/updating prospect:', prospectData)
+    
+    const { data: savedProspect, error: prospectError } = await supabase
+      .from('prospects')
+      .upsert(prospectData, {
+        onConflict: 'qb_company_id',
+        ignoreDuplicates: false
+      })
+      .select()
+      .single()
+      
+    if (prospectError) {
+      console.warn('Prospect upsert warning:', prospectError)
+      // Don't fail the whole flow for this
+    } else {
+      console.log('Prospect saved/updated:', savedProspect?.id)
     }
 
     // Check if this is an internal user or prospect

@@ -17,10 +17,9 @@ function SuccessContent() {
         // Get parameters from URL
         const connected = searchParams.get('connected')
         const companyId = searchParams.get('company')
-        const accessToken = searchParams.get('access_token')
-        const refreshToken = searchParams.get('refresh_token')
+        const companyName = searchParams.get('company_name')
 
-        console.log('Success page params:', { connected, companyId, accessToken: accessToken ? 'present' : 'missing' })
+        console.log('Success page params:', { connected, companyId })
 
         if (!connected || connected !== 'true') {
           setError('OAuth connection not confirmed')
@@ -34,64 +33,24 @@ function SuccessContent() {
           return
         }
 
-        if (!accessToken) {
-          setError('Missing access token from QuickBooks')
-          setLoading(false)
-          return
-        }
-
-        // Get company information from QuickBooks API
-        const companyInfo = await fetchCompanyInfo(companyId, accessToken)
-        
-        // Store tokens in Supabase
-        const { error: dbError } = await supabase
+        // Check if tokens are already saved in database
+        const { data: existingToken } = await supabase
           .from('qbo_tokens')
-          .upsert({
-            company_id: companyId,
-            company_name: companyInfo.name,
-            access_token: accessToken,
-            refresh_token: refreshToken || 'not_provided',
-            expires_at: new Date(Date.now() + (3600 * 1000)).toISOString(), // 1 hour default
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'company_id'
-          })
+          .select('company_id, company_name')
+          .eq('company_id', companyId)
+          .single()
 
-        if (dbError) {
-          console.error('Database error:', dbError)
-          setError(`Failed to store tokens: ${dbError.message}`)
+        if (existingToken) {
+          console.log('QuickBooks connection already saved:', existingToken)
+          setSuccess(true)
           setLoading(false)
           return
         }
 
-        // Create/update prospect record
-        const { error: prospectError } = await supabase
-          .from('prospects')
-          .upsert({
-            id: crypto.randomUUID(),
-            company_name: companyInfo.name,
-            contact_name: companyInfo.name,
-            email: `contact@${companyInfo.name.toLowerCase().replace(/\s+/g, '')}.com`,
-            qb_company_id: companyId,
-            connection_status: 'connected',
-            workflow_stage: 'connected',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'qb_company_id'
-          })
-
-        if (prospectError) {
-          console.warn('Prospect creation warning:', prospectError)
-          // Don't fail the whole process for this
-        }
-
-        setSuccess(true)
+        // If we reach here, something went wrong with token storage
+        console.error('No tokens found in database for company:', companyId)
+        setError('Connection was successful but token storage failed. Please try connecting again.')
         setLoading(false)
-
-        // Don't auto-redirect prospects to the admin dashboard
-        // They should see the success message and next steps
 
       } catch (error) {
         console.error('Error in success handler:', error)
@@ -102,43 +61,6 @@ function SuccessContent() {
 
     handleSuccess()
   }, [searchParams, router])
-
-  const fetchCompanyInfo = async (companyId: string, accessToken: string) => {
-    try {
-      // Try to get company info from QuickBooks
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? 'https://quickbooks.api.intuit.com'
-        : 'https://sandbox-quickbooks.api.intuit.com'
-
-      const response = await fetch(`${baseUrl}/v3/company/${companyId}/companyinfo/${companyId}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Accept': 'application/json'
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const companyInfo = data?.QueryResponse?.CompanyInfo?.[0]
-        return {
-          name: companyInfo?.Name || companyInfo?.CompanyName || `Company ${companyId}`,
-          id: companyId
-        }
-      } else {
-        console.warn('Failed to fetch company info, using fallback')
-        return {
-          name: `Company ${companyId}`,
-          id: companyId
-        }
-      }
-    } catch (error) {
-      console.warn('Error fetching company info:', error)
-      return {
-        name: `Company ${companyId}`,
-        id: companyId
-      }
-    }
-  }
 
   if (loading) {
     return (
