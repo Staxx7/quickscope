@@ -507,6 +507,7 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
   const [dataSource, setDataSource] = useState<'real' | 'mock' | 'ai_enhanced'>('mock')
   const [slides, setSlides] = useState<any[]>([])
   const { showToast, ToastContainer } = useToast()
+  const [downloading, setDownloading] = useState(false)
 
   // Utility functions
   const formatCurrency = (amount: number): string => {
@@ -662,6 +663,56 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
       setGenerationStage(null);
     }
   }
+
+  // Add download functionality
+  const downloadDeck = async (format: 'pdf' | 'pptx' | 'google-slides') => {
+    if (!auditDeck) {
+      showToast('Please generate a deck first', 'error');
+      return;
+    }
+
+    setDownloading(true);
+    try {
+      const response = await fetch('/api/export/audit-deck', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deck: auditDeck,
+          format
+        })
+      });
+
+      if (format === 'google-slides') {
+        const result = await response.json();
+        if (result.success) {
+          // For Google Slides, open the HTML in a new window
+          const htmlWindow = window.open('', '_blank');
+          if (htmlWindow) {
+            htmlWindow.document.write(result.content);
+            htmlWindow.document.close();
+            showToast('Google Slides HTML generated - copy and import into Google Slides', 'success');
+          }
+        }
+      } else {
+        // For PDF and PowerPoint, download the file
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${companyName.replace(/\s+/g, '-')}-audit-deck.${format === 'pdf' ? 'pdf' : 'pptx'}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        showToast(`Deck downloaded as ${format.toUpperCase()}`, 'success');
+      }
+    } catch (error) {
+      console.error('Download failed:', error);
+      showToast('Failed to download deck', 'error');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   // Navigation functions
   const nextSlide = () => {
@@ -1368,6 +1419,44 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
           <div className="p-8">
             {slides[currentSlide] && renderSlideContent(slides[currentSlide])}
           </div>
+
+          {/* Download Options */}
+          {auditDeck && (
+            <div className="p-4 border-t bg-gray-50">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-700">Export Options</h3>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => downloadDeck('pdf')}
+                    disabled={downloading}
+                    className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>PDF</span>
+                  </button>
+                  <button
+                    onClick={() => downloadDeck('pptx')}
+                    disabled={downloading}
+                    className="bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>PowerPoint</span>
+                  </button>
+                  <button
+                    onClick={() => downloadDeck('google-slides')}
+                    disabled={downloading}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+                  >
+                    <Presentation className="w-4 h-4" />
+                    <span>Google Slides</span>
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-gray-600 mt-2 text-right">
+                Professional formats with live data integration
+              </p>
+            </div>
+          )}
         </div>
       )}
 
