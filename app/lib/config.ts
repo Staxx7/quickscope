@@ -6,8 +6,8 @@ export const config = {
   database: {
     url: process.env.DATABASE_URL || '',
     supabase: {
-      url: process.env.SUPABASE_URL || '',
-      anonKey: process.env.SUPABASE_ANON_KEY || '',
+      url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
       serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     }
   },
@@ -81,8 +81,8 @@ export function validateConfig(): { isValid: boolean; missingVars: string[] } {
   const missingVars: string[] = [];
 
   // Check critical environment variables
-  if (!config.database.supabase.url) missingVars.push('SUPABASE_URL');
-  if (!config.database.supabase.anonKey) missingVars.push('SUPABASE_ANON_KEY');
+  if (!config.database.supabase.url) missingVars.push('NEXT_PUBLIC_SUPABASE_URL');
+  if (!config.database.supabase.anonKey) missingVars.push('NEXT_PUBLIC_SUPABASE_ANON_KEY');
   if (!config.quickbooks.clientId) missingVars.push('QUICKBOOKS_CLIENT_ID');
   if (!config.quickbooks.clientSecret) missingVars.push('QUICKBOOKS_CLIENT_SECRET');
   if (!config.openai.apiKey && config.features.ai) missingVars.push('OPENAI_API_KEY');
