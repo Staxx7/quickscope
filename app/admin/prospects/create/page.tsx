@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 
-export default function CreateProspectPage() {
+// Component that uses useSearchParams
+function CreateProspectForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const company_id = searchParams.get('company_id')
@@ -194,5 +195,26 @@ export default function CreateProspectPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Loading component for Suspense fallback
+function LoadingForm() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p className="text-white">Loading form...</p>
+      </div>
+    </div>
+  )
+}
+
+// Main page component with Suspense boundary
+export default function CreateProspectPage() {
+  return (
+    <Suspense fallback={<LoadingForm />}>
+      <CreateProspectForm />
+    </Suspense>
   )
 }
