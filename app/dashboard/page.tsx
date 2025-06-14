@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import SafeAccountWorkflowDashboard from '@/components/dashboard/SafeAccountWorkflowDashboard'
+import AccountWorkflowDashboard from '@/app/components/AccountWorkflowDashboard'
 
 interface CompanyConnection {
   id: string
@@ -88,7 +88,7 @@ export default function DashboardPage() {
 
   // Show dashboard if we have companies
   if (companies.length > 0) {
-    return <SafeAccountWorkflowDashboard />
+    return <AccountWorkflowDashboard />
   }
 
   // This shouldn't be reached due to redirect, but just in case

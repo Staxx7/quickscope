@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS prospects (
   annual_revenue DECIMAL(15, 2),
   employee_count INTEGER,
   workflow_stage VARCHAR(50) DEFAULT 'discovery',
+  user_type VARCHAR(50) DEFAULT 'prospect', -- 'prospect', 'internal', 'paid_user'
+  qb_company_id VARCHAR(255), -- Link to QuickBooks company ID
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

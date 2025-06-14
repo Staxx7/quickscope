@@ -58,25 +58,62 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${config.app.url}/error?message=database_error`)
     }
 
-    // Create a response that redirects to the dashboard
-    const response = NextResponse.redirect(`${config.app.url}/dashboard`)
-    
-    // Set a cookie to indicate successful authentication
-    response.cookies.set('qb_authenticated', 'true', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7 // 7 days
-    })
-    
-    response.cookies.set('qb_company_id', realmId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7 // 7 days
-    })
-    
-    return response
+    // Check if this is an internal user or prospect
+    const { data: prospect } = await supabase
+      .from('prospects')
+      .select('user_type')
+      .eq('qb_company_id', realmId)
+      .single()
+
+    const isInternalUser = prospect?.user_type === 'internal' || prospect?.user_type === 'paid_user'
+
+    // Redirect based on user type
+    if (isInternalUser) {
+      // Internal users go directly to admin dashboard
+      const response = NextResponse.redirect(`${config.app.url}/admin/dashboard`)
+      
+      // Set cookies to indicate successful authentication
+      response.cookies.set('qb_authenticated', 'true', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 7 days
+      })
+      
+      response.cookies.set('qb_company_id', realmId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 7 days
+      })
+      
+      return response
+    } else {
+      // Prospects go to success page
+      const successUrl = new URL(`${config.app.url}/success`)
+      successUrl.searchParams.set('connected', 'true')
+      successUrl.searchParams.set('company', realmId)
+      successUrl.searchParams.set('company_name', encodeURIComponent(companyInfo.name || 'Company'))
+      
+      const response = NextResponse.redirect(successUrl.toString())
+      
+      // Set cookies to indicate successful authentication
+      response.cookies.set('qb_authenticated', 'true', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 7 days
+      })
+      
+      response.cookies.set('qb_company_id', realmId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 7 days
+      })
+      
+      return response
+    }
 
   } catch (error) {
     console.error('Error in QuickBooks OAuth callback:', error)

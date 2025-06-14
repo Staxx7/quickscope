@@ -71,8 +71,11 @@ function SuccessContent() {
           .upsert({
             id: crypto.randomUUID(),
             company_name: companyInfo.name,
+            contact_name: companyInfo.name,
+            email: `contact@${companyInfo.name.toLowerCase().replace(/\s+/g, '')}.com`,
             qb_company_id: companyId,
             connection_status: 'connected',
+            workflow_stage: 'connected',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }, {
@@ -87,10 +90,8 @@ function SuccessContent() {
         setSuccess(true)
         setLoading(false)
 
-        // Redirect to dashboard after 3 seconds
-        setTimeout(() => {
-          router.push('/admin/dashboard')
-        }, 3000)
+        // Don't auto-redirect prospects to the admin dashboard
+        // They should see the success message and next steps
 
       } catch (error) {
         console.error('Error in success handler:', error)
@@ -183,16 +184,34 @@ function SuccessContent() {
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Successfully Connected!</h2>
-          <p className="text-gray-600 mb-6">Your QuickBooks account has been linked successfully.</p>
-          <div className="text-sm text-gray-500 mb-6">
-            Redirecting to dashboard in 3 seconds...
+          <p className="text-gray-600 mb-6">Your QuickBooks account has been securely linked to QuickScope.</p>
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
+            <h3 className="font-semibold text-blue-900 mb-2">What happens next?</h3>
+            <ul className="text-sm text-blue-800 space-y-2">
+              <li>• Our financial experts will analyze your data</li>
+              <li>• We'll prepare insights and recommendations</li>
+              <li>• You'll receive a comprehensive financial audit report</li>
+              <li>• We'll schedule a call to discuss the findings</li>
+            </ul>
           </div>
-          <button
-            onClick={() => router.push('/admin/dashboard')}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Go to Dashboard
-          </button>
+
+          <div className="text-sm text-gray-600 mb-6">
+            <p>Thank you for trusting QuickScope with your financial analysis.</p>
+            <p className="mt-2">We'll be in touch within 24-48 hours with your results.</p>
+          </div>
+
+          <div className="flex flex-col space-y-3">
+            <a
+              href="/"
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Return to Home
+            </a>
+            <p className="text-xs text-gray-500">
+              For internal team: <a href="/admin/dashboard" className="text-blue-600 hover:underline">Access Admin Dashboard</a>
+            </p>
+          </div>
         </div>
       </div>
     )
