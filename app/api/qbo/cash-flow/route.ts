@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const baseUrl = process.env.QB_SANDBOX_BASE_URL || 'https://sandbox-quickbooks.api.intuit.com'
+    const baseUrl = process.env.QUICKBOOKS_SANDBOX_BASE_URL || 'https://sandbox-quickbooks.api.intuit.com'
     
     // Fetch Cash Flow report from QuickBooks API
     const reportUrl = new URL(`${baseUrl}/v3/company/${companyId}/reports/CashFlow`)

@@ -10,8 +10,8 @@ export async function GET(request: NextRequest) {
     }
 
     // QuickBooks OAuth parameters
-    const clientId = process.env.QB_CLIENT_ID
-    const redirectUri = process.env.QB_REDIRECT_URI || 'http://localhost:3005/api/qbo/callback'
+    const clientId = process.env.QUICKBOOKS_CLIENT_ID
+    const redirectUri = process.env.QUICKBOOKS_REDIRECT_URI || 'http://localhost:3005/api/qbo/callback'
     const scope = 'com.intuit.quickbooks.accounting'
     const state = Buffer.from(JSON.stringify({ companyId })).toString('base64')
     

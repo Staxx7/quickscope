@@ -3,12 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   try {
     // Get all relevant environment variables
-    const clientId = process.env.QB_CLIENT_ID
-    const clientSecret = process.env.QB_CLIENT_SECRET
-    const redirectUri = process.env.QB_REDIRECT_URI
+    const clientId = process.env.QUICKBOOKS_CLIENT_ID
+    const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET
+    const redirectUri = process.env.QUICKBOOKS_REDIRECT_URI
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
-    const qbBaseUrl = process.env.QB_BASE_URL
-    const scope = process.env.QB_SCOPE
+    const qbBaseUrl = process.env.QUICKBOOKS_BASE_URL
+    const scope = process.env.QUICKBOOKS_SCOPE
 
     // Test Basic Auth creation first
     let authInfo
@@ -43,9 +43,9 @@ export async function GET(request: NextRequest) {
     const statusInfo = {
       readyForOAuth: allGood,
       issues: allGood ? [] : [
-        !clientId && 'Missing QB_CLIENT_ID',
-        !clientSecret && 'Missing QB_CLIENT_SECRET', 
-        !redirectUri && 'Missing QB_REDIRECT_URI',
+        !clientId && 'Missing QUICKBOOKS_CLIENT_ID',
+        !clientSecret && 'Missing QUICKBOOKS_CLIENT_SECRET', 
+        !redirectUri && 'Missing QUICKBOOKS_REDIRECT_URI',
         !baseUrl && 'Missing NEXT_PUBLIC_BASE_URL',
         redirectUri !== `${baseUrl}/api/auth/callback` && 'Redirect URI mismatch'
       ].filter(Boolean)

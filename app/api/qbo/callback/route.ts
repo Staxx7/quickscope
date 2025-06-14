@@ -125,8 +125,8 @@ export async function GET(request: NextRequest) {
 
 async function exchangeCodeForTokens(code: string) {
   try {
-    const clientId = process.env.QB_CLIENT_ID;
-    const clientSecret = process.env.QB_CLIENT_SECRET;
+    const clientId = process.env.QUICKBOOKS_CLIENT_ID;
+    const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
     const redirectUri = process.env.NODE_ENV === 'production' 
       ? 'https://quickscope.info/api/qbo/callback'
       : 'http://localhost:3005/api/qbo/callback';

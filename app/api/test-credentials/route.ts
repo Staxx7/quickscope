@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
   try {
-    const clientId = process.env.QB_CLIENT_ID
-    const clientSecret = process.env.QB_CLIENT_SECRET
-    const redirectUri = process.env.QB_REDIRECT_URI
+    const clientId = process.env.QUICKBOOKS_CLIENT_ID
+    const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET
+    const redirectUri = process.env.QUICKBOOKS_REDIRECT_URI
     
     // Test basic auth encoding
     const authString = `${clientId}:${clientSecret}`

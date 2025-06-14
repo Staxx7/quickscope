@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
   try {
-    const clientId = process.env.QB_CLIENT_ID
-    const redirectUri = process.env.QB_REDIRECT_URI
-    const scope = process.env.QB_SCOPE || 'com.intuit.quickbooks.accounting'
+    const clientId = process.env.QUICKBOOKS_CLIENT_ID
+    const redirectUri = process.env.QUICKBOOKS_REDIRECT_URI
+    const scope = process.env.QUICKBOOKS_SCOPE || 'com.intuit.quickbooks.accounting'
 
     if (!clientId || !redirectUri) {
       console.error('Missing OAuth configuration:', { 
