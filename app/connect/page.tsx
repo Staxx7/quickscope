@@ -1,4 +1,4 @@
-// app/connect/page.tsx - Glassmorphic design
+// app/connect/page.tsx - Glassmorphic design with exact text
 'use client'
 
 import { useState, Suspense, useEffect } from 'react'
@@ -67,16 +67,45 @@ function ConnectContent() {
   const errorParam = searchParams.get('error')
   const errorDetails = searchParams.get('details')
 
-  // If redirecting to QuickBooks
+  // If redirecting to QuickBooks - sleek loading animation
   if (isRedirecting) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="mb-6">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mx-auto"></div>
+          {/* Sleek circular loading animation */}
+          <div className="mb-8 relative">
+            <div className="w-20 h-20 mx-auto">
+              <svg className="w-20 h-20 animate-spin" viewBox="0 0 100 100">
+                <circle
+                  className="text-slate-700"
+                  strokeWidth="8"
+                  stroke="currentColor"
+                  fill="transparent"
+                  r="42"
+                  cx="50"
+                  cy="50"
+                />
+                <circle
+                  className="text-blue-500"
+                  strokeWidth="8"
+                  strokeDasharray={264}
+                  strokeDashoffset={70}
+                  strokeLinecap="round"
+                  stroke="currentColor"
+                  fill="transparent"
+                  r="42"
+                  cx="50"
+                  cy="50"
+                />
+              </svg>
+            </div>
+            {/* Pulsing dot in center */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+            </div>
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Redirecting to QuickBooks...</h2>
-          <p className="text-slate-400">You'll be redirected to QuickBooks to authorize the connection</p>
+          <h2 className="text-xl font-semibold text-white mb-2">Redirecting to QuickBooks</h2>
+          <p className="text-slate-400 text-sm">Please wait while we connect your account...</p>
         </div>
       </div>
     )
@@ -87,19 +116,27 @@ function ConnectContent() {
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-2xl mx-auto">
           
-          {/* Header */}
+          {/* Header with exact logo and text */}
           <div className="text-center mb-12">
             <div className="flex items-center justify-center space-x-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg flex items-center justify-center shadow-lg">
-                <span className="text-white text-2xl font-bold">Q</span>
+              {/* Logo - matching the style from screenshot */}
+              <div className="relative">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3">
+                  <div className="w-12 h-12 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center transform -rotate-3">
+                    <span className="text-white text-2xl font-bold">Q</span>
+                  </div>
+                </div>
               </div>
-              <h1 className="text-3xl font-bold text-white">QUICKSCOPE</h1>
+              <h1 className="text-3xl font-bold text-white tracking-wider">QUICKSCOPE</h1>
             </div>
             <h2 className="text-4xl font-bold text-white mb-4">
-              Connect Your QuickBooks
+              Get Your Free Financial Audit
             </h2>
             <p className="text-xl text-slate-300">
-              Securely connect your QuickBooks Online account for AI-powered financial analysis
+              Connect your accounting software to receive a comprehensive
+            </p>
+            <p className="text-xl text-slate-300">
+              financial health assessment.
             </p>
           </div>
 
@@ -142,7 +179,7 @@ function ConnectContent() {
 
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
-                  Email Address *
+                  Business Email *
                 </label>
                 <input
                   type="email"
@@ -213,7 +250,7 @@ function ConnectContent() {
                 Your data is encrypted and secure
               </div>
               <p className="text-sm text-slate-400">
-                We only access financial reports, not transaction details
+                We use bank-level security to protect your information
               </p>
             </div>
           </div>
@@ -221,7 +258,7 @@ function ConnectContent() {
           {/* Trust Indicators */}
           <div className="mt-8 text-center">
             <p className="text-sm text-slate-500">
-              Trusted by finance professionals • SOC 2 Compliant • Bank-level encryption
+              No credit card required • Results in 24-48 hours • 100% confidential
             </p>
           </div>
         </div>

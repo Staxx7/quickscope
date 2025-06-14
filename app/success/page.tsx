@@ -75,11 +75,11 @@ function SuccessContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full mx-4 text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Connecting QuickBooks</h2>
-          <p className="text-gray-600">Setting up your financial data integration...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl p-8 max-w-md w-full mx-4 text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-white mb-2">Completing Connection</h2>
+          <p className="text-slate-300">Setting up your financial data integration...</p>
         </div>
       </div>
     )
@@ -87,18 +87,20 @@ function SuccessContent() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full mx-4 text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl p-8 max-w-md w-full text-center">
+          <div className="mb-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-red-500/20 to-red-600/20 backdrop-blur rounded-full flex items-center justify-center mx-auto border border-red-500/30">
+              <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Connection Error</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+          <h2 className="text-2xl font-bold text-white mb-2">Connection Error</h2>
+          <p className="text-slate-300 mb-6">{error}</p>
           <button
-            onClick={() => window.location.href = '/auth/quickbooks'}
-            className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
+            onClick={() => window.location.href = '/connect'}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg transition-all duration-200 shadow-lg"
           >
             Try Again
           </button>
@@ -113,33 +115,33 @@ function SuccessContent() {
     const isPaidUser = userType === 'paid'
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl p-8 max-w-md w-full">
           <div className="text-center">
-            {/* Success Icon */}
+            {/* Success Icon with glassmorphic style */}
             <div className="mb-6">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <div className="w-20 h-20 bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur rounded-full flex items-center justify-center mx-auto border border-green-500/30">
+                <svg className="w-10 h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
             </div>
 
             {/* Success Message */}
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">Successfully Connected!</h2>
-            <p className="text-lg text-gray-600 mb-8">
+            <h2 className="text-3xl font-bold text-white mb-4">Successfully Connected!</h2>
+            <p className="text-lg text-slate-300 mb-8">
               Your QuickBooks account has been linked successfully.
             </p>
 
-            {/* Info Box */}
-            <div className="bg-gray-50 rounded-lg p-6 mb-8 text-left">
-              <p className="text-gray-700">
+            {/* Info Box with glassmorphic style */}
+            <div className="bg-white/5 backdrop-blur rounded-xl p-6 mb-8 border border-white/10">
+              <p className="text-slate-200">
                 We'll email you the results of your financial audit within the next 24-48 hours.
               </p>
             </div>
 
             {/* Thank You Message */}
-            <p className="text-gray-600 text-sm">
+            <p className="text-slate-300 text-sm mb-6">
               Thank you for choosing our services!
             </p>
 
@@ -147,7 +149,7 @@ function SuccessContent() {
             {isPaidUser && (
               <a
                 href="/dashboard"
-                className="inline-block mt-6 w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                className="inline-block w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 px-6 rounded-lg transition-all duration-200 font-medium shadow-lg transform hover:scale-[1.02]"
               >
                 Open Your Dashboard
               </a>
@@ -164,8 +166,8 @@ function SuccessContent() {
 export default function SuccessPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500"></div>
       </div>
     }>
       <SuccessContent />
