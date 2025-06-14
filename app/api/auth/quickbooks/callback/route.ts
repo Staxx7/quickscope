@@ -21,10 +21,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${config.app.url}/error?message=missing_oauth_params`)
     }
 
-    // Optional: Verify state parameter
-    const storedState = request.cookies.get('qb_oauth_state')?.value
-    if (storedState && storedState !== state) {
-      return NextResponse.redirect(`${config.app.url}/error?message=invalid_state`)
+    // Verify state parameter if it exists
+    if (state) {
+      const storedState = request.cookies.get('qb_oauth_state')?.value
+      console.log('State verification:', { received: state, stored: storedState })
+      
+      if (storedState && storedState !== state) {
+        console.error('State mismatch:', { received: state, stored: storedState })
+        return NextResponse.redirect(`${config.app.url}/error?message=invalid_state`)
+      }
     }
 
     // Exchange authorization code for access token

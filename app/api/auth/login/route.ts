@@ -30,8 +30,20 @@ export async function GET(request: NextRequest) {
     authUrl.searchParams.set('state', state)
 
     console.log('Redirecting to QuickBooks OAuth:', authUrl.toString())
+    console.log('State parameter:', state)
 
-    return NextResponse.redirect(authUrl.toString())
+    // Create response with redirect
+    const response = NextResponse.redirect(authUrl.toString())
+    
+    // Store state in cookie for verification on callback
+    response.cookies.set('qb_oauth_state', state, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 10 // 10 minutes - enough time for OAuth flow
+    })
+
+    return response
 
   } catch (error) {
     console.error('Error in OAuth login:', error)
