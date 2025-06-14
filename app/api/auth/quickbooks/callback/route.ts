@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseClient'
+import { getSupabase } from '@/app/lib/serviceFactory'
+import { config } from '@/app/lib/config'
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,31 +13,32 @@ export async function GET(request: NextRequest) {
     // Handle OAuth error
     if (error) {
       console.error('QuickBooks OAuth error:', error)
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/error?message=quickbooks_auth_failed`)
+      return NextResponse.redirect(`${config.app.url}/error?message=quickbooks_auth_failed`)
     }
 
     // Validate required parameters
     if (!code || !realmId) {
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/error?message=missing_oauth_params`)
+      return NextResponse.redirect(`${config.app.url}/error?message=missing_oauth_params`)
     }
 
     // Optional: Verify state parameter
     const storedState = request.cookies.get('qb_oauth_state')?.value
     if (storedState && storedState !== state) {
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/error?message=invalid_state`)
+      return NextResponse.redirect(`${config.app.url}/error?message=invalid_state`)
     }
 
     // Exchange authorization code for access token
     const tokenData = await exchangeCodeForTokens(code, realmId)
     
     if (!tokenData.success) {
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/error?message=token_exchange_failed`)
+      return NextResponse.redirect(`${config.app.url}/error?message=token_exchange_failed`)
     }
 
     // Get company information from QuickBooks
     const companyInfo = await getCompanyInfo(realmId, tokenData.access_token)
 
     // Store tokens and company info in database
+    const supabase = getSupabase()
     const { error: dbError } = await supabase
       .from('qbo_tokens')
       .upsert({
@@ -53,38 +55,47 @@ export async function GET(request: NextRequest) {
 
     if (dbError) {
       console.error('Error storing QB tokens:', dbError)
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/error?message=database_error`)
+      return NextResponse.redirect(`${config.app.url}/error?message=database_error`)
     }
 
-    // Redirect to success page with company info
-    const successUrl = new URL(`${process.env.NEXT_PUBLIC_APP_URL}/success`)
-    successUrl.searchParams.set('company_id', realmId)
-    successUrl.searchParams.set('company_name', companyInfo.name || 'Your Company')
+    // Create a response that redirects to the dashboard
+    const response = NextResponse.redirect(`${config.app.url}/dashboard`)
     
-    return NextResponse.redirect(successUrl.toString())
+    // Set a cookie to indicate successful authentication
+    response.cookies.set('qb_authenticated', 'true', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7 // 7 days
+    })
+    
+    response.cookies.set('qb_company_id', realmId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7 // 7 days
+    })
+    
+    return response
 
   } catch (error) {
     console.error('Error in QuickBooks OAuth callback:', error)
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/error?message=unexpected_error`)
+    return NextResponse.redirect(`${config.app.url}/error?message=unexpected_error`)
   }
 }
 
 async function exchangeCodeForTokens(code: string, realmId: string) {
   try {
-    const tokenEndpoint = process.env.NODE_ENV === 'production'
-      ? 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer'
-      : 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer'
-
-    const response = await fetch(tokenEndpoint, {
+    const response = await fetch(config.quickbooks.tokenUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${Buffer.from(`${process.env.QUICKBOOKS_CLIENT_ID}:${process.env.QUICKBOOKS_CLIENT_SECRET}`).toString('base64')}`,
+        'Authorization': `Basic ${Buffer.from(`${config.quickbooks.clientId}:${config.quickbooks.clientSecret}`).toString('base64')}`,
         'Content-Type': 'application/x-www-form-urlencoded'
       },
       body: new URLSearchParams({
         'grant_type': 'authorization_code',
         'code': code,
-        'redirect_uri': process.env.QUICKBOOKS_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/quickbooks/callback`
+        'redirect_uri': config.quickbooks.redirectUri
       })
     })
 
@@ -108,9 +119,7 @@ async function exchangeCodeForTokens(code: string, realmId: string) {
 
 async function getCompanyInfo(realmId: string, accessToken: string) {
   try {
-    const baseUrl = process.env.NODE_ENV === 'production'
-      ? 'https://quickbooks.api.intuit.com'
-      : 'https://sandbox-quickbooks.api.intuit.com'
+    const baseUrl = config.quickbooks.baseUrl
 
     const response = await fetch(`${baseUrl}/v3/company/${realmId}/companyinfo/${realmId}`, {
       headers: {
@@ -124,10 +133,10 @@ async function getCompanyInfo(realmId: string, accessToken: string) {
     }
 
     const data = await response.json()
-    const companyInfo = data?.QueryResponse?.CompanyInfo?.[0]
+    const companyInfo = data?.QueryResponse?.CompanyInfo?.[0] || data?.CompanyInfo
 
     return {
-      name: companyInfo?.Name || companyInfo?.CompanyName || `Company ${realmId}`,
+      name: companyInfo?.CompanyName || companyInfo?.Name || `Company ${realmId}`,
       id: realmId
     }
 

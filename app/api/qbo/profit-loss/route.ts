@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseClient'
-import { qbService } from '@/lib/quickbooksService'
+import { quickbooksService, getSupabase } from '@/app/lib/serviceFactory'
 
 export async function GET(request: NextRequest) {
   try {
+    // Get parameters from query
     const { searchParams } = new URL(request.url)
     const companyId = searchParams.get('companyId')
     const startDate = searchParams.get('startDate')
@@ -16,85 +16,130 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('Fetching P&L for:', companyId, 'from', startDate, 'to', endDate)
+    console.log('Fetching P&L for:', companyId, 'from:', startDate, 'to:', endDate)
 
-    // Get QB tokens from database
-    const { data: tokenData, error: tokenError } = await supabase
-      .from('qbo_tokens')
-      .select('*')
-      .eq('company_id', companyId)
-      .single()
-
-    if (tokenError || !tokenData) {
-      console.error('No QB tokens found for company:', companyId, tokenError)
-      return NextResponse.json(
-        { error: 'QuickBooks connection not found. Please reconnect your QuickBooks account.' },
-        { status: 404 }
-      )
-    }
-
-    // Check if token is expired and refresh if needed
-    const now = new Date()
-    const expiresAt = new Date(tokenData.expires_at)
-    
-    let accessToken = tokenData.access_token
-    let refreshToken = tokenData.refresh_token
-
-    if (now >= expiresAt) {
-      console.log('Token expired, refreshing...')
-      
-      const refreshResult = await qbService.refreshToken(refreshToken)
-      if (!refreshResult) {
-        return NextResponse.json(
-          { error: 'Unable to refresh QuickBooks token. Please reconnect your account.' },
-          { status: 401 }
-        )
-      }
-
-      // Update tokens in database
-      const newExpiresAt = new Date(now.getTime() + refreshResult.expiresIn * 1000)
-      
-      await supabase
-        .from('qbo_tokens')
-        .update({
-          access_token: refreshResult.accessToken,
-          refresh_token: refreshResult.refreshToken,
-          expires_at: newExpiresAt.toISOString(),
-          updated_at: now.toISOString()
-        })
-        .eq('company_id', companyId)
-
-      accessToken = refreshResult.accessToken
-      refreshToken = refreshResult.refreshToken
-    }
-
-    // Fetch P&L from QuickBooks
-    const credentials = {
-      accessToken,
-      refreshToken,
-      companyId,
-      expiresAt: new Date(tokenData.expires_at)
-    }
-
-    const result = await qbService.getProfitLoss(credentials, startDate || undefined, endDate || undefined)
+    // Get Profit & Loss from QuickBooks
+    const result = await quickbooksService.getProfitLoss(
+      companyId, 
+      startDate || undefined, 
+      endDate || undefined
+    )
 
     if (!result.success) {
       return NextResponse.json(
-        { error: result.error || 'Failed to fetch Profit & Loss data' },
+        { error: result.error },
         { status: 500 }
       )
     }
 
+    // Parse and structure the data
+    const profitLossData = parseProfitLossData(result.data)
+
+    // Cache the data in financial_snapshots
+    const supabase = getSupabase()
+    await supabase
+      .from('financial_snapshots')
+      .upsert({
+        company_id: companyId,
+        snapshot_date: new Date().toISOString().split('T')[0],
+        revenue: profitLossData.totalRevenue,
+        expenses: profitLossData.totalExpenses,
+        net_income: profitLossData.netIncome,
+        gross_margin: profitLossData.grossMargin,
+        operating_margin: profitLossData.operatingMargin,
+        net_margin: profitLossData.netMargin,
+        raw_data: result.data,
+        created_at: new Date().toISOString()
+      })
+
     return NextResponse.json({
       success: true,
-      report: result.data
+      data: profitLossData,
+      raw: result.data
     })
 
   } catch (error) {
     console.error('Error in profit-loss API:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
+}
+
+function parseProfitLossData(data: any) {
+  const rows = data?.Rows || []
+  const parsed: any = {
+    revenue: {
+      sales: {},
+      other: {}
+    },
+    expenses: {
+      cogs: {},
+      operating: {},
+      other: {}
+    },
+    totalRevenue: 0,
+    totalCOGS: 0,
+    grossProfit: 0,
+    totalExpenses: 0,
+    operatingIncome: 0,
+    netIncome: 0,
+    grossMargin: 0,
+    operatingMargin: 0,
+    netMargin: 0
+  }
+
+  // Parse rows into structured data
+  rows.forEach((section: any) => {
+    if (section.group === 'Income' || section.group === 'Revenue') {
+      parseSection(section, parsed.revenue)
+      parsed.totalRevenue = getColValue(section.summary?.ColData)
+    } else if (section.group === 'COGS' || section.group === 'CostOfGoodsSold') {
+      parseSection(section, parsed.expenses.cogs)
+      parsed.totalCOGS = getColValue(section.summary?.ColData)
+    } else if (section.group === 'Expenses' || section.group === 'OperatingExpenses') {
+      parseSection(section, parsed.expenses.operating)
+      const sectionTotal = getColValue(section.summary?.ColData)
+      parsed.totalExpenses += sectionTotal
+    }
+  })
+
+  // Calculate derived metrics
+  parsed.grossProfit = parsed.totalRevenue - parsed.totalCOGS
+  parsed.operatingIncome = parsed.grossProfit - parsed.totalExpenses
+  parsed.netIncome = parsed.operatingIncome // Simplified - would include other income/expenses
+
+  // Calculate margins
+  if (parsed.totalRevenue > 0) {
+    parsed.grossMargin = (parsed.grossProfit / parsed.totalRevenue) * 100
+    parsed.operatingMargin = (parsed.operatingIncome / parsed.totalRevenue) * 100
+    parsed.netMargin = (parsed.netIncome / parsed.totalRevenue) * 100
+  }
+
+  return parsed
+}
+
+function parseSection(section: any, target: any) {
+  if (section.Rows) {
+    section.Rows.forEach((row: any) => {
+      if (row.ColData) {
+        const name = row.ColData[0]?.value || ''
+        const value = getColValue(row.ColData)
+        if (name && value !== null) {
+          target[name.toLowerCase().replace(/\s+/g, '_')] = value
+        }
+      }
+      // Recursively parse subsections
+      if (row.Rows) {
+        parseSection(row, target)
+      }
+    })
+  }
+}
+
+function getColValue(colData: any[]): number {
+  if (!colData || colData.length < 2) return 0
+  const value = parseFloat(colData[1]?.value || '0')
+  return isNaN(value) ? 0 : value
 }

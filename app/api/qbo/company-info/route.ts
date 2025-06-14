@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     // Call QuickBooks API to get company information
     const qboResponse = await fetch(
-      `${process.env.QUICKBOOKS_BASE_URL}/v3/company/${realmId}/companyinfo/${realmId}`,
+      `${process.env.QB_BASE_URL}/v3/company/${realmId}/companyinfo/${realmId}`,
       {
         headers: {
           'Authorization': `Bearer ${accessToken}`,

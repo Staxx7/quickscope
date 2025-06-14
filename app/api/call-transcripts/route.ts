@@ -1,38 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseClient'
+import { getSupabase } from '@/app/lib/serviceFactory'
 
 // GET: Fetch all transcripts
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const companyId = searchParams.get('companyId')
     const prospectId = searchParams.get('prospectId')
+    const transcriptId = searchParams.get('transcriptId')
 
-    let query = supabase
-      .from('call_transcripts')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const supabase = getSupabase()
+    
+    if (transcriptId) {
+      const { data, error } = await supabase
+        .from('call_transcripts')
+        .select('*')
+        .eq('id', transcriptId)
+        .single()
 
-    if (companyId) {
-      query = query.eq('company_id', companyId)
+      if (error) {
+        console.error('Error fetching transcript:', error)
+        return NextResponse.json(
+          { error: 'Failed to fetch transcript', details: error.message },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        transcripts: [data],
+        count: 1
+      })
+    } else if (prospectId) {
+      const { data, error } = await supabase
+        .from('call_transcripts')
+        .select('*')
+        .eq('prospect_id', prospectId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching transcripts:', error)
+        return NextResponse.json(
+          { error: 'Failed to fetch transcripts', details: error.message },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        transcripts: data || [],
+        count: data?.length || 0
+      })
+    } else {
+      return NextResponse.json(
+        { error: 'Either prospectId or transcriptId is required' },
+        { status: 400 }
+      )
     }
-
-    if (prospectId) {
-      query = query.eq('prospect_id', prospectId)
-    }
-
-    const { data: transcripts, error } = await query
-
-    if (error) {
-      console.error('Error fetching transcripts:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ transcripts })
 
   } catch (error) {
     console.error('Unexpected error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
   }
 }
 
@@ -40,100 +70,73 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const {
-      prospect_id,
-      company_id,
-      company_name,
-      file_name,
-      file_type,
-      file_size,
-      transcript_text,
-      analysis_results,
-      audio_url
+    const { 
+      prospect_id, 
+      file_name, 
+      transcript_text, 
+      file_url,
+      duration_seconds 
     } = body
 
-    if (!prospect_id || !company_id) {
-      return NextResponse.json({ 
-        error: 'prospect_id and company_id are required' 
-      }, { status: 400 })
+    if (!prospect_id || !file_name || !transcript_text) {
+      return NextResponse.json(
+        { error: 'Missing required fields: prospect_id, file_name, transcript_text' },
+        { status: 400 }
+      )
     }
 
-    const { data: transcript, error } = await supabase
+    const supabase = getSupabase()
+    
+    // Create transcript record
+    const { data, error } = await supabase
       .from('call_transcripts')
       .insert({
         prospect_id,
-        company_id,
-        company_name: company_name || 'Unknown Company',
-        file_name: file_name || 'transcript.txt',
-        file_type: file_type || 'text/plain',
-        file_size: file_size || 0,
-        transcript_text: transcript_text || '',
-        analysis_results,
-        audio_url,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        file_name,
+        transcript_text,
+        file_url,
+        duration_seconds,
+        created_at: new Date().toISOString()
       })
       .select()
       .single()
 
     if (error) {
       console.error('Error creating transcript:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json(
+        { error: 'Failed to create transcript', details: error.message },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json({ transcript })
-
-  } catch (error) {
-    console.error('Unexpected error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
-
-// PUT: Update existing transcript
-export async function PUT(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const {
-      id,
-      transcript_text,
-      analysis_results
-    } = body
-
-    if (!id) {
-      return NextResponse.json({ 
-        error: 'Transcript ID is required' 
-      }, { status: 400 })
-    }
-
-    const updateData: any = {
-      updated_at: new Date().toISOString()
-    }
-
-    if (transcript_text !== undefined) {
-      updateData.transcript_text = transcript_text
-    }
-
-    if (analysis_results !== undefined) {
-      updateData.analysis_results = analysis_results
-    }
-
-    const { data: transcript, error } = await supabase
+    // Update prospect workflow stage if this is their first transcript
+    const { data: existingTranscripts } = await supabase
       .from('call_transcripts')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single()
+      .select('id')
+      .eq('prospect_id', prospect_id)
 
-    if (error) {
-      console.error('Error updating transcript:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    if (existingTranscripts && existingTranscripts.length === 1) {
+      await supabase
+        .from('prospects')
+        .update({ 
+          workflow_stage: 'transcript_uploaded',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', prospect_id)
     }
 
-    return NextResponse.json({ transcript })
+    return NextResponse.json({
+      success: true,
+      transcript: data,
+      message: 'Transcript uploaded successfully'
+    }, { status: 201 })
 
   } catch (error) {
     console.error('Unexpected error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
   }
 }
 
@@ -141,30 +144,39 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
+    const transcriptId = searchParams.get('transcriptId')
 
-    if (!id) {
-      return NextResponse.json({ 
-        error: 'Transcript ID is required' 
-      }, { status: 400 })
+    if (!transcriptId) {
+      return NextResponse.json(
+        { error: 'transcriptId is required' },
+        { status: 400 }
+      )
     }
 
+    const supabase = getSupabase()
+    
     const { error } = await supabase
       .from('call_transcripts')
       .delete()
-      .eq('id', id)
+      .eq('id', transcriptId)
 
     if (error) {
       console.error('Error deleting transcript:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json(
+        { error: 'Failed to delete transcript', details: error.message },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      message: 'Transcript deleted successfully'
+    })
 
   } catch (error) {
     console.error('Unexpected error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

@@ -6,8 +6,8 @@ export async function POST(request: NextRequest) {
     // Get stored tokens (you'll need to implement token storage first)
     // For now, this is a placeholder for the QB Revoke API call
     
-    const clientId = process.env.QUICKBOOKS_CLIENT_ID
-    const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET
+    const clientId = process.env.QB_CLIENT_ID
+    const clientSecret = process.env.QB_CLIENT_SECRET
     
     if (!clientId || !clientSecret) {
       return NextResponse.json({ 

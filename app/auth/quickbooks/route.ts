@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   try {
     // QuickBooks OAuth configuration
-    const clientId = process.env.QUICKBOOKS_CLIENT_ID
-    const redirectUri = process.env.QUICKBOOKS_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/quickbooks/callback`
+    const clientId = process.env.QB_CLIENT_ID
+    const redirectUri = process.env.QB_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/quickbooks/callback`
     const scope = 'com.intuit.quickbooks.accounting'
     const state = generateRandomState()
 
