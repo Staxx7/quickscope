@@ -42,6 +42,17 @@ function SuccessContent() {
 
         if (existingToken) {
           console.log('QuickBooks connection already saved:', existingToken)
+          
+          // Check if this is a paid user
+          const { data: prospect } = await supabase
+            .from('prospects')
+            .select('user_type')
+            .eq('qb_company_id', companyId)
+            .single()
+          
+          const isPaidUser = prospect?.user_type === 'paid_user' || prospect?.user_type === 'internal'
+          sessionStorage.setItem('user_type', isPaidUser ? 'paid' : 'prospect')
+          
           setSuccess(true)
           setLoading(false)
           return
@@ -97,6 +108,10 @@ function SuccessContent() {
   }
 
   if (success) {
+    // Check if user is a paid user or prospect
+    const userType = typeof window !== 'undefined' ? sessionStorage.getItem('user_type') : null
+    const isPaidUser = userType === 'paid'
+    
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
@@ -111,41 +126,32 @@ function SuccessContent() {
             </div>
 
             {/* Success Message */}
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">Success!</h2>
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Successfully Connected!</h2>
             <p className="text-lg text-gray-600 mb-8">
-              Your QuickBooks account has been successfully connected.
+              Your QuickBooks account has been linked successfully.
             </p>
 
-            {/* What's Next */}
-            <div className="bg-blue-50 rounded-lg p-6 mb-8 text-left">
-              <h3 className="font-semibold text-gray-800 mb-3">What happens next?</h3>
-              <ul className="space-y-2 text-gray-600 text-sm">
-                <li className="flex items-start">
-                  <span className="text-blue-600 mr-2">✓</span>
-                  <span>Our team will analyze your financial data</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-blue-600 mr-2">✓</span>
-                  <span>We'll prepare a comprehensive audit report</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-blue-600 mr-2">✓</span>
-                  <span>You'll receive an email within 24-48 hours</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-blue-600 mr-2">✓</span>
-                  <span>We'll schedule a call to discuss our findings</span>
-                </li>
-              </ul>
+            {/* Info Box */}
+            <div className="bg-gray-50 rounded-lg p-6 mb-8 text-left">
+              <p className="text-gray-700">
+                We'll email you the results of your financial audit within the next 24-48 hours.
+              </p>
             </div>
 
-            {/* CTA Button */}
-            <a
-              href="/"
-              className="inline-block w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              Return to Home
-            </a>
+            {/* Thank You Message */}
+            <p className="text-gray-600 text-sm">
+              Thank you for choosing our services!
+            </p>
+
+            {/* Only show dashboard button for paid users */}
+            {isPaidUser && (
+              <a
+                href="/dashboard"
+                className="inline-block mt-6 w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Open Your Dashboard
+              </a>
+            )}
           </div>
         </div>
       </div>
