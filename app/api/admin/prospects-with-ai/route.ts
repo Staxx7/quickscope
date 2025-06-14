@@ -4,59 +4,75 @@ import { supabase } from '@/lib/supabaseClient'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('Loading prospects with AI data...')
+    console.log('Loading connected QuickBooks companies...')
 
-    // Try to get prospects from the prospect_intelligence view
-    const { data: prospects, error: prospectsError } = await supabase
-      .from('prospect_intelligence')
-      .select('*')
-      .limit(20)
+    // Get all connected companies from qbo_tokens
+    const { data: qboTokens, error: tokensError } = await supabase
+      .from('qbo_tokens')
+      .select(`
+        *,
+        prospects (
+          id,
+          company_name,
+          contact_name,
+          email,
+          phone,
+          industry,
+          workflow_stage,
+          user_type,
+          created_at
+        )
+      `)
+      .order('created_at', { ascending: false })
 
-    if (prospectsError) {
-      console.warn('Prospect intelligence view failed:', prospectsError.message)
+    if (tokensError) {
+      console.error('Error fetching QB tokens:', tokensError)
       
-      // Fallback: Try basic prospects table
-      const { data: basicProspects, error: basicError } = await supabase
-        .from('prospects')
-        .select('*')
-        .limit(20)
-
-      if (basicError) {
-        console.warn('Basic prospects failed:', basicError.message)
-        
-        // Ultimate fallback: Return demo data
-        return NextResponse.json({
-          success: true,
-          prospects: getDemoProspects(),
-          source: 'demo_fallback',
-          message: 'Using demo data due to database connectivity issues'
-        })
-      }
-
-      // Return basic prospects data
+      // Fallback: Return demo data with warning
       return NextResponse.json({
         success: true,
-        prospects: basicProspects || [],
-        source: 'basic_prospects',
-        message: 'Loaded from basic prospects table'
+        prospects: getDemoProspects(),
+        source: 'demo_fallback',
+        message: 'Using demo data due to database error',
+        error: tokensError.message
       })
     }
 
-    // Calculate additional stats
-    const enhancedProspects = (prospects || []).map(prospect => ({
-      ...prospect,
-      // Ensure required fields exist
-      closeability_score: prospect.closeability_score || prospect.ai_closeability_score || 50,
-      urgency_level: prospect.urgency_level || prospect.ai_urgency_level || 'medium',
-      workflow_stage: prospect.workflow_stage || 'connected',
-      next_action: prospect.next_action || 'Review',
-      // Add calculated fields
-      pipeline_value: calculatePipelineValue(prospect),
-      ai_enhanced: !!(prospect.ai_analysis_data || prospect.financial_health_score)
-    }))
+    // Transform the data to match the expected format
+    const enhancedProspects = (qboTokens || []).map(token => {
+      const prospect = token.prospects?.[0] || {}
+      const isExpired = new Date(token.expires_at) < new Date()
+      
+      return {
+        id: prospect.id || token.company_id,
+        prospect_id: prospect.id || token.company_id,
+        company_id: token.company_id,
+        company_name: token.company_name || prospect.company_name || 'Unknown Company',
+        name: token.company_name || prospect.company_name || 'Unknown Company',
+        email: prospect.email || `contact@${token.company_id}.com`,
+        phone: prospect.phone || '',
+        industry: prospect.industry || 'Not specified',
+        status: isExpired ? 'token_expired' : 'connected',
+        connection_status: isExpired ? 'expired' : 'active',
+        urgency_level: 'medium',
+        closeability_score: 75,
+        workflow_stage: prospect.workflow_stage || 'connected',
+        next_action: 'Run Analysis',
+        pipeline_value: 50000,
+        ai_enhanced: false,
+        days_connected: Math.floor((Date.now() - new Date(token.created_at).getTime()) / (1000 * 60 * 60 * 24)),
+        token_expires_at: token.expires_at,
+        created_at: token.created_at,
+        updated_at: token.updated_at,
+        ai_analysis: null,
+        financial_summary: null
+      }
+    })
 
     // Calculate summary stats
     const stats = calculateDashboardStats(enhancedProspects)
+
+    console.log(`Found ${enhancedProspects.length} connected companies`)
 
     return NextResponse.json({
       success: true,
@@ -64,7 +80,7 @@ export async function GET(request: NextRequest) {
       stats,
       source: 'database',
       count: enhancedProspects.length,
-      message: 'Successfully loaded prospects with AI intelligence'
+      message: 'Successfully loaded connected QuickBooks companies'
     })
 
   } catch (error) {

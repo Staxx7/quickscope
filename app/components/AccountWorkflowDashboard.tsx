@@ -106,25 +106,33 @@ export default function AIEnhancedAccountWorkflowDashboard() {
         throw new Error(errorData.error || 'Failed to fetch prospects')
       }
 
-      const data: ProspectsResponse = await response.json()
+      const data = await response.json()
       
-      // Rest of your existing logic...
-      setProspects(data.prospects)
+      console.log('Prospects data received:', data)
       
-      // Calculate AI-enhanced stats (your existing logic is perfect)
-      const aiAnalyzed = data.prospects.filter(p => p.ai_analysis?.analysis_status === 'completed').length
-      const highValue = data.prospects.filter(p => p.ai_analysis && p.ai_analysis.closeability_score >= 80).length
-      const urgentFollowUp = data.prospects.filter(p => p.ai_analysis?.urgency_level === 'high').length
-      
-      setStats({
-        total: data.total,
-        connected: data.connected,
-        expired: data.expired,
-        aiAnalyzed,
-        highValue,
-        urgentFollowUp
-      })
+      // Handle the response based on its structure
+      if (data.success && data.prospects) {
+        setProspects(data.prospects)
+        
+        // Calculate stats based on the actual data
+        const total = data.prospects.length
+        const active = data.prospects.filter((p: any) => p.connection_status === 'active').length
+        const expired = data.prospects.filter((p: any) => p.connection_status === 'expired').length
+        const aiAnalyzed = data.prospects.filter((p: any) => p.ai_enhanced === true).length
+        const highValue = data.prospects.filter((p: any) => (p.closeability_score || 0) >= 80).length
+        const urgentFollowUp = data.prospects.filter((p: any) => p.urgency_level === 'high').length
+        
+        setStats({
+          total,
+          connected: active,
+          expired,
+          aiAnalyzed,
+          highValue,
+          urgentFollowUp
+        })
+      }
     } catch (err) {
+      console.error('Error fetching prospects:', err)
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setLoading(false)

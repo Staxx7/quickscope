@@ -98,40 +98,86 @@ function SuccessContent() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full mx-4 text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Successfully Connected!</h2>
-          <p className="text-gray-600 mb-6">Your QuickBooks account has been securely linked to QuickScope.</p>
-          
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
-            <h3 className="font-semibold text-blue-900 mb-2">What happens next?</h3>
-            <ul className="text-sm text-blue-800 space-y-2">
-              <li>• Our financial experts will analyze your data</li>
-              <li>• We'll prepare insights and recommendations</li>
-              <li>• You'll receive a comprehensive financial audit report</li>
-              <li>• We'll schedule a call to discuss the findings</li>
-            </ul>
+      <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full">
+          {/* Success Animation */}
+          <div className="flex justify-center mb-8">
+            <div className="relative">
+              <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center animate-pulse">
+                <div className="w-16 h-16 bg-green-500/30 rounded-full flex items-center justify-center">
+                  <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="text-sm text-gray-600 mb-6">
-            <p>Thank you for trusting QuickScope with your financial analysis.</p>
-            <p className="mt-2">We'll be in touch within 24-48 hours with your results.</p>
+          {/* Main Content */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold text-white mb-4">
+              Connection Successful!
+            </h1>
+            <p className="text-xl text-slate-300">
+              Your QuickBooks account has been securely connected to QuickScope
+            </p>
           </div>
 
-          <div className="flex flex-col space-y-3">
+          {/* What's Next Card */}
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-8 border border-slate-700 mb-8">
+            <h3 className="text-2xl font-semibold text-white mb-6 text-center">
+              What Happens Next?
+            </h3>
+            
+            <div className="space-y-6">
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0 w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
+                  <span className="text-blue-400 font-semibold">1</span>
+                </div>
+                <div>
+                  <h4 className="text-white font-semibold mb-1">Financial Analysis Begins</h4>
+                  <p className="text-slate-400">Our AI-powered system will analyze your financial data to identify opportunities and insights</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0 w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
+                  <span className="text-blue-400 font-semibold">2</span>
+                </div>
+                <div>
+                  <h4 className="text-white font-semibold mb-1">Custom Report Generation</h4>
+                  <p className="text-slate-400">We'll prepare a comprehensive financial audit report tailored to your business</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0 w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
+                  <span className="text-blue-400 font-semibold">3</span>
+                </div>
+                <div>
+                  <h4 className="text-white font-semibold mb-1">Expert Consultation</h4>
+                  <p className="text-slate-400">Our team will schedule a call to discuss findings and strategic recommendations</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+              <p className="text-blue-400 text-center">
+                <span className="font-semibold">Expected Timeline:</span> You'll hear from us within 24-48 hours
+              </p>
+            </div>
+          </div>
+
+          {/* CTA Button */}
+          <div className="text-center">
             <a
               href="/"
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
             >
-              Return to Home
+              Return to Homepage
             </a>
-            <p className="text-xs text-gray-500">
-              For internal team: <a href="/admin/dashboard" className="text-blue-600 hover:underline">Access Admin Dashboard</a>
+            <p className="mt-4 text-slate-500 text-sm">
+              Thank you for trusting QuickScope with your financial data
             </p>
           </div>
         </div>
