@@ -289,8 +289,8 @@ export default function EnhancedAdminLayout({ children, currentPage }: AdminLayo
           <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
             <div className="px-4 sm:px-6 lg:px-8 py-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-8">
-                  <div>
+                <div className="flex items-center space-x-6 flex-1">
+                  <div className="min-w-0">
                     <h2 className="text-xl font-semibold text-white">
                       {currentPage || 'Dashboard'}
                     </h2>
@@ -299,14 +299,14 @@ export default function EnhancedAdminLayout({ children, currentPage }: AdminLayo
                     </p>
                   </div>
                   
-                  {/* Global Company Selector */}
-                  <div className="hidden md:block">
+                  {/* Global Company Selector - with better spacing */}
+                  <div className="hidden md:block ml-auto mr-4">
                     <GlobalCompanySelector />
                   </div>
                 </div>
                 
                 {/* Action buttons */}
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3 flex-shrink-0">
                   <button className="bg-white/10 border border-white/25 text-white px-3 py-2 rounded-lg hover:bg-white/15 transition-all text-sm flex items-center space-x-2">
                     <RefreshCw className="w-4 h-4" />
                     <span>Sync All</span>
@@ -314,7 +314,7 @@ export default function EnhancedAdminLayout({ children, currentPage }: AdminLayo
                 </div>
               </div>
               
-              {/* Mobile Company Selector */}
+              {/* Mobile Company Selector - with better styling */}
               <div className="mt-4 md:hidden">
                 <GlobalCompanySelector />
               </div>

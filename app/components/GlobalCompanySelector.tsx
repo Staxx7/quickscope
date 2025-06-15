@@ -49,6 +49,18 @@ function CompanySelectorContent({
     }
   }, [companyIdFromUrl, companies])
 
+  // Add escape key handler
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [isOpen])
+
   const fetchConnectedCompanies = async () => {
     try {
       const response = await fetch('/api/admin/connected-companies')
@@ -141,7 +153,7 @@ function CompanySelectorContent({
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full max-w-md px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors"
+        className="flex items-center justify-between w-full max-w-md px-4 py-2.5 bg-slate-800/80 backdrop-blur-sm border border-slate-700 rounded-lg hover:bg-slate-700/80 transition-all duration-200 hover:border-slate-600 shadow-sm"
       >
         <div className="flex items-center space-x-3">
           <Building2 className="w-5 h-5 text-slate-400" />
@@ -160,52 +172,61 @@ function CompanySelectorContent({
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-2 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-96 overflow-y-auto">
-          {companies.map((company) => (
-            <button
-              key={company.company_id}
-              onClick={() => handleCompanySelect(company)}
-              className={`w-full px-4 py-3 text-left hover:bg-slate-700 transition-colors ${
-                selectedCompany?.company_id === company.company_id ? 'bg-slate-700' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-white">
-                    {company.company_name}
-                  </div>
-                  {showWorkflowStage && (
-                    <div className={`text-xs ${getWorkflowStageColor(company.workflow_stage)}`}>
-                      {getWorkflowStageLabel(company.workflow_stage)}
+        <>
+          {/* Backdrop to close dropdown when clicking outside */}
+          <div 
+            className="fixed inset-0 z-[90]" 
+            onClick={() => setIsOpen(false)}
+          />
+          
+          {/* Dropdown menu with higher z-index */}
+          <div className="absolute z-[100] w-full mt-2 bg-slate-800/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl max-h-96 overflow-y-auto">
+            {companies.map((company) => (
+              <button
+                key={company.company_id}
+                onClick={() => handleCompanySelect(company)}
+                className={`w-full px-4 py-3 text-left hover:bg-slate-700/50 transition-all duration-150 border-b border-slate-700/50 last:border-0 ${
+                  selectedCompany?.company_id === company.company_id ? 'bg-slate-700/50' : ''
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-white truncate">
+                      {company.company_name}
                     </div>
-                  )}
+                    {showWorkflowStage && (
+                      <div className={`text-xs ${getWorkflowStageColor(company.workflow_stage)} mt-0.5`}>
+                        {getWorkflowStageLabel(company.workflow_stage)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-2 text-xs ml-3">
+                    {company.connection_status === 'expired' && (
+                      <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded-md">
+                        Expired
+                      </span>
+                    )}
+                    {company.has_financial_data && (
+                      <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded-md">
+                        Financial
+                      </span>
+                    )}
+                    {company.transcript_count > 0 && (
+                      <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-md">
+                        {company.transcript_count} Call{company.transcript_count > 1 ? 's' : ''}
+                      </span>
+                    )}
+                    {company.has_ai_analysis && (
+                      <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded-md">
+                        AI
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2 text-xs">
-                  {company.connection_status === 'expired' && (
-                    <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded">
-                      Expired
-                    </span>
-                  )}
-                  {company.has_financial_data && (
-                    <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded">
-                      Financial
-                    </span>
-                  )}
-                  {company.transcript_count > 0 && (
-                    <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded">
-                      {company.transcript_count} Call{company.transcript_count > 1 ? 's' : ''}
-                    </span>
-                  )}
-                  {company.has_ai_analysis && (
-                    <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded">
-                      AI
-                    </span>
-                  )}
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )

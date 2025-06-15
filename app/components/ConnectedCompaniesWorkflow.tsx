@@ -329,17 +329,51 @@ export default function ConnectedCompaniesWorkflow({ companies }: Props) {
         </div>
       </div>
 
-      {/* Next Steps */}
-      <div className="mt-8 bg-blue-500/10 border border-blue-500/20 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-3">Next Steps</h3>
-        <div className="space-y-2">
-          {companies.map((company) => (
-            <div key={company.id} className="flex items-center justify-between">
-              <span className="text-slate-300">
-                <span className="font-medium text-white">{company.company_name}:</span> {company.next_action}
-              </span>
-            </div>
-          ))}
+      {/* Workflow Progress Overview - Replacing redundant Next Steps */}
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Companies by Stage */}
+        <div className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/10 border border-yellow-500/20 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">Need Contact Info</h3>
+            <AlertCircle className="w-5 h-5 text-yellow-400" />
+          </div>
+          <p className="text-3xl font-bold text-white mb-2">
+            {companies.filter(c => c.workflow_stage === 'needs_prospect_info').length}
+          </p>
+          <p className="text-sm text-slate-300">Companies awaiting contact details</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 border border-orange-500/20 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">Need Transcripts</h3>
+            <FileText className="w-5 h-5 text-orange-400" />
+          </div>
+          <p className="text-3xl font-bold text-white mb-2">
+            {companies.filter(c => c.workflow_stage === 'needs_transcript').length}
+          </p>
+          <p className="text-sm text-slate-300">Ready for call transcript upload</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">Need Analysis</h3>
+            <Brain className="w-5 h-5 text-purple-400" />
+          </div>
+          <p className="text-3xl font-bold text-white mb-2">
+            {companies.filter(c => c.workflow_stage === 'needs_analysis').length}
+          </p>
+          <p className="text-sm text-slate-300">Awaiting AI financial analysis</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">Ready for Reports</h3>
+            <CheckCircle className="w-5 h-5 text-green-400" />
+          </div>
+          <p className="text-3xl font-bold text-white mb-2">
+            {companies.filter(c => c.workflow_stage === 'ready_for_report').length}
+          </p>
+          <p className="text-sm text-slate-300">Complete and ready to generate</p>
         </div>
       </div>
     </div>
