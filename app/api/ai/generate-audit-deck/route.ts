@@ -28,6 +28,13 @@ interface AuditDeckData {
     cleanup_cost: number;
     implementation_timeline: string;
   };
+  market_intelligence?: {
+    market_size: number;
+    competitive_pressure: string;
+    growth_potential: number;
+    economic_outlook: string;
+    industry_health_score: number;
+  };
 }
 
 const generateExecutiveSummary = (deckData: AuditDeckData) => {
@@ -164,13 +171,26 @@ export async function POST(request: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(1);
 
-    // Prepare audit deck data
+    // Fetch market intelligence data
+    let marketIntelligence = null;
+    try {
+      const marketResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.quickscope.info'}/api/market-intelligence?industry=${prospect.industry || 'technology'}`);
+      if (marketResponse.ok) {
+        const marketData = await marketResponse.json();
+        marketIntelligence = marketData.data;
+      }
+    } catch (error) {
+      console.error('Failed to fetch market intelligence:', error);
+    }
+
+    // Prepare enhanced audit deck data
     const revenue = financialSnapshot?.[0]?.revenue || 500000; // Default estimate
     const deckData: AuditDeckData = {
       prospect_info: {
         company_name: prospect.company_name,
         industry: prospect.industry || 'Business Services',
-        revenue: revenue
+        revenue: revenue,
+        employee_count: prospect.employee_count
       },
       financial_analysis: financialIntelligence?.[0] || {
         overall_score: 65,
@@ -180,19 +200,25 @@ export async function POST(request: NextRequest) {
         recommendations: ['Implement monthly close process', 'Establish cash flow forecasting']
       },
       transcript_insights: transcriptAnalysis?.[0]?.analysis_data || null,
-      custom_recommendations: [
-        'Implement quarterly business reviews',
-        'Establish KPI dashboard',
-        'Create annual budget and forecasting process'
-      ],
+      custom_recommendations: generateEnhancedRecommendations(
+        financialIntelligence?.[0],
+        marketIntelligence
+      ),
       pricing_proposal: {
         monthly_retainer: Math.max(3000, Math.min(8000, Math.round(revenue * 0.015 / 12))),
         cleanup_cost: Math.max(2000, Math.min(6000, Math.round(revenue * 0.01))),
         implementation_timeline: '30-45 days'
-      }
+      },
+      market_intelligence: marketIntelligence ? {
+        market_size: marketIntelligence.marketOverview?.totalMarketSize,
+        competitive_pressure: marketIntelligence.competitiveAnalysis?.competitivePressure,
+        growth_potential: marketIntelligence.competitiveAnalysis?.growthPotential,
+        economic_outlook: marketIntelligence.economicIndicators?.economicOutlook,
+        industry_health_score: marketIntelligence.benchmarks?.industryHealthScore
+      } : undefined
     };
 
-    // Generate all sections
+    // Generate all sections with enhanced data
     const auditDeck = {
       id: `audit_deck_${prospect_id}_${Date.now()}`,
       prospect_id,
@@ -200,7 +226,11 @@ export async function POST(request: NextRequest) {
       sections: {
         executive_summary: generateExecutiveSummary(deckData),
         financial_analysis: generateFinancialSection(deckData.financial_analysis),
-        recommendations: generateRecommendationsSection(deckData.custom_recommendations, deckData.financial_analysis.red_flags),
+        market_context: generateMarketContextSection(marketIntelligence),
+        recommendations: generateRecommendationsSection(
+          deckData.custom_recommendations, 
+          deckData.financial_analysis.red_flags
+        ),
         roi_projections: generateROISection(deckData),
         service_proposal: generateProposalSection(deckData.pricing_proposal)
       },
@@ -209,7 +239,8 @@ export async function POST(request: NextRequest) {
         data_sources: {
           financial_data: !!financialSnapshot?.[0],
           transcript_data: !!transcriptAnalysis?.[0],
-          ai_analysis: !!financialIntelligence?.[0]
+          ai_analysis: !!financialIntelligence?.[0],
+          market_intelligence: !!marketIntelligence
         }
       }
     };
@@ -275,4 +306,77 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Add new helper function for enhanced recommendations
+function generateEnhancedRecommendations(
+  financialAnalysis: any,
+  marketIntelligence: any
+): string[] {
+  const recommendations = [
+    'Implement quarterly business reviews',
+    'Establish KPI dashboard',
+    'Create annual budget and forecasting process'
+  ];
+
+  // Add market-based recommendations
+  if (marketIntelligence) {
+    if (marketIntelligence.competitiveAnalysis?.competitivePressure === 'very high') {
+      recommendations.push('Develop competitive differentiation strategy');
+    }
+    if (marketIntelligence.economicIndicators?.inflationRate > 3) {
+      recommendations.push('Implement inflation-resistant pricing model');
+    }
+    if (marketIntelligence.marketTrends?.volatility === 'high') {
+      recommendations.push('Establish risk mitigation framework');
+    }
+  }
+
+  // Add financial-based recommendations
+  if (financialAnalysis) {
+    if (financialAnalysis.component_scores?.liquidity < 60) {
+      recommendations.push('Improve working capital management');
+    }
+    if (financialAnalysis.component_scores?.profitability < 50) {
+      recommendations.push('Focus on margin improvement initiatives');
+    }
+  }
+
+  return recommendations;
+}
+
+// Add new section for market context
+function generateMarketContextSection(marketIntelligence: any) {
+  if (!marketIntelligence) {
+    return {
+      title: 'Market Context',
+      content: 'Market intelligence data unavailable'
+    };
+  }
+
+  return {
+    title: 'Market Context & Industry Analysis',
+    market_overview: {
+      total_market_size: marketIntelligence.marketOverview?.totalMarketSize || 0,
+      market_sentiment: marketIntelligence.marketOverview?.marketSentiment || 'neutral',
+      sector_performance: marketIntelligence.marketOverview?.sectorPerformance || 0
+    },
+    competitive_landscape: {
+      competitive_pressure: marketIntelligence.competitiveAnalysis?.competitivePressure || 'unknown',
+      market_position: marketIntelligence.competitiveAnalysis?.marketPosition || 'competitive',
+      growth_potential: marketIntelligence.competitiveAnalysis?.growthPotential || 50
+    },
+    economic_indicators: {
+      gdp_growth: marketIntelligence.economicIndicators?.gdpGrowth || 'N/A',
+      inflation_rate: marketIntelligence.economicIndicators?.inflationRate || 'N/A',
+      interest_rate: marketIntelligence.economicIndicators?.interestRate || 'N/A',
+      outlook: marketIntelligence.economicIndicators?.economicOutlook || 'stable'
+    },
+    key_insights: [
+      `Market size: ${(marketIntelligence.marketOverview?.totalMarketSize || 0).toLocaleString()} establishments`,
+      `Employment: ${(marketIntelligence.marketOverview?.totalEmployment || 0).toLocaleString()} workers`,
+      `Industry momentum: ${marketIntelligence.competitiveAnalysis?.industryMomentum || 'stable'}`,
+      `Data confidence: ${marketIntelligence.dataSources?.confidence || 'medium'}`
+    ]
+  };
 }
