@@ -195,13 +195,29 @@ async function getCompanyInfo(realmId: string, accessToken: string) {
 
     if (!response.ok) {
       console.error('Failed to fetch company info:', response.status);
+      const errorText = await response.text();
+      console.error('Error response:', errorText);
       return null;
     }
 
     const data = await response.json();
-    console.log('Company info fetched successfully');
+    console.log('Company info response:', JSON.stringify(data, null, 2));
+    
+    // Try multiple possible paths for the company name
+    const companyName = 
+      data?.CompanyInfo?.CompanyName ||
+      data?.CompanyInfo?.Name ||
+      data?.QueryResponse?.CompanyInfo?.[0]?.CompanyName ||
+      data?.QueryResponse?.CompanyInfo?.[0]?.Name ||
+      data?.QueryResponse?.CompanyInfo?.[0]?.LegalName ||
+      null;
+    
+    console.log('Extracted company name:', companyName);
+    
     return {
-      name: data?.QueryResponse?.CompanyInfo?.[0]?.Name || null
+      name: companyName,
+      legalName: data?.QueryResponse?.CompanyInfo?.[0]?.LegalName || null,
+      raw: data // Keep for debugging
     };
   } catch (error) {
     console.error('Error fetching company info:', error);

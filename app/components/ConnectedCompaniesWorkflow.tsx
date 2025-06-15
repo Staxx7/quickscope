@@ -97,6 +97,29 @@ export default function ConnectedCompaniesWorkflow({ companies: initialCompanies
     }
   }
 
+  const handleRefreshCompanyNames = async () => {
+    try {
+      const response = await fetch('/api/admin/refresh-company-names', {
+        method: 'POST'
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        // Show success message
+        alert(`Company names refreshed!\n\nUpdated: ${result.summary.updated}\nSkipped: ${result.summary.skipped}\nFailed: ${result.summary.failed}`)
+        
+        // Refresh the display
+        await fetchLatestData()
+      } else {
+        alert(`Failed to refresh company names: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error refreshing company names:', error)
+      alert('Failed to refresh company names')
+    }
+  }
+
   const handleCompanyAction = (company: Company, action: string) => {
     // Use prospect_id as account parameter if company_id is null
     const accountId = company.company_id || company.prospect_id || company.id
@@ -175,14 +198,24 @@ export default function ConnectedCompaniesWorkflow({ companies: initialCompanies
             <h1 className="text-3xl font-bold text-white mb-2">Connected QuickBooks Companies</h1>
             <p className="text-slate-400">Manage and analyze your connected QuickBooks accounts</p>
           </div>
-          <button
-            onClick={handleRefreshAndSync}
-            disabled={isRefreshing}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>Refresh & Sync</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={handleRefreshCompanyNames}
+              className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              title="Fetch company names from QuickBooks for connections showing company IDs"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Refresh Company Names</span>
+            </button>
+            <button
+              onClick={handleRefreshAndSync}
+              disabled={isRefreshing}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>Refresh & Sync</span>
+            </button>
+          </div>
         </div>
       </div>
 
