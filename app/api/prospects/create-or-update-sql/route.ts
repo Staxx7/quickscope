@@ -81,86 +81,103 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new prospect using minimal fields
-    const newProspectData = {
-      company_name,
+    const newProspectData: any = {
       email,
       workflow_stage: 'needs_transcript',
       user_type: 'prospect',
       created_at: new Date().toISOString()
     }
+    
+    // Try different field combinations based on what the database expects
+    const fieldVariations = [
+      // Variation 1: Use field names from our schema
+      { ...newProspectData, company_name, contact_name },
+      // Variation 2: Use 'name' field (error message suggested this)
+      { ...newProspectData, name: company_name },
+      // Variation 3: Just email and minimal fields
+      { ...newProspectData }
+    ]
 
-    // Add optional fields only if the insert supports them
+    // Add optional fields to first variation
     const optionalFields: any = {}
-    if (contact_name) optionalFields.contact_name = contact_name
     if (phone) optionalFields.phone = phone
     if (industry) optionalFields.industry = industry
     if (company_id) optionalFields.qb_company_id = company_id
+    
+    fieldVariations[0] = { ...fieldVariations[0], ...optionalFields }
 
-    // Try insert with all fields first
-    let insertResult = await supabase
-      .from('prospects')
-      .insert({ ...newProspectData, ...optionalFields })
-      .select()
-      .single()
-
-    if (insertResult.error) {
-      console.log('Full insert failed, trying minimal insert...')
+    // Try each variation until one works
+    let insertResult: any = null
+    let successfulVariation = -1
+    
+    for (let i = 0; i < fieldVariations.length; i++) {
+      console.log(`Trying variation ${i + 1}:`, Object.keys(fieldVariations[i]))
       
-      // If that fails, try with minimal fields only
-      insertResult = await supabase
+      const result = await supabase
         .from('prospects')
-        .insert(newProspectData)
+        .insert(fieldVariations[i])
         .select()
         .single()
       
-      if (insertResult.error) {
-        console.error('Minimal insert also failed:', insertResult.error)
-        return NextResponse.json({
-          error: 'Failed to create prospect',
-          details: insertResult.error.message,
-          hint: 'Schema cache issue - please contact support'
-        }, { status: 500 })
+      if (!result.error) {
+        insertResult = result
+        successfulVariation = i
+        console.log(`Variation ${i + 1} succeeded!`)
+        break
+      } else {
+        console.log(`Variation ${i + 1} failed:`, result.error.message)
+      }
+    }
+    
+    if (!insertResult || insertResult.error) {
+      console.error('All insert variations failed')
+      return NextResponse.json({
+        error: 'Failed to create prospect',
+        details: insertResult?.error?.message || 'All field variations failed',
+        hint: 'Database schema incompatible - manual intervention required'
+      }, { status: 500 })
+    }
+
+    let prospectData = insertResult.data
+    
+    // If we used a minimal variation, try to update with missing fields
+    if (successfulVariation > 0 && prospectData) {
+      console.log('Updating with additional fields after minimal insert...')
+      
+      const updateData: any = {}
+      
+      // Add fields that might have been missing
+      if (successfulVariation === 1) {
+        // Used 'name' field, might need to add contact_name
+        if (contact_name) updateData.contact_name = contact_name
+      }
+      if (successfulVariation === 2) {
+        // Used minimal fields, add everything else
+        updateData.company_name = company_name
+        if (contact_name) updateData.contact_name = contact_name
       }
       
-      // Update with additional fields using raw SQL if available
-      if (insertResult.data && (contact_name || phone || industry || company_id)) {
-        console.log('Updating with additional fields...')
+      // Always try to add optional fields if not in minimal insert
+      if (phone && !prospectData.phone) updateData.phone = phone
+      if (industry && !prospectData.industry) updateData.industry = industry
+      if (company_id && !prospectData.qb_company_id) updateData.qb_company_id = company_id
+      
+      if (Object.keys(updateData).length > 0) {
+        const { data: updatedData, error: updateError } = await supabase
+          .from('prospects')
+          .update(updateData)
+          .eq('id', prospectData.id)
+          .select()
+          .single()
         
-        const updateFields = []
-        const updateValues = []
-        let paramIndex = 2 // $1 is already the ID
-        
-        if (contact_name) {
-          updateFields.push(`contact_name = $${paramIndex++}`)
-          updateValues.push(contact_name)
-        }
-        if (phone) {
-          updateFields.push(`phone = $${paramIndex++}`)
-          updateValues.push(phone)
-        }
-        if (industry) {
-          updateFields.push(`industry = $${paramIndex++}`)
-          updateValues.push(industry)
-        }
-        if (company_id) {
-          updateFields.push(`qb_company_id = $${paramIndex++}`)
-          updateValues.push(company_id)
-        }
-        
-        const updateQuery = `UPDATE prospects SET ${updateFields.join(', ')}, updated_at = NOW() WHERE id = $1 RETURNING *`
-        
-        try {
-          await supabase.rpc('execute_sql', {
-            query: updateQuery,
-            params: [insertResult.data.id, ...updateValues]
-          })
-        } catch (e) {
-          console.log('Raw SQL update not available, fields may be incomplete')
+        if (!updateError && updatedData) {
+          prospectData = updatedData
+          console.log('Successfully updated with additional fields')
+        } else {
+          console.log('Could not update additional fields:', updateError?.message)
         }
       }
     }
-
-    const prospectData = insertResult.data
     
     // Link to QB token if possible
     if (prospectData && company_id) {
