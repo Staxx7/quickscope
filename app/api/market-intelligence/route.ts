@@ -10,6 +10,8 @@ export async function GET(request: NextRequest) {
     const industry = searchParams.get('industry') || 'technology';
     const companySize = searchParams.get('companySize') || 'medium';
 
+    console.log('[Market Intelligence] Starting data fetch for industry:', industry);
+
     // Initialize services
     const blsService = new BLSService();
     const censusService = new CensusService();
@@ -23,13 +25,38 @@ export async function GET(request: NextRequest) {
       fredData,
       marketData
     ] = await Promise.all([
-      blsService.getIndustryBenchmarks(industry),
-      censusService.getIndustryDemographics(industry),
-      censusService.getEconomicIndicators(),
-      getIndustryContext(industry),
-      getFREDEconomicData(industry),
-      getMarketIntelligence(industry)
+      blsService.getIndustryBenchmarks(industry).catch(err => {
+        console.error('[BLS Error]:', err);
+        return null;
+      }),
+      censusService.getIndustryDemographics(industry).catch(err => {
+        console.error('[Census Error]:', err);
+        return null;
+      }),
+      censusService.getEconomicIndicators().catch(err => {
+        console.error('[Census Economic Error]:', err);
+        return null;
+      }),
+      getIndustryContext(industry).catch(err => {
+        console.error('[Industry Context Error]:', err);
+        return null;
+      }),
+      getFREDEconomicData(industry).catch(err => {
+        console.error('[FRED Error]:', err);
+        return null;
+      }),
+      getMarketIntelligence(industry).catch(err => {
+        console.error('[Market Data Error]:', err);
+        return null;
+      })
     ]);
+
+    console.log('[Market Intelligence] Data fetch results:', {
+      bls: !!industryMetrics,
+      census: !!industryDemographics,
+      fred: !!fredData,
+      market: !!marketData
+    });
 
     // Calculate competitive positioning with enhanced data
     const competitiveAnalysis = analyzeCompetitivePosition(

@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import GlobalCompanySelector from './GlobalCompanySelector'
 import { 
   Database, 
   FileText, 
@@ -288,13 +289,20 @@ export default function EnhancedAdminLayout({ children, currentPage }: AdminLayo
           <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
             <div className="px-4 sm:px-6 lg:px-8 py-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold text-white">
-                    {currentPage || 'Dashboard'}
-                  </h2>
-                  <p className="text-sm text-gray-400 mt-1">
-                    AI-enhanced financial analysis and insights platform
-                  </p>
+                <div className="flex items-center space-x-8">
+                  <div>
+                    <h2 className="text-xl font-semibold text-white">
+                      {currentPage || 'Dashboard'}
+                    </h2>
+                    <p className="text-sm text-gray-400 mt-1">
+                      AI-enhanced financial analysis and insights platform
+                    </p>
+                  </div>
+                  
+                  {/* Global Company Selector */}
+                  <div className="hidden md:block">
+                    <GlobalCompanySelector />
+                  </div>
                 </div>
                 
                 {/* Action buttons */}
@@ -304,6 +312,11 @@ export default function EnhancedAdminLayout({ children, currentPage }: AdminLayo
                     <span>Sync All</span>
                   </button>
                 </div>
+              </div>
+              
+              {/* Mobile Company Selector */}
+              <div className="mt-4 md:hidden">
+                <GlobalCompanySelector />
               </div>
             </div>
           </div>

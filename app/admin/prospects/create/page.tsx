@@ -82,22 +82,64 @@ function CreateProspectForm() {
 
       // Update the qbo_token to link to this prospect
       if (prospectId && company_id) {
-        const { error: updateError } = await supabase
+        console.log('Attempting to link prospect:', prospectId, 'to company:', company_id)
+        
+        const { data: tokenData, error: fetchError } = await supabase
           .from('qbo_tokens')
-          .update({ prospect_id: prospectId })
+          .select('*')
           .eq('company_id', company_id)
+          .single()
+          
+        if (fetchError) {
+          console.error('Error fetching QB token:', fetchError)
+          // Don't throw - prospect was created successfully
+        } else if (tokenData) {
+          const { error: updateError } = await supabase
+            .from('qbo_tokens')
+            .update({ 
+              prospect_id: prospectId,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', tokenData.id)
 
-        if (updateError) {
-          console.error('Error linking prospect to QB token:', updateError)
-          // Don't throw here, the prospect was created successfully
+          if (updateError) {
+            console.error('Error linking prospect to QB token:', updateError)
+            // Don't throw here, the prospect was created successfully
+          } else {
+            console.log('Successfully linked prospect to QB token')
+          }
         }
+      }
+
+      // Update workflow stage based on what data is available
+      try {
+        await fetch('/api/prospects/update-workflow-stage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prospect_id: prospectId })
+        })
+      } catch (error) {
+        console.error('Error updating workflow stage:', error)
+        // Non-critical error, don't prevent redirect
       }
 
       // Redirect back to dashboard
       router.push('/dashboard')
     } catch (err) {
       console.error('Error creating/updating prospect:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save contact information')
+      
+      // More detailed error handling
+      if (err instanceof Error) {
+        if (err.message.includes('duplicate key')) {
+          setError('A contact with this email already exists')
+        } else if (err.message.includes('violates foreign key constraint')) {
+          setError('Invalid company reference. Please try again.')
+        } else {
+          setError(err.message)
+        }
+      } else {
+        setError('Failed to save contact information. Please try again.')
+      }
     } finally {
       setIsSubmitting(false)
     }
