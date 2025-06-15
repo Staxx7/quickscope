@@ -79,14 +79,22 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
       const response = await fetch('/api/admin/prospects');
       if (response.ok) {
         const data = await response.json();
+        // Map all prospects to companies, regardless of QB connection status
         const companies = data.prospects?.map((prospect: any) => ({
           id: prospect.id,
           company_name: prospect.company_name,
-          realm_id: prospect.company_id,
-          status: prospect.connection_status,
-          connected_at: prospect.connection_date
-        })) || [];
+          // Use prospect ID as realm_id if no QB company_id exists
+          realm_id: prospect.company_id || prospect.id,
+          status: prospect.company_id ? 'active' : 'pending',
+          connected_at: prospect.created_at || prospect.last_activity
+        })).filter((company: any) => company.company_name) || [];
+        
         setConnectedCompanies(companies);
+        
+        // If no companies found, show a helpful message
+        if (companies.length === 0) {
+          console.log('No companies found. Make sure to add prospects first.');
+        }
       }
     } catch (error) {
       console.error('Error fetching companies:', error);
@@ -206,21 +214,19 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fileName: transcript.fileName,
-          companyId: transcript.companyId,
-          callType: transcript.callType,
-          duration: transcript.duration,
-          participants: transcript.participants,
-          transcriptText: fileContent || transcript.transcriptText,
-          aiAnalysis,
-          sentiment: Math.random() > 0.7 ? 'positive' : Math.random() > 0.3 ? 'neutral' : 'negative',
-          confidence: Math.floor(Math.random() * 20) + 80
+          prospect_id: transcript.companyId,
+          file_name: transcript.fileName,
+          transcript_text: fileContent || transcript.transcriptText,
+          duration_seconds: transcript.duration ? parseInt(transcript.duration.split(':')[0]) * 60 + parseInt(transcript.duration.split(':')[1]) : 0,
         })
       });
 
       if (storeResponse.ok) {
         const storedData = await storeResponse.json();
-        transcript.id = storedData.id;
+        transcript.id = storedData.transcript?.id || storedData.id;
+      } else {
+        const errorData = await storeResponse.json();
+        console.error('Error storing transcript:', errorData);
       }
     } catch (error) {
       console.error('Error storing transcript:', error);
