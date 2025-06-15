@@ -21,9 +21,7 @@ export async function POST(request: NextRequest) {
       contact_name,
       email,
       phone,
-      industry,
-      annual_revenue,
-      employee_count
+      industry
     } = body
 
     // Validate required fields
@@ -93,7 +91,7 @@ export async function POST(request: NextRequest) {
     if (existingProspect) {
       console.log('Updating existing prospect:', existingProspect.id)
       
-      // Build update object with only essential fields first
+      // Build update object with only essential fields
       const updateData: any = {
         company_name,
         contact_name,
@@ -102,19 +100,6 @@ export async function POST(request: NextRequest) {
         qb_company_id: company_id,
         workflow_stage: 'needs_transcript',
         updated_at: new Date().toISOString()
-      }
-      
-      // Try to include annual_revenue and employee_count if provided
-      // But don't fail if these columns aren't recognized
-      try {
-        if (annual_revenue) {
-          updateData.annual_revenue = parseFloat(annual_revenue)
-        }
-        if (employee_count) {
-          updateData.employee_count = parseInt(employee_count)
-        }
-      } catch (e) {
-        console.warn('Could not parse numeric fields:', e)
       }
       
       // Update existing prospect
@@ -127,43 +112,16 @@ export async function POST(request: NextRequest) {
 
       if (updateError) {
         console.error('Update error:', updateError)
-        
-        // If the error is about columns, try again without the problematic fields
-        if (updateError.code === 'PGRST204' || updateError.message.includes('column')) {
-          console.log('Retrying without numeric fields...')
-          delete updateData.annual_revenue
-          delete updateData.employee_count
-          
-          const { data: retryUpdate, error: retryError } = await supabase
-            .from('prospects')
-            .update(updateData)
-            .eq('id', existingProspect.id)
-            .select()
-            .single()
-          
-          if (retryError) {
-            return NextResponse.json({
-              error: 'Failed to update prospect',
-              details: retryError.message,
-              code: retryError.code,
-              hint: 'Database schema may be out of sync'
-            }, { status: 500 })
-          }
-          
-          prospectData = retryUpdate
-        } else {
-          return NextResponse.json({
-            error: 'Failed to update prospect',
-            details: updateError.message,
-            code: updateError.code,
-            hint: updateError.hint
-          }, { status: 500 })
-        }
-      } else {
-        prospectData = updatedProspect
+        return NextResponse.json({
+          error: 'Failed to update prospect',
+          details: updateError.message,
+          code: updateError.code,
+          hint: updateError.hint
+        }, { status: 500 })
       }
 
       prospectId = existingProspect.id
+      prospectData = updatedProspect
       console.log('Prospect updated successfully:', prospectId)
     } else {
       console.log('Creating new prospect')
@@ -180,18 +138,6 @@ export async function POST(request: NextRequest) {
         qb_company_id: company_id
       }
       
-      // Try to include annual_revenue and employee_count if provided
-      try {
-        if (annual_revenue) {
-          insertData.annual_revenue = parseFloat(annual_revenue)
-        }
-        if (employee_count) {
-          insertData.employee_count = parseInt(employee_count)
-        }
-      } catch (e) {
-        console.warn('Could not parse numeric fields:', e)
-      }
-      
       // Create new prospect
       const { data: newProspect, error: insertError } = await supabase
         .from('prospects')
@@ -201,42 +147,16 @@ export async function POST(request: NextRequest) {
 
       if (insertError) {
         console.error('Insert error:', insertError)
-        
-        // If the error is about columns, try again without the problematic fields
-        if (insertError.code === 'PGRST204' || insertError.message.includes('column')) {
-          console.log('Retrying without numeric fields...')
-          delete insertData.annual_revenue
-          delete insertData.employee_count
-          
-          const { data: retryInsert, error: retryError } = await supabase
-            .from('prospects')
-            .insert(insertData)
-            .select()
-            .single()
-          
-          if (retryError) {
-            return NextResponse.json({
-              error: 'Failed to create prospect',
-              details: retryError.message,
-              code: retryError.code,
-              hint: 'Database schema may be out of sync'
-            }, { status: 500 })
-          }
-          
-          prospectData = retryInsert
-        } else {
-          return NextResponse.json({
-            error: 'Failed to create prospect',
-            details: insertError.message,
-            code: insertError.code,
-            hint: insertError.hint
-          }, { status: 500 })
-        }
-      } else {
-        prospectData = newProspect
+        return NextResponse.json({
+          error: 'Failed to create prospect',
+          details: insertError.message,
+          code: insertError.code,
+          hint: insertError.hint
+        }, { status: 500 })
       }
 
-      prospectId = prospectData.id
+      prospectId = newProspect.id
+      prospectData = newProspect
       console.log('Prospect created successfully:', prospectId)
     }
 

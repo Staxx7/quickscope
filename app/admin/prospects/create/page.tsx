@@ -15,8 +15,8 @@ function CreateProspectForm() {
     email: '',
     phone: '',
     industry: '',
-    annual_revenue: '',
-    employee_count: ''
+    // annual_revenue: '',  // Temporarily disabled due to schema issues
+    // employee_count: ''   // Temporarily disabled due to schema issues
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -45,8 +45,8 @@ function CreateProspectForm() {
           email: formData.email,
           phone: formData.phone,
           industry: formData.industry,
-          annual_revenue: formData.annual_revenue,
-          employee_count: formData.employee_count
+          // annual_revenue: formData.annual_revenue,  // Temporarily disabled
+          // employee_count: formData.employee_count   // Temporarily disabled
         })
       })
 
@@ -162,6 +162,7 @@ function CreateProspectForm() {
               </select>
             </div>
 
+            {/* Temporarily disabled due to schema cache issues
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
                 Annual Revenue
@@ -187,6 +188,7 @@ function CreateProspectForm() {
                 placeholder="50"
               />
             </div>
+            */}
 
             <div className="flex space-x-4">
               <button
