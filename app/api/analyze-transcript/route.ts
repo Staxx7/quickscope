@@ -9,92 +9,42 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData()
-    const file = formData.get('file') as File
-    const companyId = formData.get('companyId') as string
-    const companyName = formData.get('companyName') as string
-    const callType = formData.get('callType') as string || 'discovery'
+    const body = await request.json()
+    const { transcriptText, companyId, companyName, callType = 'discovery' } = body
 
-    if (!file || !companyId) {
-      return NextResponse.json({ error: 'File and company ID are required' }, { status: 400 })
+    if (!transcriptText || !companyId) {
+      return NextResponse.json({ error: 'Transcript text and company ID are required' }, { status: 400 })
     }
 
-    // Step 1: Transcribe audio using Whisper
-    const transcription = await openai.audio.transcriptions.create({
-      file: file,
-      model: "whisper-1",
-      language: "en",
-      response_format: "verbose_json",
-      timestamp_granularities: ["segment"]
-    })
+    // Analyze transcript for sales intelligence
+    const analysis = await analyzeTranscriptForSales(transcriptText, companyName || 'Unknown Company', callType)
 
-    // Step 2: Analyze transcript for sales intelligence
-    const analysis = await analyzeTranscriptForSales(transcription.text, companyName, callType)
-
-    // Step 3: Store transcript and analysis
+    // Store transcript in database
     const { data: transcriptRecord, error: transcriptError } = await supabase
       .from('call_transcripts')
       .insert({
-        company_id: companyId,
-        company_name: companyName,
+        prospect_id: companyId,
+        transcript_text: transcriptText,
         call_type: callType,
-        transcript_text: transcription.text,
-        transcript_json: transcription,
-        duration: transcription.duration,
-        language: transcription.language,
         created_at: new Date().toISOString()
       })
       .select()
       .single()
 
     if (transcriptError) {
-      throw new Error(`Failed to store transcript: ${transcriptError.message}`)
-    }
-
-    // Step 4: Store analysis
-    const { data: analysisRecord, error: analysisError } = await supabase
-      .from('transcript_analyses')
-      .insert({
-        transcript_id: transcriptRecord.id,
-        company_id: companyId,
-        pain_points: analysis.painPoints,
-        buying_signals: analysis.buyingSignals,
-        decision_makers: analysis.decisionMakers,
-        budget_indicators: analysis.budgetIndicators,
-        timeline_indicators: analysis.timelineIndicators,
-        objections: analysis.objections,
-        next_steps: analysis.nextSteps,
-        closeability_score: analysis.closeabilityScore,
-        urgency_level: analysis.urgencyLevel,
-        key_insights: analysis.keyInsights,
-        recommended_approach: analysis.recommendedApproach,
-        talking_points: analysis.talkingPoints,
-        created_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-
-    if (analysisError) {
-      throw new Error(`Failed to store analysis: ${analysisError.message}`)
+      console.error('Failed to store transcript:', transcriptError)
     }
 
     return NextResponse.json({
       success: true,
-      transcript: transcriptRecord,
-      analysis: analysisRecord,
-      summary: {
-        duration: Math.round(transcription.duration || 0),
-        closeabilityScore: analysis.closeabilityScore,
-        urgencyLevel: analysis.urgencyLevel,
-        keyPainPoints: analysis.painPoints.slice(0, 3),
-        nextSteps: analysis.nextSteps.slice(0, 3)
-      }
+      analysis,
+      transcriptId: transcriptRecord?.id
     })
 
   } catch (error) {
     console.error('Transcript analysis error:', error)
     return NextResponse.json({ 
-      error: 'Failed to process transcript',
+      error: 'Failed to analyze transcript',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }

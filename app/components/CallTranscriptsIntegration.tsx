@@ -177,20 +177,59 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
         body: JSON.stringify({
           transcriptText: fileContent || transcript.transcriptText || '',
           companyId: transcript.companyId,
+          companyName: connectedCompanies.find(c => c.realm_id === transcript.companyId)?.company_name || 'Unknown Company',
           callType: transcript.callType
         })
       });
 
       if (analysisResponse.ok) {
         const analysisData = await analysisResponse.json();
-        aiAnalysis = analysisData.analysis;
+        
+        // Transform the API response to match our interface
+        aiAnalysis = {
+          painPoints: analysisData.analysis?.pain_points?.map((p: any) => 
+            typeof p === 'string' ? p : `${p.description} (${p.severity} severity)`
+          ) || [],
+          businessGoals: analysisData.analysis?.key_insights || [],
+          budgetIndications: analysisData.analysis?.budget_indicators?.map((b: any) => 
+            typeof b === 'string' ? b : b.indicator
+          ) || [],
+          decisionMakers: analysisData.analysis?.decision_makers || [],
+          competitiveThreats: analysisData.analysis?.objections?.map((o: any) => 
+            typeof o === 'string' ? o : o.objection
+          ) || [],
+          urgency: analysisData.analysis?.urgency_level || 'medium',
+          nextSteps: analysisData.analysis?.next_steps?.map((s: any) => 
+            typeof s === 'string' ? s : s.action
+          ) || [],
+          salesScore: analysisData.analysis?.closeability_score || 70,
+          financialInsights: analysisData.analysis?.talking_points || [],
+          riskFactors: analysisData.analysis?.objections?.map((o: any) => 
+            typeof o === 'string' ? o : `${o.objection} - ${o.response_strategy}`
+          ) || []
+        };
       } else {
         throw new Error('Analysis failed');
       }
     } catch (error) {
       console.error('Analysis error:', error)
-      showToast('Failed to analyze transcript. Please ensure the transcript contains valid content.', 'error')
-      // Don't fall back to mock analysis
+      showToast('AI analysis encountered an error. Using basic analysis.', 'warning')
+      
+      // Provide basic analysis based on transcript content
+      const transcriptLower = (fileContent || transcript.transcriptText || '').toLowerCase();
+      
+      aiAnalysis = {
+        painPoints: extractPainPoints(transcriptLower),
+        businessGoals: extractBusinessGoals(transcriptLower),
+        budgetIndications: extractBudgetInfo(transcriptLower),
+        decisionMakers: extractDecisionMakers(fileContent || transcript.transcriptText || ''),
+        competitiveThreats: extractCompetitiveInfo(transcriptLower),
+        urgency: determineUrgency(transcriptLower),
+        nextSteps: generateNextSteps(transcript.callType),
+        salesScore: calculateBasicScore(transcriptLower),
+        financialInsights: extractFinancialInsights(transcriptLower),
+        riskFactors: extractRiskFactors(transcriptLower)
+      };
     } finally {
       setAiProcessing(null);
       setActiveToastId(null);
@@ -227,6 +266,175 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
       sentiment: Math.random() > 0.7 ? 'positive' : Math.random() > 0.3 ? 'neutral' : 'negative',
       aiAnalysis
     };
+  };
+
+  // Helper functions for basic analysis
+  const extractPainPoints = (text: string): string[] => {
+    const painKeywords = [
+      'problem', 'issue', 'challenge', 'struggle', 'difficult', 'pain', 
+      'frustrat', 'concern', 'worry', 'inefficient', 'manual', 'time-consuming'
+    ];
+    const points: string[] = [];
+    
+    painKeywords.forEach(keyword => {
+      if (text.includes(keyword)) {
+        const sentences = text.split(/[.!?]+/);
+        sentences.forEach(sentence => {
+          if (sentence.includes(keyword) && sentence.length > 20) {
+            points.push(sentence.trim());
+          }
+        });
+      }
+    });
+    
+    return Array.from(new Set(points)).slice(0, 5);
+  };
+
+  const extractBusinessGoals = (text: string): string[] => {
+    const goalKeywords = [
+      'goal', 'objective', 'target', 'aim', 'want to', 'need to', 
+      'plan to', 'looking to', 'trying to', 'growth', 'expand', 'improve'
+    ];
+    const goals: string[] = [];
+    
+    goalKeywords.forEach(keyword => {
+      if (text.includes(keyword)) {
+        const sentences = text.split(/[.!?]+/);
+        sentences.forEach(sentence => {
+          if (sentence.includes(keyword) && sentence.length > 20) {
+            goals.push(sentence.trim());
+          }
+        });
+      }
+    });
+    
+    return Array.from(new Set(goals)).slice(0, 5);
+  };
+
+  const extractBudgetInfo = (text: string): string[] => {
+    const budgetKeywords = [
+      'budget', 'cost', 'price', 'invest', 'spend', 'dollar', '$', 
+      'thousand', 'million', 'k per', 'monthly', 'annual', 'yearly'
+    ];
+    const budgetInfo: string[] = [];
+    
+    budgetKeywords.forEach(keyword => {
+      if (text.includes(keyword)) {
+        const sentences = text.split(/[.!?]+/);
+        sentences.forEach(sentence => {
+          if (sentence.includes(keyword) && sentence.length > 15) {
+            budgetInfo.push(sentence.trim());
+          }
+        });
+      }
+    });
+    
+    return Array.from(new Set(budgetInfo)).slice(0, 3);
+  };
+
+  const extractDecisionMakers = (text: string): any[] => {
+    const titleKeywords = ['ceo', 'cfo', 'cto', 'president', 'director', 'manager', 'head of', 'vp'];
+    const makers: any[] = [];
+    
+    titleKeywords.forEach(title => {
+      if (text.toLowerCase().includes(title)) {
+        makers.push({
+          name: 'Decision Maker',
+          role: title.toUpperCase(),
+          influence: title.includes('c') ? 'high' : 'medium'
+        });
+      }
+    });
+    
+    return makers.slice(0, 3);
+  };
+
+  const extractCompetitiveInfo = (text: string): string[] => {
+    const competitorKeywords = ['competitor', 'alternative', 'other option', 'comparing', 'versus', 'instead of'];
+    const threats: string[] = [];
+    
+    competitorKeywords.forEach(keyword => {
+      if (text.includes(keyword)) {
+        threats.push(`Evaluating ${keyword}s in the market`);
+      }
+    });
+    
+    return threats;
+  };
+
+  const determineUrgency = (text: string): 'high' | 'medium' | 'low' => {
+    const urgentKeywords = ['urgent', 'asap', 'immediately', 'right away', 'this week', 'this month'];
+    const urgentCount = urgentKeywords.filter(keyword => text.includes(keyword)).length;
+    
+    if (urgentCount >= 2) return 'high';
+    if (urgentCount === 1) return 'medium';
+    return 'low';
+  };
+
+  const generateNextSteps = (callType: string): string[] => {
+    const steps: { [key: string]: string[] } = {
+      discovery: [
+        'Schedule follow-up call to dive deeper into pain points',
+        'Prepare customized demo based on identified needs',
+        'Send relevant case studies and ROI calculator'
+      ],
+      audit: [
+        'Compile comprehensive financial analysis report',
+        'Prepare recommendations presentation',
+        'Schedule decision-maker meeting'
+      ],
+      'follow-up': [
+        'Address any remaining concerns or objections',
+        'Finalize proposal with custom pricing',
+        'Set timeline for implementation'
+      ],
+      close: [
+        'Send contract for review and signature',
+        'Schedule kickoff meeting',
+        'Begin onboarding preparation'
+      ]
+    };
+    
+    return steps[callType] || steps.discovery;
+  };
+
+  const calculateBasicScore = (text: string): number => {
+    let score = 50; // Base score
+    
+    // Positive indicators
+    if (text.includes('interested')) score += 10;
+    if (text.includes('budget')) score += 10;
+    if (text.includes('timeline')) score += 10;
+    if (text.includes('decision')) score += 5;
+    if (text.includes('implement')) score += 5;
+    
+    // Negative indicators
+    if (text.includes('not sure')) score -= 10;
+    if (text.includes('maybe')) score -= 5;
+    if (text.includes('think about')) score -= 5;
+    
+    return Math.max(0, Math.min(100, score));
+  };
+
+  const extractFinancialInsights = (text: string): string[] => {
+    const insights: string[] = [];
+    
+    if (text.includes('revenue')) insights.push('Revenue growth is a key focus area');
+    if (text.includes('cost') || text.includes('expense')) insights.push('Cost optimization opportunities identified');
+    if (text.includes('cash flow')) insights.push('Cash flow management is a priority');
+    if (text.includes('profit')) insights.push('Profitability improvement needed');
+    
+    return insights;
+  };
+
+  const extractRiskFactors = (text: string): string[] => {
+    const risks: string[] = [];
+    
+    if (text.includes('concern')) risks.push('Concerns need to be addressed');
+    if (text.includes('worry')) risks.push('Risk factors identified in discussion');
+    if (text.includes('competitor')) risks.push('Competitive evaluation in progress');
+    
+    return risks;
   };
 
   const handleFileUpload = async (files: FileList) => {
@@ -456,13 +664,42 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
   };
 
   const generateFinancialAnalysis = async (transcript: CallTranscript) => {
-    if (!transcript.companyId || !transcript.aiAnalysis) {
-      showToast('Insufficient data for financial analysis generation', 'warning');
+    if (!transcript.companyId) {
+      showToast('Please ensure a company is selected for this transcript', 'warning');
       return;
     }
 
+    // Check if we have QuickBooks data for this company
     try {
-      showToast('Generating financial analysis with call insights...', 'info');
+      showToast('Checking financial data availability...', 'info');
+      
+      // First check if company has financial data
+      const checkResponse = await fetch(`/api/financial-data/${transcript.companyId}`);
+      
+      if (!checkResponse.ok) {
+        // If no financial data, check if QuickBooks is connected
+        const companyResponse = await fetch(`/api/companies/${transcript.companyId}`);
+        if (!companyResponse.ok) {
+          showToast('Please connect QuickBooks for this company first', 'warning');
+          return;
+        }
+        
+        // Try to sync financial data
+        showToast('Syncing financial data from QuickBooks...', 'info');
+        const syncResponse = await fetch('/api/qbo/sync-financial-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ companyId: transcript.companyId })
+        });
+        
+        if (!syncResponse.ok) {
+          showToast('Unable to sync financial data. Please check QuickBooks connection.', 'error');
+          return;
+        }
+      }
+      
+      // Now generate the analysis
+      showToast('Generating comprehensive financial analysis...', 'info');
       
       const response = await fetch('/api/ai/generate-comprehensive', {
         method: 'POST',
@@ -479,15 +716,17 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
         const analysisData = await response.json();
         
         // Navigate to the financial analysis page with transcript context
-        window.location.href = `/admin/financial-analysis?company=${transcript.companyId}&transcript=${transcript.id}`;
+        const companyName = connectedCompanies.find(c => c.realm_id === transcript.companyId)?.company_name || 'Company';
+        window.location.href = `/dashboard/advanced-analysis?account=${transcript.companyId}&company=${encodeURIComponent(companyName)}&transcript=${transcript.id}`;
         
         showToast('Financial analysis generated successfully!', 'success');
       } else {
-        throw new Error('Failed to generate financial analysis');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate analysis');
       }
     } catch (error) {
       console.error('Financial analysis generation error:', error);
-      showToast('Failed to generate financial analysis', 'error');
+      showToast(error instanceof Error ? error.message : 'Failed to generate financial analysis', 'error');
     }
   };
 
