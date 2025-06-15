@@ -14,9 +14,7 @@ function CreateProspectForm() {
     contact_name: '',
     email: '',
     phone: '',
-    industry: '',
-    // annual_revenue: '',  // Temporarily disabled due to schema issues
-    // employee_count: ''   // Temporarily disabled due to schema issues
+    industry: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -44,9 +42,7 @@ function CreateProspectForm() {
           contact_name: formData.contact_name,
           email: formData.email,
           phone: formData.phone,
-          industry: formData.industry,
-          // annual_revenue: formData.annual_revenue,  // Temporarily disabled
-          // employee_count: formData.employee_count   // Temporarily disabled
+          industry: formData.industry
         })
       })
 
@@ -161,34 +157,6 @@ function CreateProspectForm() {
                 <option value="Other">Other</option>
               </select>
             </div>
-
-            {/* Temporarily disabled due to schema cache issues
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Annual Revenue
-              </label>
-              <input
-                type="number"
-                value={formData.annual_revenue}
-                onChange={(e) => setFormData(prev => ({ ...prev, annual_revenue: e.target.value }))}
-                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="5000000"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Employee Count
-              </label>
-              <input
-                type="number"
-                value={formData.employee_count}
-                onChange={(e) => setFormData(prev => ({ ...prev, employee_count: e.target.value }))}
-                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="50"
-              />
-            </div>
-            */}
 
             <div className="flex space-x-4">
               <button

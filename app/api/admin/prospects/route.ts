@@ -6,16 +6,19 @@ interface ProspectData {
   company_name: string
   contact_name: string
   email: string
-  phone: string
-  industry: string
-  annual_revenue: number
+  phone?: string
+  industry?: string
+  workflow_stage?: string
+  user_type?: string
+  qb_company_id?: string
   created_at: string
-  qbo_tokens: Array<{
+  updated_at?: string
+  qbo_tokens?: Array<{
     company_id: string
     company_name: string
     token_created_at: string
   }>
-  ai_analyses: Array<{
+  ai_analyses?: Array<{
     closeability_score: number
     financial_health_score: number
     key_insights: string[]
@@ -23,7 +26,7 @@ interface ProspectData {
     opportunities: string[]
     analysis_date: string
   }>
-  call_transcripts: Array<{
+  call_transcripts?: Array<{
     id: string
     file_name: string
     analysis_results: any
@@ -107,20 +110,22 @@ export async function GET(request: NextRequest) {
         company_name: prospect.company_name,
         contact_name: prospect.contact_name,
         email: prospect.email,
-        phone: prospect.phone,
-        industry: prospect.industry,
-        revenue: prospect.annual_revenue,
-        created_at: prospect.created_at,
-        qb_company_id: qbToken?.company_id || null,
-        workflow_stage: workflowStage,
-        closeability_score: latestAnalysis?.closeability_score || null,
+        phone: prospect.phone || 'N/A',
+        industry: prospect.industry || 'N/A',
+        status: workflowStage,
+        company_id: qbToken?.company_id || null,
+        closeability_score: latestAnalysis?.closeability_score || 0,
         financial_health_score: latestAnalysis?.financial_health_score || null,
-        last_activity: getLastActivity(prospect),
+        last_activity: prospect.updated_at || prospect.created_at,
         next_step: nextStep,
         transcript_count: prospect.call_transcripts?.length || 0,
         ai_insights: latestAnalysis?.key_insights || null,
         pain_points: latestAnalysis?.pain_points || null,
-        opportunities: latestAnalysis?.opportunities || null
+        opportunities: latestAnalysis?.opportunities || null,
+        analysis_status: workflowStage,
+        needs_transcript: workflowStage === 'connected',
+        transcript_id: prospect.call_transcripts && prospect.call_transcripts.length > 0 ? prospect.call_transcripts[0].id : null,
+        workflow_stage: workflowStage
       }
     }) || []
 
@@ -148,7 +153,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { company_name, contact_name, email, phone, industry, annual_revenue } = body
+    const { company_name, contact_name, email, phone, industry } = body
 
     // Validate required fields
     if (!company_name || !contact_name || !email) {
@@ -167,8 +172,8 @@ export async function POST(request: NextRequest) {
         email,
         phone,
         industry,
-        annual_revenue,
-        workflow_stage: 'discovery',
+        workflow_stage: 'needs_transcript',
+        user_type: 'prospect',
         created_at: new Date().toISOString()
       }])
       .select()

@@ -7,7 +7,6 @@ interface AuditDeckData {
     company_name: string;
     industry: string;
     revenue: number;
-    employee_count?: number;
   };
   financial_analysis: {
     overall_score: number;
@@ -35,6 +34,16 @@ interface AuditDeckData {
     economic_outlook: string;
     industry_health_score: number;
   };
+}
+
+interface Prospect {
+  id: string;
+  company_name: string;
+  contact_name: string;
+  email: string;
+  phone?: string;
+  industry?: string;
+  workflow_stage?: string;
 }
 
 const generateExecutiveSummary = (deckData: AuditDeckData) => {
@@ -189,8 +198,7 @@ export async function POST(request: NextRequest) {
       prospect_info: {
         company_name: prospect.company_name,
         industry: prospect.industry || 'Business Services',
-        revenue: revenue,
-        employee_count: prospect.employee_count
+        revenue: revenue
       },
       financial_analysis: financialIntelligence?.[0] || {
         overall_score: 65,
