@@ -2,9 +2,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import IntelligentAuditDeckGenerator from '../../components/IntelligentAuditDeckGenerator'
-import AdminLayout from '../../components/AdminLayout'
 import { Users, Building, TrendingUp } from 'lucide-react'
-import LoadingSpinner from '../../components/LoadingSpinner'
 
 interface Prospect {
   id: string
@@ -185,12 +183,22 @@ function AuditDeckContent() {
   )
 }
 
+// Loading component for Suspense fallback
+function LoadingAuditDeck() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading audit deck generator...</p>
+      </div>
+    </div>
+  )
+}
+
 export default function AuditDeckPage() {
   return (
-    <AdminLayout>
-      <Suspense fallback={<LoadingSpinner />}>
-        <AuditDeckContent />
-      </Suspense>
-    </AdminLayout>
+    <Suspense fallback={<LoadingAuditDeck />}>
+      <AuditDeckContent />
+    </Suspense>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Building2, ChevronDown } from 'lucide-react'
 
@@ -20,7 +20,7 @@ interface GlobalCompanySelectorProps {
   showWorkflowStage?: boolean
 }
 
-export default function GlobalCompanySelector({ 
+function CompanySelectorContent({ 
   onCompanySelect, 
   showWorkflowStage = true 
 }: GlobalCompanySelectorProps) {
@@ -208,5 +208,22 @@ export default function GlobalCompanySelector({
         </div>
       )}
     </div>
+  )
+}
+
+// Loading fallback
+function CompanySelectorLoading() {
+  return (
+    <div className="animate-pulse">
+      <div className="h-10 bg-slate-700 rounded-lg w-64"></div>
+    </div>
+  )
+}
+
+export default function GlobalCompanySelector(props: GlobalCompanySelectorProps) {
+  return (
+    <Suspense fallback={<CompanySelectorLoading />}>
+      <CompanySelectorContent {...props} />
+    </Suspense>
   )
 }
