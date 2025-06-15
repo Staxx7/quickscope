@@ -11,8 +11,8 @@ import {
 import { useToast } from './Toast'
 
 // Import data services
-import { getFREDData } from '@/lib/fredService'
-import { getMarketData } from '@/lib/marketDataService'
+import { getFREDEconomicData } from '../lib/fredService'
+import { getMarketIntelligence } from '../lib/marketDataService'
 
 // Enhanced interfaces with full data integration
 interface IntegratedDataSources {
@@ -286,24 +286,14 @@ const IntelligentAuditDeckGeneratorFullyIntegrated: React.FC<IntelligentAuditDec
         fetch: async () => {
           setDataLoadingStatus(prev => ({ ...prev, fred: true }))
           try {
-            const fredData = await getFREDData({
-              series: ['GDP', 'CPIAUCSL', 'UNRATE', 'DFF', 'UMCSENT'],
-              startDate: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-              endDate: new Date().toISOString().split('T')[0]
-            })
-            
-            if (results.marketData) {
-              results.marketData.fred = {
-                gdpGrowth: fredData.GDP?.value || 0,
-                inflationRate: fredData.CPIAUCSL?.value || 0,
-                unemploymentRate: fredData.UNRATE?.value || 0,
-                interestRate: fredData.DFF?.value || 0,
-                consumerConfidence: fredData.UMCSENT?.value || 0,
-                industryGrowth: 0 // Would need industry-specific series
-              }
-            }
+            const fredData = await getFREDEconomicData('technology')
+            setIntegratedData(prev => ({ ...prev, fred: fredData }))
+            setDataLoadingStatus(prev => ({ ...prev, fred: false }))
+            return fredData
           } catch (error) {
-            console.error('FRED data error:', error)
+            console.error('FRED data fetch error:', error)
+            setDataLoadingStatus(prev => ({ ...prev, fred: false }))
+            return null
           }
         }
       },
@@ -314,20 +304,14 @@ const IntelligentAuditDeckGeneratorFullyIntegrated: React.FC<IntelligentAuditDec
         fetch: async () => {
           setDataLoadingStatus(prev => ({ ...prev, market: true }))
           try {
-            const marketData = await getMarketData({
-              symbols: ['SPY', 'QQQ'], // Add competitor symbols
-              metrics: ['quote', 'sector_performance']
-            })
-            
-            if (results.marketData) {
-              results.marketData.stockData = {
-                sectorPerformance: marketData.sectorPerformance || {},
-                marketTrends: marketData.trends || {},
-                competitorStocks: []
-              }
-            }
+            const marketData = await getMarketIntelligence('technology')
+            setIntegratedData(prev => ({ ...prev, market: marketData }))
+            setDataLoadingStatus(prev => ({ ...prev, market: false }))
+            return marketData
           } catch (error) {
-            console.error('Market data error:', error)
+            console.error('Market data fetch error:', error)
+            setDataLoadingStatus(prev => ({ ...prev, market: false }))
+            return null
           }
         }
       },
@@ -1286,3 +1270,6 @@ const renderNextStepsSlide = (content: any) => {
 }
 
 export default IntelligentAuditDeckGeneratorFullyIntegrated
+
+// Temporary export to fix build
+export const IntelligentAuditDeckGeneratorFullyIntegratedTemp = IntelligentAuditDeckGeneratorFullyIntegrated
