@@ -14,10 +14,10 @@ export async function GET(request: NextRequest) {
       serviceKeyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0,
     },
     tests: {
-      clientCreation: { status: 'pending', error: null },
-      databaseConnection: { status: 'pending', error: null },
-      tableAccess: { status: 'pending', error: null },
-      sampleQuery: { status: 'pending', data: null, error: null }
+      clientCreation: { status: 'pending', error: null as any },
+      databaseConnection: { status: 'pending', error: null as any },
+      tableAccess: { status: 'pending', error: null as any, tables: null as any },
+      sampleQuery: { status: 'pending', data: null as any, error: null as any }
     }
   }
 
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     // Test 3: Table access
     console.log('Test 3: Checking table access...')
     const tables = ['prospects', 'qbo_tokens']
-    const tableAccess = {}
+    const tableAccess: Record<string, string> = {}
     
     for (const table of tables) {
       const { error } = await supabase
@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
     
     diagnostics.tests.tableAccess = {
       status: Object.values(tableAccess).every(v => v === 'OK') ? 'success' : 'partial',
+      error: null,
       tables: tableAccess
     }
     
