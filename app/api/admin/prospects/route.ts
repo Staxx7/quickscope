@@ -38,32 +38,12 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseServerClient()
     
-    // Fetch prospects with their associated data
+    // Simplified query - fetch only prospects without relationships
+    // to avoid schema cache issues
     const { data: prospects, error: prospectsError } = await supabase
       .from('prospects')
-      .select(`
-        *,
-        qbo_tokens (
-          company_id,
-          company_name,
-          created_at as token_created_at
-        ),
-        ai_analyses (
-          closeability_score,
-          financial_health_score,
-          key_insights,
-          pain_points,
-          opportunities,
-          created_at as analysis_date
-        ),
-        call_transcripts (
-          id,
-          file_name,
-          analysis_results,
-          created_at as transcript_date
-        )
-      `)
-      .order('created_at', { ascending: false }) as { data: ProspectData[] | null, error: any }
+      .select('*')
+      .order('created_at', { ascending: false })
 
     if (prospectsError) {
       console.error('Error fetching prospects:', prospectsError)
@@ -73,61 +53,30 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Transform and enrich the data
-    const enrichedProspects = prospects?.map((prospect: ProspectData) => {
-      // Determine workflow stage based on available data
-      let workflowStage = 'discovery'
-      if (prospect.qbo_tokens && prospect.qbo_tokens.length > 0) {
-        workflowStage = 'connected'
-      }
-      if (prospect.call_transcripts && prospect.call_transcripts.length > 0) {
-        workflowStage = 'analyzed'
-      }
-      if (prospect.ai_analyses && prospect.ai_analyses.length > 0) {
-        workflowStage = 'audit_ready'
-      }
-
-      // Get latest AI analysis
-      const latestAnalysis = prospect.ai_analyses && prospect.ai_analyses.length > 0 
-        ? prospect.ai_analyses[0] 
-        : null
-
-      // Get QB company info
-      const qbToken = prospect.qbo_tokens && prospect.qbo_tokens.length > 0 
-        ? prospect.qbo_tokens[0] 
-        : null
-
-      // Calculate next step
-      let nextStep = 'Connect QuickBooks account'
-      if (workflowStage === 'connected') {
-        nextStep = 'Upload discovery call transcript'
-      } else if (workflowStage === 'analyzed') {
-        nextStep = 'Generate audit deck'
-      } else if (workflowStage === 'audit_ready') {
-        nextStep = 'Schedule audit call'
-      }
-
+    // For now, return simplified data without the complex relationships
+    const enrichedProspects = prospects?.map((prospect: any) => {
       return {
         id: prospect.id,
-        company_name: prospect.company_name,
-        contact_name: prospect.contact_name,
+        company_name: prospect.company_name || prospect.name || 'Unknown',
+        contact_name: prospect.contact_name || 'Unknown',
         email: prospect.email,
         phone: prospect.phone || 'N/A',
         industry: prospect.industry || 'N/A',
-        status: workflowStage,
-        company_id: qbToken?.company_id || null,
-        closeability_score: latestAnalysis?.closeability_score || 0,
-        financial_health_score: latestAnalysis?.financial_health_score || null,
+        status: prospect.workflow_stage || 'discovery',
+        company_id: prospect.qb_company_id || null,
+        closeability_score: 0,
+        financial_health_score: null,
         last_activity: prospect.updated_at || prospect.created_at,
-        next_step: nextStep,
-        transcript_count: prospect.call_transcripts?.length || 0,
-        ai_insights: latestAnalysis?.key_insights || null,
-        pain_points: latestAnalysis?.pain_points || null,
-        opportunities: latestAnalysis?.opportunities || null,
-        analysis_status: workflowStage,
-        needs_transcript: workflowStage === 'connected',
-        transcript_id: prospect.call_transcripts && prospect.call_transcripts.length > 0 ? prospect.call_transcripts[0].id : null,
-        workflow_stage: workflowStage
+        next_step: 'Continue workflow',
+        transcript_count: 0,
+        ai_insights: null,
+        pain_points: null,
+        opportunities: null,
+        analysis_status: prospect.workflow_stage || 'discovery',
+        needs_transcript: prospect.workflow_stage === 'needs_transcript',
+        transcript_id: null,
+        workflow_stage: prospect.workflow_stage || 'discovery',
+        created_at: prospect.created_at
       }
     }) || []
 
@@ -136,9 +85,9 @@ export async function GET(request: NextRequest) {
       total: enrichedProspects.length,
       summary: {
         total_accounts: enrichedProspects.length,
-        connected_accounts: enrichedProspects.filter(p => p.workflow_stage !== 'discovery').length,
-        ready_for_transcripts: enrichedProspects.filter(p => p.workflow_stage === 'connected').length,
-        ready_for_audit: enrichedProspects.filter(p => p.workflow_stage === 'audit_ready').length,
+        connected_accounts: enrichedProspects.filter(p => p.company_id).length,
+        ready_for_transcripts: enrichedProspects.filter(p => p.workflow_stage === 'needs_transcript').length,
+        ready_for_audit: enrichedProspects.filter(p => p.workflow_stage === 'ready_for_report').length,
         completed: enrichedProspects.filter(p => p.workflow_stage === 'completed').length
       }
     })
