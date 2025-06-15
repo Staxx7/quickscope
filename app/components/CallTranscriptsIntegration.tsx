@@ -526,7 +526,7 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
       if (response.ok) {
         const analysisData = await response.json();
         
-        // Navigate to the financial analysis page
+        // Navigate to the financial analysis page with transcript context
         window.location.href = `/admin/financial-analysis?company=${transcript.companyId}&transcript=${transcript.id}`;
         
         showToast('Financial analysis generated successfully!', 'success');
