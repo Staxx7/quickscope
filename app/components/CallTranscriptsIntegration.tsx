@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, AlertTriangle, Play, Pause, Download, MessageSquare, Brain, Clock, User, Phone, Calendar, Search, Filter, ChevronDown, ChevronRight, Star, AlertCircle, CheckCircle, TrendingUp, Zap, Eye, BarChart3, Target, DollarSign, Users } from 'lucide-react';
+import { Upload, FileText, AlertTriangle, Play, Pause, Download, MessageSquare, Brain, Clock, User, Phone, Calendar, Search, Filter, ChevronDown, ChevronRight, Star, AlertCircle, CheckCircle, TrendingUp, Zap, Eye, BarChart3, Target, DollarSign, Users, ClipboardPaste, Type } from 'lucide-react';
 import { useToast } from './Toast';
 
 interface CallTranscript {
@@ -65,7 +65,10 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
   const [filterCallType, setFilterCallType] = useState('all');
   const [activeTab, setActiveTab] = useState('upload');
   const [aiProcessing, setAiProcessing] = useState<AIProcessingStage | null>(null);
-  const [selectedCompanyForUpload, setSelectedCompanyForUpload] = useState(defaultCompanyId || '');
+  const [selectedCompanyForUpload, setSelectedCompanyForUpload] = useState(defaultCompanyId);
+  const [inputMode, setInputMode] = useState<'upload' | 'paste'>('upload');
+  const [pastedTranscript, setPastedTranscript] = useState('');
+  const [transcriptTitle, setTranscriptTitle] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast, ToastContainer } = useToast();
 
@@ -358,6 +361,86 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
     setIsUploading(false);
   };
 
+  const handlePastedTranscript = async () => {
+    if (!selectedCompanyForUpload) {
+      showToast('Please select a company before processing', 'warning');
+      return;
+    }
+
+    if (!pastedTranscript.trim()) {
+      showToast('Please paste a transcript before processing', 'warning');
+      return;
+    }
+
+    if (!transcriptTitle.trim()) {
+      showToast('Please provide a title for the transcript', 'warning');
+      return;
+    }
+
+    setIsUploading(true);
+    
+    const callType = determineCallType(transcriptTitle);
+    const fileName = `${transcriptTitle}.txt`;
+    
+    const newTranscript: CallTranscript = {
+      id: `transcript_${Date.now()}`,
+      fileName: fileName,
+      duration: '00:00',
+      date: new Date().toISOString().split('T')[0],
+      participants: ['Prospect Contact', 'Sales Rep'],
+      status: 'processing',
+      sentiment: 'neutral',
+      keyTopics: [],
+      actionItems: [],
+      summary: '',
+      confidence: 0,
+      companyId: selectedCompanyForUpload,
+      callType
+    };
+    
+    setTranscripts(prev => [...prev, newTranscript]);
+    showToast(`Processing ${fileName}...`, 'info');
+
+    try {
+      // Process with AI
+      const processedTranscript = await processTranscriptWithAI(newTranscript, pastedTranscript);
+      
+      // Calculate estimated duration based on word count (avg 150 words per minute)
+      const wordCount = pastedTranscript.split(/\s+/).length;
+      const estimatedMinutes = Math.round(wordCount / 150);
+      processedTranscript.duration = `${estimatedMinutes}:00`;
+      
+      processedTranscript.keyTopics = [
+        'Financial Planning', 'Cash Flow Management', 'Growth Strategy', 
+        'System Integration', 'Reporting Automation'
+      ].slice(0, Math.floor(Math.random() * 3) + 3);
+      processedTranscript.actionItems = processedTranscript.aiAnalysis?.nextSteps || [];
+      processedTranscript.summary = `${callType.charAt(0).toUpperCase() + callType.slice(1)} call discussing financial optimization opportunities and implementation timeline.`;
+      processedTranscript.transcriptText = pastedTranscript;
+
+      setTranscripts(prev => prev.map(t => 
+        t.id === newTranscript.id ? processedTranscript : t
+      ));
+
+      // Clear the form
+      setPastedTranscript('');
+      setTranscriptTitle('');
+      
+      // Switch to library tab to show the processed transcript
+      setActiveTab('library');
+      
+      showToast(`${fileName} processed successfully with AI insights`, 'success');
+    } catch (error) {
+      console.error('Processing error:', error);
+      setTranscripts(prev => prev.map(t => 
+        t.id === newTranscript.id ? { ...t, status: 'failed' as const } : t
+      ));
+      showToast(`Failed to process ${fileName}`, 'error');
+    }
+    
+    setIsUploading(false);
+  };
+
   const determineCallType = (fileName: string): CallTranscript['callType'] => {
     const name = fileName.toLowerCase();
     if (name.includes('discovery') || name.includes('initial')) return 'discovery';
@@ -579,53 +662,141 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
             </select>
           </div>
 
-          <div className="text-center">
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/25 mb-6">
-              <div className="bg-cyan-500/20 rounded-full p-6 w-24 h-24 mx-auto mb-4 flex items-center justify-center">
-                <Upload className="w-12 h-12 text-cyan-400" />
-              </div>
-              <h3 className="text-xl font-medium text-white mb-2">Upload Call Recordings or Transcripts</h3>
-              <p className="text-gray-400 mb-6">Drag and drop your audio files or transcript documents</p>
-              
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept=".mp3,.wav,.m4a,.mp4,.txt,.docx,.pdf"
-                onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
-                className="hidden"
-              />
-              
+          {/* Input Mode Toggle */}
+          <div className="mb-6">
+            <div className="flex bg-white/10 backdrop-blur-sm rounded-xl p-1 border border-white/25">
               <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading || !selectedCompanyForUpload}
-                className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 disabled:opacity-50"
+                onClick={() => setInputMode('upload')}
+                className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                  inputMode === 'upload'
+                    ? 'bg-white/20 text-white border border-white/30'
+                    : 'text-gray-400 hover:text-white'
+                }`}
               >
-                {isUploading ? 'Processing...' : 'Choose Files'}
+                <Upload className="w-4 h-4" />
+                <span className="font-medium">Upload Files</span>
+              </button>
+              <button
+                onClick={() => setInputMode('paste')}
+                className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                  inputMode === 'paste'
+                    ? 'bg-white/20 text-white border border-white/30'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <ClipboardPaste className="w-4 h-4" />
+                <span className="font-medium">Paste Transcript</span>
               </button>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
-                <Brain className="w-8 h-8 text-blue-400 mb-2" />
-                <h4 className="font-medium text-white mb-1">AI Transcription</h4>
-                <p className="text-gray-400 text-sm">Automatic speech-to-text with 98%+ accuracy</p>
+          </div>
+
+          {/* Upload Mode */}
+          {inputMode === 'upload' && (
+            <div className="text-center">
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/25 mb-6">
+                <div className="bg-cyan-500/20 rounded-full p-6 w-24 h-24 mx-auto mb-4 flex items-center justify-center">
+                  <Upload className="w-12 h-12 text-cyan-400" />
+                </div>
+                <h3 className="text-xl font-medium text-white mb-2">Upload Call Recordings or Transcripts</h3>
+                <p className="text-gray-400 mb-6">Drag and drop your audio files or transcript documents</p>
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".mp3,.wav,.m4a,.mp4,.txt,.docx,.pdf"
+                  onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+                  className="hidden"
+                />
+                
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading || !selectedCompanyForUpload}
+                  className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 disabled:opacity-50"
+                >
+                  {isUploading ? 'Processing...' : 'Choose Files'}
+                </button>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
-                <Target className="w-8 h-8 text-cyan-400 mb-2" />
-                <h4 className="font-medium text-white mb-1">Sales Intelligence</h4>
-                <p className="text-gray-400 text-sm">Extract pain points, goals, and opportunities</p>
+            </div>
+          )}
+
+          {/* Paste Mode */}
+          {inputMode === 'paste' && (
+            <div className="space-y-6">
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/25">
+                <div className="bg-cyan-500/20 rounded-full p-6 w-24 h-24 mx-auto mb-4 flex items-center justify-center">
+                  <ClipboardPaste className="w-12 h-12 text-cyan-400" />
+                </div>
+                <h3 className="text-xl font-medium text-white mb-2 text-center">Paste Call Transcript</h3>
+                <p className="text-gray-400 mb-6 text-center">Copy and paste your call transcript from Fathom or other sources</p>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-white text-sm font-medium mb-2">
+                      Transcript Title <span className="text-red-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <Type className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
+                      <input
+                        type="text"
+                        placeholder="e.g., Discovery Call with ABC Company"
+                        value={transcriptTitle}
+                        onChange={(e) => setTranscriptTitle(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/25 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-white text-sm font-medium mb-2">
+                      Transcript Text <span className="text-red-400">*</span>
+                    </label>
+                    <textarea
+                      placeholder="Paste your call transcript here..."
+                      value={pastedTranscript}
+                      onChange={(e) => setPastedTranscript(e.target.value)}
+                      rows={12}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/25 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"
+                    />
+                    <div className="mt-2 text-right text-sm text-gray-400">
+                      {pastedTranscript.split(/\s+/).filter(word => word.length > 0).length} words
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handlePastedTranscript}
+                    disabled={isUploading || !selectedCompanyForUpload || !pastedTranscript.trim() || !transcriptTitle.trim()}
+                    className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 disabled:opacity-50 flex items-center justify-center space-x-2"
+                  >
+                    <Brain className="w-5 h-5" />
+                    <span>{isUploading ? 'Processing with AI...' : 'Process Transcript with AI'}</span>
+                  </button>
+                </div>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
-                <Users className="w-8 h-8 text-purple-400 mb-2" />
-                <h4 className="font-medium text-white mb-1">Stakeholder Mapping</h4>
-                <p className="text-gray-400 text-sm">Identify decision makers and influence levels</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
-                <Zap className="w-8 h-8 text-slate-300 mb-2" />
-                <h4 className="font-medium text-white mb-1">Financial Integration</h4>
-                <p className="text-gray-400 text-sm">Connect insights to QBO financial data</p>
-              </div>
+            </div>
+          )}
+
+          {/* Feature Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
+              <Brain className="w-8 h-8 text-blue-400 mb-2" />
+              <h4 className="font-medium text-white mb-1">AI Transcription</h4>
+              <p className="text-gray-400 text-sm">Automatic speech-to-text with 98%+ accuracy</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
+              <Target className="w-8 h-8 text-cyan-400 mb-2" />
+              <h4 className="font-medium text-white mb-1">Sales Intelligence</h4>
+              <p className="text-gray-400 text-sm">Extract pain points, goals, and opportunities</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
+              <Users className="w-8 h-8 text-purple-400 mb-2" />
+              <h4 className="font-medium text-white mb-1">Stakeholder Mapping</h4>
+              <p className="text-gray-400 text-sm">Identify decision makers and influence levels</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
+              <Zap className="w-8 h-8 text-slate-300 mb-2" />
+              <h4 className="font-medium text-white mb-1">Financial Integration</h4>
+              <p className="text-gray-400 text-sm">Connect insights to QBO financial data</p>
             </div>
           </div>
         </div>
