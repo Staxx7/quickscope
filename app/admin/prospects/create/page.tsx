@@ -2,7 +2,6 @@
 
 import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient'
 
 // Component that uses useSearchParams
 function CreateProspectForm() {
@@ -27,88 +26,35 @@ function CreateProspectForm() {
     setIsSubmitting(true)
     setError('')
 
+    console.log('=== Starting contact save ===')
+    console.log('Company ID:', company_id)
+    console.log('Company Name:', company_name)
+    console.log('Form Data:', formData)
+
     try {
-      // Check if a prospect already exists for this email
-      const { data: existingProspects, error: checkError } = await supabase
-        .from('prospects')
-        .select('*')
-        .eq('email', formData.email)
-        .single()
+      // Use API endpoint instead of direct Supabase calls
+      const response = await fetch('/api/prospects/create-or-update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          company_id,
+          company_name,
+          contact_name: formData.contact_name,
+          email: formData.email,
+          phone: formData.phone,
+          industry: formData.industry,
+          annual_revenue: formData.annual_revenue,
+          employee_count: formData.employee_count
+        })
+      })
 
-      let prospectId
+      const data = await response.json()
+      console.log('API Response:', data)
 
-      if (existingProspects) {
-        // Update existing prospect
-        const { data: updatedProspect, error: updateError } = await supabase
-          .from('prospects')
-          .update({
-            company_name: company_name,
-            contact_name: formData.contact_name,
-            phone: formData.phone || null,
-            industry: formData.industry || null,
-            annual_revenue: formData.annual_revenue ? parseFloat(formData.annual_revenue) : null,
-            employee_count: formData.employee_count ? parseInt(formData.employee_count) : null,
-            qb_company_id: company_id,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingProspects.id)
-          .select()
-          .single()
-
-        if (updateError) throw updateError
-        prospectId = existingProspects.id
-      } else {
-        // Create new prospect
-        const { data: prospect, error: prospectError } = await supabase
-          .from('prospects')
-          .insert({
-            company_name: company_name,
-            contact_name: formData.contact_name,
-            email: formData.email,
-            phone: formData.phone || null,
-            industry: formData.industry || null,
-            annual_revenue: formData.annual_revenue ? parseFloat(formData.annual_revenue) : null,
-            employee_count: formData.employee_count ? parseInt(formData.employee_count) : null,
-            workflow_stage: 'needs_transcript',
-            user_type: 'prospect',
-            qb_company_id: company_id
-          })
-          .select()
-          .single()
-
-        if (prospectError) throw prospectError
-        prospectId = prospect.id
-      }
-
-      // Update the qbo_token to link to this prospect
-      if (prospectId && company_id) {
-        console.log('Attempting to link prospect:', prospectId, 'to company:', company_id)
-        
-        const { data: tokenData, error: fetchError } = await supabase
-          .from('qbo_tokens')
-          .select('*')
-          .eq('company_id', company_id)
-          .single()
-          
-        if (fetchError) {
-          console.error('Error fetching QB token:', fetchError)
-          // Don't throw - prospect was created successfully
-        } else if (tokenData) {
-          const { error: updateError } = await supabase
-            .from('qbo_tokens')
-            .update({ 
-              prospect_id: prospectId,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', tokenData.id)
-
-          if (updateError) {
-            console.error('Error linking prospect to QB token:', updateError)
-            // Don't throw here, the prospect was created successfully
-          } else {
-            console.log('Successfully linked prospect to QB token')
-          }
-        }
+      if (!response.ok) {
+        throw new Error(data.details || data.error || 'Failed to save contact information')
       }
 
       // Force the dashboard to refresh by adding a timestamp parameter
@@ -120,19 +66,17 @@ function CreateProspectForm() {
       // Redirect back to dashboard with refresh parameter
       router.push(`/dashboard?refresh=${timestamp}&success=contact_added`)
     } catch (err) {
-      console.error('Error creating/updating prospect:', err)
+      console.error('=== Error creating/updating prospect ===')
+      console.error('Full error object:', err)
       
       // More detailed error handling
       if (err instanceof Error) {
-        if (err.message.includes('duplicate key')) {
-          setError('A contact with this email already exists')
-        } else if (err.message.includes('violates foreign key constraint')) {
-          setError('Invalid company reference. Please try again.')
-        } else {
-          setError(err.message)
-        }
+        console.error('Error message:', err.message)
+        
+        // Set user-friendly error message
+        setError(err.message)
       } else {
-        setError('Failed to save contact information. Please try again.')
+        setError('An unexpected error occurred. Please try again.')
       }
     } finally {
       setIsSubmitting(false)
