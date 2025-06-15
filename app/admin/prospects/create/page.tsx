@@ -30,8 +30,8 @@ function CreateProspectForm() {
     console.log('Form Data:', formData)
 
     try {
-      // Use API endpoint instead of direct Supabase calls
-      const response = await fetch('/api/prospects/create-or-update', {
+      // Use SQL-based API endpoint to bypass schema cache issues
+      const response = await fetch('/api/prospects/create-or-update-sql', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
