@@ -504,7 +504,7 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
   const [selectedTemplate, setSelectedTemplate] = useState('ai-enhanced')
   const [realFinancialData, setRealFinancialData] = useState<FinancialSnapshot | null>(null)
   const [loadingFinancialData, setLoadingFinancialData] = useState(false)
-  const [dataSource, setDataSource] = useState<'real' | 'mock' | 'ai_enhanced'>('mock')
+  const [dataSource, setDataSource] = useState<'real' | 'mock' | 'ai_enhanced'>('real')
   const [slides, setSlides] = useState<any[]>([])
   const { showToast, ToastContainer } = useToast()
   const [downloading, setDownloading] = useState(false)
@@ -646,7 +646,7 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
           generatedAt: new Date().toISOString(),
           dataSource: dataSource === 'real' ? 'real_quickbooks' : 'enhanced_demo',
           version: '4.0',
-          companyName: companyName || 'Demo Company'
+          companyName: companyName || 'Company'
         }
       };
       
@@ -657,7 +657,8 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
       
     } catch (error) {
       console.error('Enhanced deck generation failed:', error);
-      showToast('Deck generation failed', 'error');
+      showToast('Deck generation failed. Please ensure you have connected your QuickBooks account.', 'error');
+      // Don't generate mock data - show error state
     } finally {
       setGenerating(false);
       setGenerationStage(null);
@@ -1339,10 +1340,10 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              {companyName || 'Demo Company'} Financial Analysis
+              {companyName || 'Company'} Financial Analysis
             </h2>
             <p className="text-gray-600">
-              Company ID: {companyId || 'demo-123'} • Data Source: {dataSource}
+              Company ID: {companyId || 'Not specified'} • Data Source: {dataSource}
             </p>
           </div>
           

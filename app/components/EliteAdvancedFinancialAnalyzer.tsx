@@ -258,7 +258,7 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [loadingFinancialData, setLoadingFinancialData] = useState(false);
   const [realFinancialData, setRealFinancialData] = useState<FinancialSnapshot | null>(null);
-  const [dataSource, setDataSource] = useState<'real' | 'mock'>('mock');
+  const [dataSource, setDataSource] = useState<'real' | 'mock'>('real');
   const [metrics, setMetrics] = useState<FinancialMetric[]>([]);
   const [advancedMetrics, setAdvancedMetrics] = useState<AdvancedFinancialMetrics | null>(null);
   const [trendData, setTrendData] = useState<TrendData[]>([]);
@@ -376,9 +376,9 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
       
       showToast('Comprehensive analysis with market data loaded successfully!', 'success');
     } catch (error) {
-      showToast('Failed to load comprehensive analysis', 'error');
-      setDataSource('mock');
-      generateAdvancedMockData();
+      showToast('Failed to load comprehensive analysis. Please ensure you have connected your QuickBooks account.', 'error');
+      setDataSource('real'); // Keep it as real, don't switch to mock
+      // Don't call generateAdvancedMockData() - let the user see the error state
     } finally {
       setLoadingFinancialData(false);
     }
