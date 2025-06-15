@@ -11,8 +11,9 @@ interface Contact {
   phone?: string
   industry?: string
   company_id?: string
-  created_at?: string
-  updated_at?: string
+  workflow_stage?: string
+  created_at: string
+  updated_at: string
 }
 
 interface ContactEditModalProps {
