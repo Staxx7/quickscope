@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Eye, Calendar, BarChart3, TrendingUp, DollarSign, Users, Building2, Brain, Zap, AlertCircle, CheckCircle, Clock, RefreshCw, Target, Shield, Presentation, Star, Upload } from 'lucide-react';
+import { FileText, Download, Eye, Calendar, BarChart3, TrendingUp, DollarSign, Users, Building2, Brain, Zap, AlertCircle, CheckCircle, Clock, RefreshCw, Target, Shield, Presentation, Star, Upload, FileSearch } from 'lucide-react';
 import { useToast } from './Toast';
 
 interface ConnectedCompany {
@@ -87,12 +87,11 @@ interface ReportTemplate {
   id: string;
   name: string;
   description: string;
-  type: 'financial' | 'audit' | 'analysis' | 'comprehensive' | 'investor';
   icon: React.ReactNode;
+  sections: string[];
+  color: string;
   estimatedTime: string;
-  requirements: string[];
-  features: string[];
-  sampleSections: string[];
+  requiredData: string[];
 }
 
 interface GenerationStage {
@@ -119,135 +118,88 @@ export default function EnhancedAIReportGenerator() {
 
   const reportTemplates: ReportTemplate[] = [
     {
-      id: 'comprehensive',
-      name: 'Comprehensive Financial Analysis',
-      description: 'Complete financial health assessment with AI-powered insights, call analysis integration, and strategic recommendations',
-      type: 'comprehensive',
-      icon: <Brain className="w-6 h-6" />,
-      estimatedTime: '5-8 minutes',
-      requirements: ['QuickBooks financial data', 'Call transcripts (optional)', 'Company information'],
-      features: [
-        'AI-powered financial health scoring',
-        'Call transcript analysis integration',
-        'Industry benchmarking',
-        'Risk assessment matrix',
-        'Opportunity identification',
-        'Personalized recommendations',
-        'Executive summary with action items'
-      ],
-      sampleSections: [
-        'Executive Summary & Health Score',
-        'Financial Performance Analysis',
-        'Call Insights Integration',
-        'Industry Benchmarking',
-        'Risk & Opportunity Matrix',
+      id: 'executive-summary',
+      name: 'Executive Summary',
+      description: 'High-level overview with key metrics and recommendations',
+      icon: <FileText className="w-5 h-5" />,
+      sections: [
+        'Company Overview',
+        'Financial Health Score',
+        'Key Findings',
         'Strategic Recommendations',
-        'Proposed Engagement Plan'
-      ]
+        'Implementation Roadmap'
+      ],
+      color: 'from-blue-500 to-cyan-500',
+      estimatedTime: '2-3 minutes',
+      requiredData: ['financial', 'ai-analysis']
     },
     {
-      id: 'audit',
-      name: 'Professional Audit Deck',
-      description: 'Client-ready presentation with executive summary, financial analysis, and strategic recommendations for audit calls',
-      type: 'audit',
-      icon: <Presentation className="w-6 h-6" />,
-      estimatedTime: '6-10 minutes',
-      requirements: ['Financial data', 'Discovery call transcripts', 'Industry context'],
-      features: [
-        'Professional slide-based presentation',
-        'Executive-level insights',
-        'Pain point to solution mapping',
-        'ROI calculations',
-        'Phased implementation approach',
-        'Budget-aligned proposals',
-        'Success metrics framework'
+      id: 'financial-analysis',
+      name: 'Financial Deep Dive',
+      description: 'Comprehensive financial analysis with benchmarks and projections',
+      icon: <TrendingUp className="w-5 h-5" />,
+      sections: [
+        'Revenue Analysis',
+        'Expense Breakdown',
+        'Cash Flow Assessment',
+        'Financial Ratios',
+        'Industry Benchmarks',
+        'Growth Projections'
       ],
-      sampleSections: [
-        'Executive Summary Slide',
+      color: 'from-green-500 to-emerald-500',
+      estimatedTime: '3-4 minutes',
+      requiredData: ['financial', 'industry-data']
+    },
+    {
+      id: 'sales-intelligence',
+      name: 'Sales Intelligence Report',
+      description: 'Prospect insights with pain points and opportunity analysis',
+      icon: <Target className="w-5 h-5" />,
+      sections: [
+        'Prospect Profile',
+        'Pain Point Analysis',
+        'Decision Maker Map',
+        'Competitive Landscape',
+        'Opportunity Assessment',
+        'Recommended Approach'
+      ],
+      color: 'from-purple-500 to-pink-500',
+      estimatedTime: '2-3 minutes',
+      requiredData: ['transcript', 'ai-analysis']
+    },
+    {
+      id: 'risk-assessment',
+      name: 'Risk & Opportunity Assessment',
+      description: 'Identify risks and opportunities with mitigation strategies',
+      icon: <Shield className="w-5 h-5" />,
+      sections: [
+        'Risk Overview',
+        'Financial Risks',
+        'Operational Risks',
+        'Market Risks',
+        'Opportunity Matrix',
+        'Mitigation Strategies'
+      ],
+      color: 'from-red-500 to-orange-500',
+      estimatedTime: '3-4 minutes',
+      requiredData: ['financial', 'market-data']
+    },
+    {
+      id: 'custom-audit',
+      name: 'Custom Audit Report',
+      description: 'Tailored report based on specific client needs',
+      icon: <FileSearch className="w-5 h-5" />,
+      sections: [
+        'Audit Objectives',
         'Current State Analysis',
-        'Identified Opportunities',
-        'Recommended Solutions',
-        'Implementation Roadmap',
-        'Investment & ROI',
-        'Next Steps & Timeline'
-      ]
-    },
-    {
-      id: 'financial',
-      name: 'Financial Performance Analysis',
-      description: 'Deep-dive financial analysis focusing on performance metrics, trends, and operational efficiency',
-      type: 'financial',
-      icon: <BarChart3 className="w-6 h-6" />,
-      estimatedTime: '3-5 minutes',
-      requirements: ['QuickBooks data', 'Historical financial statements'],
-      features: [
-        'Detailed financial ratio analysis',
-        'Trend identification',
-        'Cash flow analysis',
-        'Profitability optimization',
-        'Working capital assessment',
-        'Growth trajectory modeling'
+        'Gap Analysis',
+        'Recommendations',
+        'Implementation Plan',
+        'Success Metrics'
       ],
-      sampleSections: [
-        'Financial Health Overview',
-        'Revenue & Growth Analysis',
-        'Profitability Deep Dive',
-        'Cash Flow & Liquidity',
-        'Operational Efficiency',
-        'Financial Projections'
-      ]
-    },
-    {
-      id: 'investor',
-      name: 'Investor-Ready Analysis',
-      description: 'Sophisticated financial analysis optimized for investor presentations and fundraising activities',
-      type: 'investor',
-      icon: <Star className="w-6 h-6" />,
-      estimatedTime: '8-12 minutes',
-      requirements: ['Comprehensive financial data', 'Market analysis', 'Growth projections'],
-      features: [
-        'Investment thesis development',
-        'Market opportunity sizing',
-        'Competitive positioning',
-        'Financial projections',
-        'Risk factor analysis',
-        'Use of funds planning',
-        'Exit strategy considerations'
-      ],
-      sampleSections: [
-        'Investment Thesis',
-        'Market Opportunity',
-        'Financial Performance',
-        'Growth Strategy',
-        'Risk Mitigation',
-        'Financial Projections',
-        'Funding Requirements'
-      ]
-    },
-    {
-      id: 'analysis',
-      name: 'Strategic Business Analysis',
-      description: 'Comprehensive business analysis with growth projections, market positioning, and strategic planning insights',
-      type: 'analysis',
-      icon: <Target className="w-6 h-6" />,
-      estimatedTime: '4-7 minutes',
-      requirements: ['Financial data', 'Market research', 'Business objectives'],
-      features: [
-        'SWOT analysis integration',
-        'Market positioning assessment',
-        'Growth opportunity mapping',
-        'Strategic planning framework',
-        'Competitive analysis',
-        'Implementation roadmap'
-      ],
-      sampleSections: [
-        'Business Overview',
-        'Market Position Analysis',
-        'SWOT Assessment',
-        'Growth Opportunities',
-        'Strategic Initiatives',
-        'Implementation Plan'
-      ]
+      color: 'from-indigo-500 to-purple-500',
+      estimatedTime: '4-5 minutes',
+      requiredData: ['financial', 'transcript', 'ai-analysis']
     }
   ];
 
@@ -369,37 +321,102 @@ export default function EnhancedAIReportGenerator() {
     }
   };
 
-  const generateAIReport = async (templateId: string) => {
-    if (!selectedCompany || !financialData) {
-      setError('Please ensure financial data is available for the selected company.');
+  const generateReport = async () => {
+    if (!selectedTemplate || !selectedCompany) {
+      showToast('Please select a template and ensure company data is available', 'error');
       return;
     }
 
     setIsGenerating(true);
-    setError(null);
+    setGenerationStage({
+      stage: 'Initializing report generation...',
+      progress: 5,
+      message: 'Setting up report parameters',
+      currentTask: 'Initialization'
+    });
 
     try {
-      const template = reportTemplates.find(t => t.id === templateId);
-      if (!template) throw new Error('Template not found');
+      // Fetch real financial data
+      setGenerationStage({
+        stage: 'Fetching financial data...',
+        progress: 20,
+        message: 'Loading QuickBooks data',
+        currentTask: 'Data retrieval'
+      });
+      const financialResponse = await fetch(`/api/financial-data/${selectedCompany.realm_id}`);
+      if (!financialResponse.ok) {
+        throw new Error('Failed to fetch financial data');
+      }
+      const financialData = await financialResponse.json();
 
-      const reportId = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Fetch transcript data if available
+      setGenerationStage({
+        stage: 'Analyzing call transcripts...',
+        progress: 40,
+        message: 'Processing conversation insights',
+        currentTask: 'Transcript analysis'
+      });
+      let transcriptData = null;
+      try {
+        const transcriptResponse = await fetch(`/api/transcripts/${selectedCompany.realm_id}`);
+        if (transcriptResponse.ok) {
+          transcriptData = await transcriptResponse.json();
+        }
+      } catch (error) {
+        console.log('No transcript data available');
+      }
+
+      // Generate AI insights
+      setGenerationStage({
+        stage: 'Generating AI insights...',
+        progress: 60,
+        message: 'Creating intelligent recommendations',
+        currentTask: 'AI processing'
+      });
+      const aiResponse = await fetch('/api/ai/generate-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateId: selectedTemplate,
+          companyId: selectedCompany.realm_id,
+          companyName: selectedCompany.company_name,
+          financialData,
+          transcriptData,
+          includeCharts: true,
+          includeRecommendations: true,
+          reportFormat: 'html'
+        })
+      });
+
+      if (!aiResponse.ok) {
+        throw new Error('Failed to generate report');
+      }
+
+      const reportData = await aiResponse.json();
       
-      // Initialize report
-      const newReport: GeneratedReport = {
-        id: reportId,
-        title: `${template.name} - ${selectedCompany.company_name}`,
-        type: template.type,
-        status: 'generating',
+      setGenerationStage({
+        stage: 'Finalizing report...',
+        progress: 90,
+        message: 'Compiling final document',
+        currentTask: 'Report compilation'
+      });
+      
+      // Create report content based on real data
+      const report: GeneratedReport = {
+        id: `report-${Date.now()}`,
+        title: `${reportTemplates.find(t => t.id === selectedTemplate)?.name} - ${selectedCompany.company_name}`,
+        type: 'comprehensive',
+        status: 'completed',
         generatedAt: new Date().toISOString(),
         company_id: selectedCompany.realm_id,
         data: {
           financial: financialData,
-          transcripts: transcripts,
-          insights: [],
-          recommendations: [],
+          transcripts: transcriptData || [],
+          insights: reportData.insights || [],
+          recommendations: reportData.recommendations || [],
           opportunities: [],
           risks: [],
-          executiveSummary: {
+          executiveSummary: reportData.executiveSummary || {
             overallScore: 0,
             keyMetrics: [],
             criticalFindings: [],
@@ -409,264 +426,16 @@ export default function EnhancedAIReportGenerator() {
         }
       };
 
-      setGeneratedReports(prev => [newReport, ...prev]);
-
-      // AI Generation stages
-      const stages = [
-        { stage: 'Initializing AI analysis...', progress: 5, message: 'Setting up intelligent processing', currentTask: 'System initialization' },
-        { stage: 'Analyzing financial data...', progress: 15, message: 'Processing QuickBooks financial metrics', currentTask: 'Financial data extraction' },
-        { stage: 'Processing call transcripts...', progress: 25, message: 'Extracting insights from sales conversations', currentTask: 'Transcript analysis' },
-        { stage: 'Calculating health scores...', progress: 35, message: 'Computing financial health indicators', currentTask: 'Health score calculation' },
-        { stage: 'Benchmarking against industry...', progress: 45, message: 'Comparing performance to industry standards', currentTask: 'Industry benchmarking' },
-        { stage: 'Identifying opportunities...', progress: 55, message: 'Mapping growth and optimization opportunities', currentTask: 'Opportunity analysis' },
-        { stage: 'Assessing risk factors...', progress: 65, message: 'Evaluating potential business risks', currentTask: 'Risk assessment' },
-        { stage: 'Generating recommendations...', progress: 75, message: 'Creating personalized strategic recommendations', currentTask: 'Recommendation engine' },
-        { stage: 'Creating executive summary...', progress: 85, message: 'Compiling key insights and findings', currentTask: 'Executive summary' },
-        { stage: 'Finalizing report...', progress: 95, message: 'Generating professional presentation', currentTask: 'Report compilation' },
-        { stage: 'Report generation complete!', progress: 100, message: 'AI analysis ready for review', currentTask: 'Completed' }
-      ];
-
-      for (const stage of stages) {
-        setGenerationStage(stage);
-        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
-      }
-
-      // Generate comprehensive analysis
-      const aiInsights = generateAIInsights(financialData, transcripts, template.type);
-      const opportunities = generateOpportunities(financialData, transcripts);
-      const risks = generateRisks(financialData, transcripts);
-      const recommendations = generateRecommendations(financialData, transcripts, template.type);
-      const executiveSummary = generateExecutiveSummary(financialData, transcripts, aiInsights);
-      const proposedServices = generateProposedServices(financialData, transcripts);
-
-      const completedReport: GeneratedReport = {
-        ...newReport,
-        status: 'completed',
-        data: {
-          ...newReport.data,
-          insights: aiInsights,
-          opportunities,
-          risks,
-          recommendations,
-          executiveSummary,
-          proposedServices
-        }
-      };
-
-      setGeneratedReports(prev => 
-        prev.map(report => 
-          report.id === reportId ? completedReport : report
-        )
-      );
-
-      showToast(`${template.name} generated successfully!`, 'success');
-      setActiveTab('reports');
-
-    } catch (error) {
-      console.error('Error generating report:', error);
-      setError('Failed to generate report. Please try again.');
+      setGeneratedReports(prev => [report, ...prev]);
+      showToast('Report generated successfully!', 'success');
       
-      setGeneratedReports(prev => 
-        prev.map(report => 
-          report.id.includes(Date.now().toString()) 
-            ? { ...report, status: 'error' as const }
-            : report
-        )
-      );
-      showToast('Report generation failed', 'error');
+    } catch (error) {
+      console.error('Report generation error:', error);
+      showToast('Failed to generate report. Please ensure all required data is available.', 'error');
     } finally {
       setIsGenerating(false);
-      setTimeout(() => setGenerationStage(null), 2000);
+      setGenerationStage(null);
     }
-  };
-
-  // AI Generation Helper Functions
-  const generateAIInsights = (financial: FinancialData, transcripts: TranscriptData[], reportType: string): string[] => {
-    const insights = [];
-    
-    // Financial insights
-    const revenueGrowth = financial.growth_rate * 100;
-    insights.push(`Revenue growth of ${revenueGrowth.toFixed(1)}% significantly exceeds industry average of 15.2%`);
-    
-    const profitMargin = financial.profit_margin * 100;
-    insights.push(`Net profit margin of ${profitMargin.toFixed(1)}% indicates ${profitMargin > 20 ? 'excellent' : profitMargin > 15 ? 'good' : 'adequate'} profitability`);
-    
-    insights.push(`Current ratio of ${financial.current_ratio.toFixed(1)} demonstrates ${financial.current_ratio > 2 ? 'strong' : 'adequate'} liquidity position`);
-    
-    // Call transcript insights
-    if (transcripts.length > 0) {
-      const avgSalesScore = transcripts.reduce((sum, t) => sum + t.sales_score, 0) / transcripts.length;
-      insights.push(`Average sales conversation score of ${avgSalesScore.toFixed(0)}/100 indicates ${avgSalesScore > 80 ? 'high-quality' : 'moderate'} opportunity potential`);
-      
-      const commonPainPoints = transcripts.flatMap(t => t.pain_points);
-      if (commonPainPoints.length > 0) {
-        insights.push(`Recurring operational challenges identified: ${commonPainPoints.slice(0, 2).join(', ')}`);
-      }
-      
-      const highUrgencyCount = transcripts.filter(t => t.urgency === 'high').length;
-      if (highUrgencyCount > 0) {
-        insights.push(`${highUrgencyCount} of ${transcripts.length} conversations indicate high implementation urgency`);
-      }
-    }
-    
-    // Report-type specific insights
-    if (reportType === 'investor') {
-      insights.push(`Strong fundamentals support investment thesis with projected 3-year CAGR of 35-40%`);
-      insights.push(`Market opportunity and execution capability align for potential 10x valuation growth`);
-    } else if (reportType === 'audit') {
-      insights.push(`Financial infrastructure assessment reveals immediate optimization opportunities worth $150K+ annually`);
-      insights.push(`Operational scaling requirements align with strategic growth objectives`);
-    }
-    
-    return insights;
-  };
-
-  const generateOpportunities = (financial: FinancialData, transcripts: TranscriptData[]) => {
-    return [
-      {
-        title: 'Financial Process Automation',
-        description: 'Implement automated reporting and analytics to reduce manual work and improve accuracy',
-        value: 127000,
-        timeline: '3-6 months',
-        priority: 'high' as const
-      },
-      {
-        title: 'Working Capital Optimization',
-        description: 'Optimize accounts receivable and inventory management to improve cash flow',
-        value: 85000,
-        timeline: '1-3 months',
-        priority: 'high' as const
-      },
-      {
-        title: 'Strategic Pricing Review',
-        description: 'Analyze pricing strategy to identify margin improvement opportunities',
-        value: 275000,
-        timeline: '6-12 months',
-        priority: 'medium' as const
-      },
-      {
-        title: 'Market Expansion Strategy',
-        description: 'Develop systematic approach to geographic or vertical market expansion',
-        value: 450000,
-        timeline: '12-18 months',
-        priority: 'medium' as const
-      }
-    ];
-  };
-
-  const generateRisks = (financial: FinancialData, transcripts: TranscriptData[]) => {
-    return [
-      {
-        title: 'Customer Concentration Risk',
-        description: 'High dependency on top customers creates revenue vulnerability',
-        impact: 'High - potential 40% revenue impact if top client lost',
-        mitigation: 'Implement customer diversification strategy and strengthen relationships'
-      },
-      {
-        title: 'Operational Scaling Challenges',
-        description: 'Current systems may not support planned growth trajectory',
-        impact: 'Medium - could limit growth to 50% of potential',
-        mitigation: 'Invest in scalable financial and operational infrastructure'
-      },
-      {
-        title: 'Market Competition Intensification',
-        description: 'Increasing competitive pressure in core markets',
-        impact: 'Medium - potential margin compression of 5-8%',
-        mitigation: 'Strengthen competitive differentiation and customer value proposition'
-      }
-    ];
-  };
-
-  const generateRecommendations = (financial: FinancialData, transcripts: TranscriptData[], reportType: string): string[] => {
-    const recommendations = [];
-    
-    // Financial recommendations
-    if (financial.current_ratio > 3) {
-      recommendations.push('Optimize excess cash position through strategic investments or debt reduction');
-    } else if (financial.current_ratio < 1.5) {
-      recommendations.push('Improve working capital management to enhance liquidity position');
-    }
-    
-    if (financial.profit_margin < 0.15) {
-      recommendations.push('Implement cost optimization initiatives to improve profit margins');
-    } else if (financial.profit_margin > 0.25) {
-      recommendations.push('Consider strategic investments in growth initiatives given strong profitability');
-    }
-    
-    // Transcript-based recommendations
-    if (transcripts.some(t => t.pain_points.includes('manual'))) {
-      recommendations.push('Prioritize financial process automation to address operational inefficiencies');
-    }
-    
-    if (transcripts.some(t => t.business_goals.includes('scale') || t.business_goals.includes('grow'))) {
-      recommendations.push('Develop scalable financial infrastructure to support aggressive growth targets');
-    }
-    
-    // Report-type specific recommendations
-    if (reportType === 'audit') {
-      recommendations.push('Implement monthly financial close process to reduce reporting cycle time');
-      recommendations.push('Establish key performance indicator (KPI) dashboard for real-time visibility');
-    } else if (reportType === 'investor') {
-      recommendations.push('Enhance financial reporting and metrics tracking for investor readiness');
-      recommendations.push('Develop comprehensive financial projections and scenario modeling');
-    }
-    
-    recommendations.push('Establish strategic financial planning process with quarterly reviews');
-    recommendations.push('Consider fractional CFO services to provide strategic financial leadership');
-    
-    return recommendations;
-  };
-
-  const generateExecutiveSummary = (financial: FinancialData, transcripts: TranscriptData[], insights: string[]) => {
-    const overallScore = Math.min(100, Math.max(0, 
-      (financial.profit_margin * 100) + 
-      (financial.growth_rate * 50) + 
-      (financial.current_ratio * 10) + 
-      (transcripts.reduce((sum, t) => sum + t.sales_score, 0) / transcripts.length || 0) / 2
-    ));
-
-    return {
-      overallScore: Math.round(overallScore),
-      keyMetrics: [
-        { name: 'Revenue Growth', value: `${(financial.growth_rate * 100).toFixed(1)}%`, trend: 'up' },
-        { name: 'Profit Margin', value: `${(financial.profit_margin * 100).toFixed(1)}%`, trend: 'stable' },
-        { name: 'Current Ratio', value: financial.current_ratio.toFixed(1), trend: financial.current_ratio > 2 ? 'up' : 'stable' },
-        { name: 'Sales Opportunity Score', value: `${transcripts.length > 0 ? Math.round(transcripts.reduce((sum, t) => sum + t.sales_score, 0) / transcripts.length) : 85}/100`, trend: 'up' }
-      ],
-      criticalFindings: insights.slice(0, 3),
-      nextSteps: [
-        'Schedule strategic planning session to align on priorities',
-        'Implement quick-win optimizations within 30 days',
-        'Develop comprehensive improvement roadmap',
-        'Begin fractional CFO engagement for strategic oversight'
-      ]
-    };
-  };
-
-  const generateProposedServices = (financial: FinancialData, transcripts: TranscriptData[]) => {
-    return [
-      {
-        name: 'Fractional CFO Services',
-        description: 'Strategic financial leadership and oversight',
-        investment: '$8,000-12,000/month',
-        roi: '400% Year 1',
-        timeline: 'Immediate start'
-      },
-      {
-        name: 'Financial Systems Implementation',
-        description: 'Automated reporting and analytics platform',
-        investment: '$15,000-25,000 setup',
-        roi: '350% Year 1',
-        timeline: '3-6 months'
-      },
-      {
-        name: 'Strategic Planning & Analysis',
-        description: 'Comprehensive business planning and financial modeling',
-        investment: '$5,000-8,000/month',
-        roi: '280% Year 1',
-        timeline: 'Ongoing'
-      }
-    ];
   };
 
   const downloadReport = (report: GeneratedReport) => {
@@ -1184,23 +953,14 @@ export default function EnhancedAIReportGenerator() {
                   <div className="mb-4">
                     <h4 className="text-sm font-medium text-white mb-2">Key Features:</h4>
                     <ul className="text-xs text-gray-400 space-y-1">
-                      {template.features.slice(0, 3).map((feature, index) => (
-                        <li key={index}>• {feature}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  
-                  <div className="mb-4">
-                    <h4 className="text-sm font-medium text-white mb-2">Report Sections:</h4>
-                    <ul className="text-xs text-gray-400 space-y-1">
-                      {template.sampleSections.slice(0, 4).map((section, index) => (
+                      {template.sections.slice(0, 3).map((section, index) => (
                         <li key={index}>• {section}</li>
                       ))}
                     </ul>
                   </div>
                   
                   <div className="text-xs text-gray-500">
-                    <strong>Requirements:</strong> {template.requirements.join(', ')}
+                    <strong>Requirements:</strong> {template.requiredData.join(', ')}
                   </div>
                 </div>
               ))}
@@ -1208,7 +968,7 @@ export default function EnhancedAIReportGenerator() {
 
             <div className="mt-8 text-center">
               <button
-                onClick={() => generateAIReport(selectedTemplate)}
+                onClick={generateReport}
                 disabled={!selectedCompany || !financialData || isGenerating}
                 className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-xl hover:from-purple-700 hover:to-blue-700 disabled:from-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed font-medium flex items-center space-x-2 mx-auto"
               >
@@ -1336,10 +1096,10 @@ export default function EnhancedAIReportGenerator() {
                         <div>
                           <h4 className="font-medium text-white mb-2">Key Features</h4>
                           <ul className="text-sm text-gray-400 space-y-1">
-                            {template.features.map((feature, index) => (
+                            {template.sections.map((section, index) => (
                               <li key={index} className="flex items-start">
-                                <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                                {feature}
+                                <FileText className="w-4 h-4 text-blue-400 mr-2 mt-0.5 flex-shrink-0" />
+                                {section}
                               </li>
                             ))}
                           </ul>
@@ -1348,7 +1108,7 @@ export default function EnhancedAIReportGenerator() {
                         <div>
                           <h4 className="font-medium text-white mb-2">Report Sections</h4>
                           <ul className="text-sm text-gray-400 space-y-1">
-                            {template.sampleSections.map((section, index) => (
+                            {template.sections.map((section, index) => (
                               <li key={index} className="flex items-start">
                                 <FileText className="w-4 h-4 text-blue-400 mr-2 mt-0.5 flex-shrink-0" />
                                 {section}
@@ -1361,7 +1121,7 @@ export default function EnhancedAIReportGenerator() {
                       <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
                         <div className="text-sm text-gray-400">
                           <span className="font-medium">Estimated Time:</span> {template.estimatedTime} • 
-                          <span className="font-medium ml-2">Requirements:</span> {template.requirements.join(', ')}
+                          <span className="font-medium ml-2">Requirements:</span> {template.requiredData.join(', ')}
                         </div>
                         <button
                           onClick={() => {

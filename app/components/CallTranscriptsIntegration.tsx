@@ -175,7 +175,7 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          transcriptText: fileContent || transcript.transcriptText || 'Sample transcript content for analysis',
+          transcriptText: fileContent || transcript.transcriptText || '',
           companyId: transcript.companyId,
           callType: transcript.callType
         })
@@ -188,60 +188,12 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
         throw new Error('Analysis failed');
       }
     } catch (error) {
-      console.error('AI analysis error:', error);
-      
-      // Fallback to sophisticated mock analysis
-      aiAnalysis = {
-        painPoints: [
-          'Manual financial reporting taking too much time',
-          'Lack of real-time visibility into cash flow',
-          'Difficulty in making data-driven decisions',
-          'Struggling with month-end close processes',
-          'Limited financial forecasting capabilities'
-        ],
-        businessGoals: [
-          'Scale operations to $10M ARR within 18 months',
-          'Improve operational efficiency by 25%',
-          'Expand into new geographic markets',
-          'Automate financial processes',
-          'Improve investor reporting capabilities'
-        ],
-        budgetIndications: [
-          'Mentioned $8-12K monthly budget for financial services',
-          'Currently spending $5K/month on accounting',
-          'Looking for ROI within 6 months',
-          'Budget approved for Q2 implementation'
-        ],
-        decisionMakers: [
-          { name: 'Sarah Johnson', role: 'CEO', influence: 'high' as const },
-          { name: 'Mike Chen', role: 'CFO', influence: 'high' as const },
-          { name: 'Lisa Rodriguez', role: 'Operations Director', influence: 'medium' as const }
-        ],
-        competitiveThreats: [
-          'Currently evaluating 2 other fractional CFO services',
-          'Considering hiring full-time CFO',
-          'Existing relationship with local accounting firm'
-        ],
-        urgency: 'high' as const,
-        nextSteps: [
-          'Schedule audit call for next week',
-          'Provide financial analysis within 3 days',
-          'Present comprehensive proposal',
-          'Arrange stakeholder meeting'
-        ],
-        salesScore: Math.floor(Math.random() * 30) + 70, // 70-100 range
-        financialInsights: [
-          'Company shows strong revenue growth trajectory',
-          'Cash flow management needs immediate attention',
-          'Financial reporting infrastructure is outdated',
-          'Investment in automation would yield 300% ROI'
-        ],
-        riskFactors: [
-          'Multiple vendors in evaluation process',
-          'Decision timeline may extend beyond Q2',
-          'Budget constraints mentioned for additional services'
-        ]
-      };
+      console.error('Analysis error:', error)
+      showToast('Failed to analyze transcript. Please ensure the transcript contains valid content.', 'error')
+      // Don't fall back to mock analysis
+    } finally {
+      setAiProcessing(null);
+      setActiveToastId(null);
     }
 
     // Store transcript in Supabase
@@ -267,12 +219,6 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
     } catch (error) {
       console.error('Error storing transcript:', error);
     }
-
-    // Clear AI processing state after a short delay
-    setTimeout(() => {
-      setAiProcessing(null);
-      setActiveToastId(null); // Clear active toast ID
-    }, 1000);
 
     return {
       ...transcript,
@@ -354,6 +300,12 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
           } else {
             transcriptText = 'Document parsing not available - using mock content for demo';
           }
+        }
+
+        // Validate transcript content
+        if (!transcriptText || transcriptText.trim().length === 0) {
+          showToast('The uploaded file appears to be empty', 'error')
+          return
         }
 
         // Process with AI
