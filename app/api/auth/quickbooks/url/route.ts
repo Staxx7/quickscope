@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { config } from '@/app/lib/config'
 
 export async function GET(request: NextRequest) {
   try {

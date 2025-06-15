@@ -11,15 +11,32 @@ function ConnectContent() {
   const companyId = searchParams.get('company')
   const [authUrl, setAuthUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const getAuthUrl = async () => {
       try {
+        console.log('Fetching auth URL...')
         const response = await fetch('/api/auth/quickbooks/url')
+        console.log('Response status:', response.status)
+        
+        if (!response.ok) {
+          const errorData = await response.text()
+          console.error('Error response:', errorData)
+          throw new Error(`Failed to get auth URL: ${response.status} ${errorData}`)
+        }
+        
         const data = await response.json()
+        console.log('Auth URL data:', data)
+        
+        if (data.error) {
+          throw new Error(data.error)
+        }
+        
         setAuthUrl(data.url)
       } catch (error) {
         console.error('Error getting auth URL:', error)
+        setError(error instanceof Error ? error.message : 'Failed to get authorization URL')
       } finally {
         setLoading(false)
       }
@@ -34,6 +51,7 @@ function ConnectContent() {
       if (companyId) {
         sessionStorage.setItem('connectingCompany', companyId)
       }
+      console.log('Redirecting to:', authUrl)
       window.location.href = authUrl
     }
   }
@@ -58,11 +76,25 @@ function ConnectContent() {
             Securely link your QuickBooks account to enable real-time financial analysis and AI-powered insights.
           </p>
 
+          {error && (
+            <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-red-200 text-sm">
+              <p className="font-semibold mb-1">Connection Error</p>
+              <p>{error}</p>
+            </div>
+          )}
+
           <div className="space-y-4">
             {loading ? (
               <div className="py-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
               </div>
+            ) : error ? (
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Retry Connection
+              </button>
             ) : (
               <button
                 onClick={handleConnect}
