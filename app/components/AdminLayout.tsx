@@ -286,7 +286,7 @@ export default function EnhancedAdminLayout({ children, currentPage }: AdminLayo
         {/* Page content */}
         <main className="flex-1">
           {/* Enhanced breadcrumb/page header */}
-          <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
+          <div className="bg-white/5 backdrop-blur-sm border-b border-white/10 relative z-50">
             <div className="px-4 sm:px-6 lg:px-8 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-6 flex-1">
@@ -300,7 +300,7 @@ export default function EnhancedAdminLayout({ children, currentPage }: AdminLayo
                   </div>
                   
                   {/* Global Company Selector - with better spacing */}
-                  <div className="hidden md:block ml-auto mr-4">
+                  <div className="hidden md:block ml-auto mr-4 relative z-[10000]" style={{ isolation: 'isolate' }}>
                     <GlobalCompanySelector />
                   </div>
                 </div>
@@ -315,7 +315,7 @@ export default function EnhancedAdminLayout({ children, currentPage }: AdminLayo
               </div>
               
               {/* Mobile Company Selector - with better styling */}
-              <div className="mt-4 md:hidden">
+              <div className="mt-4 md:hidden relative z-[10000]" style={{ isolation: 'isolate' }}>
                 <GlobalCompanySelector />
               </div>
             </div>

@@ -125,56 +125,68 @@ export default function ConnectedCompaniesWorkflow({ companies }: Props) {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+      {/* Consolidated Dashboard Cards - Combining stats and workflow progress */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        {/* Total Connected */}
         <div className="bg-white/5 backdrop-blur-xl rounded-xl p-4 border border-white/10">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-400 text-sm">Total Connected</p>
-              <p className="text-2xl font-bold text-white">{stats.total}</p>
-            </div>
-            <CheckCircle className="w-8 h-8 text-green-400" />
+          <div className="flex items-center justify-between mb-2">
+            <CheckCircle className="w-6 h-6 text-green-400" />
           </div>
+          <p className="text-2xl font-bold text-white">{stats.total}</p>
+          <p className="text-slate-400 text-xs">Total Connected</p>
         </div>
 
-        <div className="bg-white/5 backdrop-blur-xl rounded-xl p-4 border border-white/10">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-400 text-sm">With Contacts</p>
-              <p className="text-2xl font-bold text-white">{stats.withProspects}</p>
-            </div>
-            <Users className="w-8 h-8 text-blue-400" />
+        {/* Need Contact Info */}
+        <div className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/10 border border-yellow-500/20 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <AlertCircle className="w-6 h-6 text-yellow-400" />
           </div>
+          <p className="text-2xl font-bold text-white">
+            {companies.filter(c => c.workflow_stage === 'needs_prospect_info').length}
+          </p>
+          <p className="text-xs text-slate-300">Need Contact</p>
         </div>
 
-        <div className="bg-white/5 backdrop-blur-xl rounded-xl p-4 border border-white/10">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-400 text-sm">With Financials</p>
-              <p className="text-2xl font-bold text-white">{stats.withFinancials}</p>
-            </div>
-            <DollarSign className="w-8 h-8 text-emerald-400" />
+        {/* Need Transcripts */}
+        <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 border border-orange-500/20 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <FileText className="w-6 h-6 text-orange-400" />
           </div>
+          <p className="text-2xl font-bold text-white">
+            {companies.filter(c => c.workflow_stage === 'needs_transcript').length}
+          </p>
+          <p className="text-xs text-slate-300">Need Transcript</p>
         </div>
 
-        <div className="bg-white/5 backdrop-blur-xl rounded-xl p-4 border border-white/10">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-400 text-sm">AI Analyzed</p>
-              <p className="text-2xl font-bold text-white">{stats.withAnalysis}</p>
-            </div>
-            <Brain className="w-8 h-8 text-purple-400" />
+        {/* Need Analysis */}
+        <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <Brain className="w-6 h-6 text-purple-400" />
           </div>
+          <p className="text-2xl font-bold text-white">
+            {companies.filter(c => c.workflow_stage === 'needs_analysis').length}
+          </p>
+          <p className="text-xs text-slate-300">Need Analysis</p>
         </div>
 
-        <div className="bg-white/5 backdrop-blur-xl rounded-xl p-4 border border-white/10">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-400 text-sm">Total Revenue</p>
-              <p className="text-xl font-bold text-white">{formatCurrency(stats.totalRevenue)}</p>
-            </div>
-            <TrendingUp className="w-8 h-8 text-yellow-400" />
+        {/* Ready for Reports */}
+        <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <TrendingUp className="w-6 h-6 text-green-400" />
           </div>
+          <p className="text-2xl font-bold text-white">
+            {companies.filter(c => c.workflow_stage === 'ready_for_report').length}
+          </p>
+          <p className="text-xs text-slate-300">Ready for Report</p>
+        </div>
+
+        {/* Total Revenue */}
+        <div className="bg-white/5 backdrop-blur-xl rounded-xl p-4 border border-white/10">
+          <div className="flex items-center justify-between mb-2">
+            <DollarSign className="w-6 h-6 text-emerald-400" />
+          </div>
+          <p className="text-lg font-bold text-white">{formatCurrency(stats.totalRevenue)}</p>
+          <p className="text-slate-400 text-xs">Total Revenue</p>
         </div>
       </div>
 
@@ -326,54 +338,6 @@ export default function ConnectedCompaniesWorkflow({ companies }: Props) {
               })}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Workflow Progress Overview - Replacing redundant Next Steps */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Companies by Stage */}
-        <div className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/10 border border-yellow-500/20 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Need Contact Info</h3>
-            <AlertCircle className="w-5 h-5 text-yellow-400" />
-          </div>
-          <p className="text-3xl font-bold text-white mb-2">
-            {companies.filter(c => c.workflow_stage === 'needs_prospect_info').length}
-          </p>
-          <p className="text-sm text-slate-300">Companies awaiting contact details</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 border border-orange-500/20 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Need Transcripts</h3>
-            <FileText className="w-5 h-5 text-orange-400" />
-          </div>
-          <p className="text-3xl font-bold text-white mb-2">
-            {companies.filter(c => c.workflow_stage === 'needs_transcript').length}
-          </p>
-          <p className="text-sm text-slate-300">Ready for call transcript upload</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Need Analysis</h3>
-            <Brain className="w-5 h-5 text-purple-400" />
-          </div>
-          <p className="text-3xl font-bold text-white mb-2">
-            {companies.filter(c => c.workflow_stage === 'needs_analysis').length}
-          </p>
-          <p className="text-sm text-slate-300">Awaiting AI financial analysis</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Ready for Reports</h3>
-            <CheckCircle className="w-5 h-5 text-green-400" />
-          </div>
-          <p className="text-3xl font-bold text-white mb-2">
-            {companies.filter(c => c.workflow_stage === 'ready_for_report').length}
-          </p>
-          <p className="text-sm text-slate-300">Complete and ready to generate</p>
         </div>
       </div>
     </div>

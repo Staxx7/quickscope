@@ -150,7 +150,7 @@ function CompanySelectorContent({
   }
 
   return (
-    <div className="relative">
+    <div className="relative z-[9999]">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center justify-between w-full max-w-md px-4 py-2.5 bg-slate-800/80 backdrop-blur-sm border border-slate-700 rounded-lg hover:bg-slate-700/80 transition-all duration-200 hover:border-slate-600 shadow-sm"
@@ -175,12 +175,13 @@ function CompanySelectorContent({
         <>
           {/* Backdrop to close dropdown when clicking outside */}
           <div 
-            className="fixed inset-0 z-[90]" 
+            className="fixed inset-0 z-[9998]" 
             onClick={() => setIsOpen(false)}
           />
           
-          {/* Dropdown menu with higher z-index */}
-          <div className="absolute z-[100] w-full mt-2 bg-slate-800/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl max-h-96 overflow-y-auto">
+          {/* Dropdown menu with higher z-index and fixed positioning */}
+          <div className="absolute z-[9999] w-full mt-2 bg-slate-800/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl max-h-96 overflow-y-auto"
+               style={{ position: 'absolute', top: '100%', left: 0, right: 0 }}>
             {companies.map((company) => (
               <button
                 key={company.company_id}
