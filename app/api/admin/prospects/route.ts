@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseClient'
+import { getSupabaseServerClient } from '@/lib/supabaseClient'
 
 interface ProspectData {
   id: string
@@ -36,6 +36,8 @@ interface ProspectData {
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabaseServerClient()
+    
     // Fetch prospects with their associated data
     const { data: prospects, error: prospectsError } = await supabase
       .from('prospects')
@@ -162,6 +164,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    const supabase = getSupabaseServerClient()
 
     // Create new prospect
     const { data: prospect, error: insertError } = await supabase
