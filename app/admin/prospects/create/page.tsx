@@ -69,7 +69,7 @@ function CreateProspectForm() {
             industry: formData.industry || null,
             annual_revenue: formData.annual_revenue ? parseFloat(formData.annual_revenue) : null,
             employee_count: formData.employee_count ? parseInt(formData.employee_count) : null,
-            workflow_stage: 'connected',
+            workflow_stage: 'needs_transcript',
             user_type: 'prospect',
             qb_company_id: company_id
           })
@@ -111,20 +111,14 @@ function CreateProspectForm() {
         }
       }
 
-      // Update workflow stage based on what data is available
-      try {
-        await fetch('/api/prospects/update-workflow-stage', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prospect_id: prospectId })
-        })
-      } catch (error) {
-        console.error('Error updating workflow stage:', error)
-        // Non-critical error, don't prevent redirect
-      }
-
-      // Redirect back to dashboard
-      router.push('/dashboard')
+      // Force the dashboard to refresh by adding a timestamp parameter
+      const timestamp = new Date().getTime()
+      
+      // Show success message
+      console.log('Contact information saved successfully!')
+      
+      // Redirect back to dashboard with refresh parameter
+      router.push(`/dashboard?refresh=${timestamp}&success=contact_added`)
     } catch (err) {
       console.error('Error creating/updating prospect:', err)
       

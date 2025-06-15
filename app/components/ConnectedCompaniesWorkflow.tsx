@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { RefreshCw, CheckCircle, XCircle, AlertCircle, FileText, Brain, Users, DollarSign, Clock, TrendingUp } from 'lucide-react'
 
 interface Company {
@@ -42,14 +42,59 @@ interface Props {
   companies: Company[]
 }
 
-export default function ConnectedCompaniesWorkflow({ companies }: Props) {
+export default function ConnectedCompaniesWorkflow({ companies: initialCompanies }: Props) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const [companies, setCompanies] = useState<Company[]>(initialCompanies)
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
 
-  const handleRefresh = async () => {
+  // Check for refresh parameter and success message
+  useEffect(() => {
+    const refreshParam = searchParams?.get('refresh')
+    const successParam = searchParams?.get('success')
+    
+    if (refreshParam || successParam === 'contact_added') {
+      // Force refresh the page data
+      fetchLatestData()
+      
+      // Show success message if contact was just added
+      if (successParam === 'contact_added') {
+        setShowSuccessMessage(true)
+        // Hide message after 5 seconds
+        setTimeout(() => {
+          setShowSuccessMessage(false)
+        }, 5000)
+      }
+    }
+  }, [searchParams])
+
+  const fetchLatestData = async () => {
+    try {
+      const response = await fetch('/api/admin/connected-companies')
+      const data = await response.json()
+      if (data.success && data.companies) {
+        setCompanies(data.companies)
+      }
+    } catch (error) {
+      console.error('Error fetching updated data:', error)
+    }
+  }
+
+  const handleRefreshAndSync = async () => {
     setIsRefreshing(true)
-    window.location.reload()
+    try {
+      // First fetch latest data
+      await fetchLatestData()
+      // Then trigger any sync operations (could add sync API call here)
+      setTimeout(() => {
+        setIsRefreshing(false)
+      }, 1000)
+    } catch (error) {
+      console.error('Error refreshing:', error)
+      setIsRefreshing(false)
+    }
   }
 
   const handleCompanyAction = (company: Company, action: string) => {
@@ -107,6 +152,19 @@ export default function ConnectedCompaniesWorkflow({ companies }: Props) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+      {/* Success Message */}
+      {showSuccessMessage && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-in">
+          <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-4 flex items-center space-x-3">
+            <CheckCircle className="w-5 h-5 text-green-400" />
+            <div>
+              <p className="text-white font-medium">Contact Information Added Successfully!</p>
+              <p className="text-green-300 text-sm">The workflow stage has been updated.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
@@ -115,78 +173,69 @@ export default function ConnectedCompaniesWorkflow({ companies }: Props) {
             <p className="text-slate-400">Manage and analyze your connected QuickBooks accounts</p>
           </div>
           <button
-            onClick={handleRefresh}
+            onClick={handleRefreshAndSync}
             disabled={isRefreshing}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
+            <span>Refresh & Sync</span>
           </button>
         </div>
       </div>
 
-      {/* Consolidated Dashboard Cards - Combining stats and workflow progress */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+      {/* Consolidated Dashboard Cards - Now 5 cards with better sizing */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         {/* Total Connected */}
-        <div className="bg-white/5 backdrop-blur-xl rounded-xl p-4 border border-white/10">
-          <div className="flex items-center justify-between mb-2">
-            <CheckCircle className="w-6 h-6 text-green-400" />
+        <div className="bg-white/5 backdrop-blur-xl rounded-xl p-5 border border-white/10">
+          <div className="flex items-center justify-between mb-3">
+            <CheckCircle className="w-7 h-7 text-green-400" />
           </div>
-          <p className="text-2xl font-bold text-white">{stats.total}</p>
-          <p className="text-slate-400 text-xs">Total Connected</p>
+          <p className="text-3xl font-bold text-white">{stats.total}</p>
+          <p className="text-slate-400 text-sm mt-1">Total Connected</p>
         </div>
 
         {/* Need Contact Info */}
-        <div className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/10 border border-yellow-500/20 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <AlertCircle className="w-6 h-6 text-yellow-400" />
+        <div className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/10 border border-yellow-500/20 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <AlertCircle className="w-7 h-7 text-yellow-400" />
           </div>
-          <p className="text-2xl font-bold text-white">
+          <p className="text-3xl font-bold text-white">
             {companies.filter(c => c.workflow_stage === 'needs_prospect_info').length}
           </p>
-          <p className="text-xs text-slate-300">Need Contact</p>
+          <p className="text-sm text-slate-300 mt-1">Need Contact</p>
         </div>
 
         {/* Need Transcripts */}
-        <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 border border-orange-500/20 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <FileText className="w-6 h-6 text-orange-400" />
+        <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 border border-orange-500/20 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <FileText className="w-7 h-7 text-orange-400" />
           </div>
-          <p className="text-2xl font-bold text-white">
+          <p className="text-3xl font-bold text-white">
             {companies.filter(c => c.workflow_stage === 'needs_transcript').length}
           </p>
-          <p className="text-xs text-slate-300">Need Transcript</p>
+          <p className="text-sm text-slate-300 mt-1">Need Transcript</p>
         </div>
 
         {/* Need Analysis */}
-        <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <Brain className="w-6 h-6 text-purple-400" />
+        <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <Brain className="w-7 h-7 text-purple-400" />
           </div>
-          <p className="text-2xl font-bold text-white">
+          <p className="text-3xl font-bold text-white">
             {companies.filter(c => c.workflow_stage === 'needs_analysis').length}
           </p>
-          <p className="text-xs text-slate-300">Need Analysis</p>
+          <p className="text-sm text-slate-300 mt-1">Need Analysis</p>
         </div>
 
         {/* Ready for Reports */}
-        <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <TrendingUp className="w-6 h-6 text-green-400" />
+        <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <TrendingUp className="w-7 h-7 text-green-400" />
           </div>
-          <p className="text-2xl font-bold text-white">
+          <p className="text-3xl font-bold text-white">
             {companies.filter(c => c.workflow_stage === 'ready_for_report').length}
           </p>
-          <p className="text-xs text-slate-300">Ready for Report</p>
-        </div>
-
-        {/* Total Revenue */}
-        <div className="bg-white/5 backdrop-blur-xl rounded-xl p-4 border border-white/10">
-          <div className="flex items-center justify-between mb-2">
-            <DollarSign className="w-6 h-6 text-emerald-400" />
-          </div>
-          <p className="text-lg font-bold text-white">{formatCurrency(stats.totalRevenue)}</p>
-          <p className="text-slate-400 text-xs">Total Revenue</p>
+          <p className="text-sm text-slate-300 mt-1">Ready for Report</p>
         </div>
       </div>
 

@@ -304,14 +304,6 @@ export default function EnhancedAdminLayout({ children, currentPage }: AdminLayo
                     <GlobalCompanySelector />
                   </div>
                 </div>
-                
-                {/* Action buttons */}
-                <div className="flex items-center space-x-3 flex-shrink-0">
-                  <button className="bg-white/10 border border-white/25 text-white px-3 py-2 rounded-lg hover:bg-white/15 transition-all text-sm flex items-center space-x-2">
-                    <RefreshCw className="w-4 h-4" />
-                    <span>Sync All</span>
-                  </button>
-                </div>
               </div>
               
               {/* Mobile Company Selector - with better styling */}
