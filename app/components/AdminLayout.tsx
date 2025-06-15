@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import GlobalCompanySelector from './GlobalCompanySelector'
+import SystemStatus from './SystemStatus'
 import { 
   Database, 
   FileText, 
@@ -34,6 +35,14 @@ const navigation = [
     description: 'Connected accounts with workflow progress tracking',
     badge: null,
     color: 'blue'
+  },
+  {
+    name: 'Contact Management',
+    href: '/dashboard/contacts',
+    icon: Users,
+    description: 'Manage company contacts and information',
+    badge: null,
+    color: 'orange'
   },
   {
     name: 'Call Transcripts',
@@ -68,15 +77,6 @@ const navigation = [
     color: 'indigo'
   }
 ]
-
-const systemStats = {
-  connectedCompanies: 12,
-  reportsGenerated: 47,
-  callsAnalyzed: 23,
-  aiInsights: 156,
-  lastSync: '2 minutes ago',
-  systemHealth: 98
-}
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -190,41 +190,9 @@ export default function EnhancedAdminLayout({ children, currentPage }: AdminLayo
               </div>
             </div>
 
-            {/* System Status */}
+            {/* System Status - Dynamic Component */}
             <div className="px-6 mb-6">
-              <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/30">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-white font-semibold text-sm">System Status</h3>
-                  <div className="flex items-center space-x-1">
-                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                    <span className="text-green-400 text-xs">Online</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <div className="text-gray-400">Companies</div>
-                    <div className="text-white font-semibold">{systemStats.connectedCompanies}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400">Reports</div>
-                    <div className="text-white font-semibold">{systemStats.reportsGenerated}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400">AI Insights</div>
-                    <div className="text-white font-semibold">{systemStats.aiInsights}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400">Health</div>
-                    <div className="text-green-400 font-semibold">{systemStats.systemHealth}%</div>
-                  </div>
-                </div>
-                <div className="mt-3 pt-3 border-t border-white/20">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-400">Last sync</span>
-                    <span className="text-white">{systemStats.lastSync}</span>
-                  </div>
-                </div>
-              </div>
+              <SystemStatus />
             </div>
 
             {/* Navigation */}
