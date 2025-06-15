@@ -69,8 +69,27 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
   const [inputMode, setInputMode] = useState<'upload' | 'paste'>('upload');
   const [pastedTranscript, setPastedTranscript] = useState('');
   const [transcriptTitle, setTranscriptTitle] = useState('');
+  const [activeToastId, setActiveToastId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { showToast, ToastContainer } = useToast();
+  const { showToast: originalShowToast, ToastContainer } = useToast();
+
+  // Wrapper for showToast to handle dismissing previous toasts
+  const showToast = (message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
+    // Generate a unique ID for this toast
+    const toastId = `toast-${Date.now()}`;
+    
+    // If there's an active toast, dismiss it first
+    if (activeToastId) {
+      // Small delay to ensure smooth transition
+      setTimeout(() => {
+        originalShowToast(message, type);
+      }, 100);
+    } else {
+      originalShowToast(message, type);
+    }
+    
+    setActiveToastId(toastId);
+  };
 
   useEffect(() => {
     console.log('CallTranscriptsIntegration mounted with:', { defaultCompanyId, defaultCompanyName })
@@ -249,7 +268,11 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
       console.error('Error storing transcript:', error);
     }
 
-    setTimeout(() => setAiProcessing(null), 1000);
+    // Clear AI processing state after a short delay
+    setTimeout(() => {
+      setAiProcessing(null);
+      setActiveToastId(null); // Clear active toast ID
+    }, 1000);
 
     return {
       ...transcript,
@@ -480,6 +503,42 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
     showToast('Transcript analysis exported', 'success');
   };
 
+  const generateFinancialAnalysis = async (transcript: CallTranscript) => {
+    if (!transcript.companyId || !transcript.aiAnalysis) {
+      showToast('Insufficient data for financial analysis generation', 'warning');
+      return;
+    }
+
+    try {
+      showToast('Generating financial analysis with call insights...', 'info');
+      
+      const response = await fetch('/api/ai/generate-comprehensive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyId: transcript.companyId,
+          transcriptId: transcript.id,
+          callInsights: transcript.aiAnalysis,
+          includeTranscriptInsights: true
+        })
+      });
+
+      if (response.ok) {
+        const analysisData = await response.json();
+        
+        // Navigate to the financial analysis page
+        window.location.href = `/admin/financial-analysis?company=${transcript.companyId}&transcript=${transcript.id}`;
+        
+        showToast('Financial analysis generated successfully!', 'success');
+      } else {
+        throw new Error('Failed to generate financial analysis');
+      }
+    } catch (error) {
+      console.error('Financial analysis generation error:', error);
+      showToast('Failed to generate financial analysis', 'error');
+    }
+  };
+
   const generateAuditDeck = async (transcript: CallTranscript) => {
     if (!transcript.companyId || !transcript.aiAnalysis) {
       showToast('Insufficient data for audit deck generation', 'warning');
@@ -604,14 +663,22 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-medium text-white mb-1">{aiProcessing.stage}</h3>
-              <p className="text-gray-400 text-sm mb-2">{aiProcessing.message}</p>
-              <div className="w-full bg-white/10 rounded-full h-2">
-                <div
-                  className="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 rounded-full transition-all duration-1000"
-                  style={{ width: `${aiProcessing.progress}%` }}
-                />
+              <p className="text-gray-400 text-sm">{aiProcessing.message}</p>
+              <div className="flex items-center mt-2">
+                <div className="flex space-x-1">
+                  {[...Array(10)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-2 h-2 rounded-full ${
+                        i < Math.floor(aiProcessing.progress / 10)
+                          ? 'bg-cyan-400'
+                          : 'bg-white/20'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm text-gray-400 ml-3">{aiProcessing.progress}%</span>
               </div>
-              <div className="text-right text-sm text-gray-400 mt-1">{aiProcessing.progress}%</div>
             </div>
           </div>
         </div>
@@ -1379,21 +1446,35 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-purple-400 mb-1">→</div>
-                        <div className="text-sm text-gray-300">Ready for Audit Deck</div>
+                        <div className="text-sm text-gray-300">Ready for Reports</div>
                       </div>
                     </div>
-                    <div className="mt-4 text-center">
-                      <button 
-                        onClick={() => generateAuditDeck(selectedTranscript)}
-                        className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:from-green-700 hover:to-blue-700 transition-all duration-200 flex items-center space-x-2 mx-auto"
-                      >
-                        <Brain className="w-4 h-4" />
-                        <span>Generate Intelligent Audit Deck</span>
-                      </button>
+                    <div className="mt-6 space-y-3">
+                      <div className="text-center">
+                        <button 
+                          onClick={() => generateFinancialAnalysis(selectedTranscript)}
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2 mx-auto"
+                        >
+                          <BarChart3 className="w-5 h-5" />
+                          <span>Generate Financial Analysis</span>
+                        </button>
+                        <p className="text-xs text-gray-400 mt-2">
+                          Combine QBO data with call insights for comprehensive analysis
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <button 
+                          onClick={() => generateAuditDeck(selectedTranscript)}
+                          className="bg-gradient-to-r from-green-600 to-cyan-600 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-cyan-700 transition-all duration-200 flex items-center space-x-2 mx-auto"
+                        >
+                          <Brain className="w-5 h-5" />
+                          <span>Generate Audit Deck</span>
+                        </button>
+                        <p className="text-xs text-gray-400 mt-2">
+                          Create presentation-ready audit deck with insights
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-center text-xs text-gray-400 mt-2">
-                      Combine financial data with call insights for personalized presentation
-                    </p>
                   </div>
                 )}
               </div>
