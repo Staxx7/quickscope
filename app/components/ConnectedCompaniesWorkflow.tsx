@@ -98,8 +98,11 @@ export default function ConnectedCompaniesWorkflow({ companies: initialCompanies
   }
 
   const handleCompanyAction = (company: Company, action: string) => {
+    // Use prospect_id as account parameter if company_id is null
+    const accountId = company.company_id || company.prospect_id || company.id
+    
     const params = new URLSearchParams({
-      account: company.company_id,
+      account: accountId,
       company: company.company_name
     })
 
@@ -117,7 +120,7 @@ export default function ConnectedCompaniesWorkflow({ companies: initialCompanies
         router.push(`/dashboard/report-generation?${params.toString()}`)
         break
       case 'prospect':
-        router.push(`/admin/prospects/create?company_id=${company.company_id}&company_name=${encodeURIComponent(company.company_name)}`)
+        router.push(`/admin/prospects/create?company_id=${accountId}&company_name=${encodeURIComponent(company.company_name)}`)
         break
     }
   }

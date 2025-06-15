@@ -65,14 +65,28 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
   const [filterCallType, setFilterCallType] = useState('all');
   const [activeTab, setActiveTab] = useState('upload');
   const [aiProcessing, setAiProcessing] = useState<AIProcessingStage | null>(null);
-  const [selectedCompanyForUpload, setSelectedCompanyForUpload] = useState<string>('');
+  const [selectedCompanyForUpload, setSelectedCompanyForUpload] = useState(defaultCompanyId || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast, ToastContainer } = useToast();
 
   useEffect(() => {
-    fetchConnectedCompanies();
-    fetchExistingTranscripts();
-  }, []);
+    console.log('CallTranscriptsIntegration mounted with:', { defaultCompanyId, defaultCompanyName })
+    fetchConnectedCompanies()
+    fetchExistingTranscripts()
+  }, [])
+  
+  useEffect(() => {
+    // If we have a defaultCompanyId and companies are loaded, select it
+    if (defaultCompanyId && connectedCompanies.length > 0) {
+      const matchingCompany = connectedCompanies.find(c => 
+        c.realm_id === defaultCompanyId || c.id === defaultCompanyId
+      )
+      if (matchingCompany) {
+        setSelectedCompanyForUpload(matchingCompany.realm_id)
+        console.log('Auto-selected company:', matchingCompany.company_name)
+      }
+    }
+  }, [defaultCompanyId, connectedCompanies])
 
   const fetchConnectedCompanies = async () => {
     try {
