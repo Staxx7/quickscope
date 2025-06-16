@@ -39,23 +39,44 @@ export default function ConnectPage() {
           <div className="text-center mb-8">
             <div className="flex justify-center mb-6">
               <div className="relative">
-                <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg">
-                  <svg className="w-14 h-14 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8z"/>
+                <div className="w-24 h-24 bg-gradient-to-br from-gray-700 to-gray-800 rounded-full flex items-center justify-center shadow-lg border border-gray-600/50">
+                  <svg className="w-14 h-14" viewBox="0 0 24 24" fill="none">
+                    <defs>
+                      <linearGradient id="checkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#10b981" />
+                        <stop offset="100%" stopColor="#059669" />
+                      </linearGradient>
+                      <filter id="glow">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feMerge>
+                          <feMergeNode in="coloredBlur"/>
+                          <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                      </filter>
+                    </defs>
+                    <path 
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" 
+                      stroke="url(#checkGradient)" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                      filter="url(#glow)"
+                      className="drop-shadow-lg"
+                    />
                   </svg>
                 </div>
-                <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md">
-                  <span className="text-green-600 font-bold text-lg">Quickscope</span>
+                <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md border border-gray-200">
+                  <span className="text-green-600 font-bold text-sm">QB</span>
                 </div>
               </div>
             </div>
             
             <h1 className="text-3xl font-bold text-white mb-3">
-              Connect Your QuickBooks Account
+              Connect QuickBooks
             </h1>
             
             <p className="text-gray-400 text-sm">
-              Securely connect your QuickBooks account so our lead CFO can prepare and present your audit deck on the scheduled follow up call.
+              Securely connect your QuickBooks account to unlock powerful financial insights and automated reporting.
             </p>
           </div>
 
