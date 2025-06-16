@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { RefreshCw, CheckCircle, XCircle, AlertCircle, FileText, Brain, Users, DollarSign, Clock, TrendingUp } from 'lucide-react'
+import { RefreshCw, CheckCircle, XCircle, AlertCircle, FileText, Brain, Users, DollarSign, Clock, TrendingUp, ChevronRight, Building2 } from 'lucide-react'
 
 interface Company {
   id: string
@@ -49,6 +49,7 @@ export default function ConnectedCompaniesWorkflow({ companies: initialCompanies
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
+  const [expandedCompany, setExpandedCompany] = useState<string | null>(null)
 
   // Check for refresh parameter and success message
   useEffect(() => {
@@ -121,12 +122,18 @@ export default function ConnectedCompaniesWorkflow({ companies: initialCompanies
   }
 
   const handleCompanyAction = (company: Company, action: string) => {
+    // Store selected company in session storage for context
+    sessionStorage.setItem('selectedCompany', JSON.stringify({
+      id: company.company_id || company.prospect_id || company.id,
+      name: company.company_name
+    }))
+    
     // Use prospect_id as account parameter if company_id is null
     const accountId = company.company_id || company.prospect_id || company.id
     
     const params = new URLSearchParams({
-      account: accountId,
-      company: company.company_name
+      company_id: accountId,
+      company_name: company.company_name
     })
 
     switch (action) {
@@ -158,13 +165,13 @@ export default function ConnectedCompaniesWorkflow({ companies: initialCompanies
   }
 
   const getWorkflowStageDisplay = (stage: string) => {
-    const stages: Record<string, { label: string; color: string }> = {
-      'needs_prospect_info': { label: 'Needs Contact Info', color: 'bg-yellow-500' },
-      'needs_transcript': { label: 'Needs Transcript', color: 'bg-orange-500' },
-      'needs_analysis': { label: 'Needs Analysis', color: 'bg-purple-500' },
-      'ready_for_report': { label: 'Ready for Report', color: 'bg-green-500' }
+    const stages: Record<string, { label: string; color: string; bgColor: string }> = {
+      'needs_prospect_info': { label: 'Needs Contact Info', color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
+      'needs_transcript': { label: 'Needs Transcript', color: 'text-orange-400', bgColor: 'bg-orange-500/20' },
+      'needs_analysis': { label: 'Needs Analysis', color: 'text-purple-400', bgColor: 'bg-purple-500/20' },
+      'ready_for_report': { label: 'Ready for Report', color: 'text-green-400', bgColor: 'bg-green-500/20' }
     }
-    return stages[stage] || { label: stage, color: 'bg-gray-500' }
+    return stages[stage] || { label: stage, color: 'text-gray-400', bgColor: 'bg-gray-500/20' }
   }
 
   // Calculate stats
@@ -177,7 +184,7 @@ export default function ConnectedCompaniesWorkflow({ companies: initialCompanies
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+    <div className="space-y-6">
       {/* Success Message */}
       {showSuccessMessage && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">
@@ -192,35 +199,33 @@ export default function ConnectedCompaniesWorkflow({ companies: initialCompanies
       )}
 
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Connected QuickBooks Companies</h1>
-            <p className="text-slate-400">Manage and analyze your connected QuickBooks accounts</p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={handleRefreshCompanyNames}
-              className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              title="Fetch company names from QuickBooks for connections showing company IDs"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span>Refresh Company Names</span>
-            </button>
-            <button
-              onClick={handleRefreshAndSync}
-              disabled={isRefreshing}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              <span>Refresh & Sync</span>
-            </button>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Account Workflow</h1>
+          <p className="text-slate-400 mt-1">Manage your connected QuickBooks accounts through the workflow</p>
+        </div>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handleRefreshCompanyNames}
+            className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            title="Fetch company names from QuickBooks for connections showing company IDs"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Refresh Names</span>
+          </button>
+          <button
+            onClick={handleRefreshAndSync}
+            disabled={isRefreshing}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>Refresh Data</span>
+          </button>
         </div>
       </div>
 
-      {/* Consolidated Dashboard Cards - Now 5 cards with better sizing */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+      {/* Workflow Stage Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {/* Total Connected */}
         <div className="bg-white/5 backdrop-blur-xl rounded-xl p-5 border border-white/10">
           <div className="flex items-center justify-between mb-3">
@@ -275,156 +280,206 @@ export default function ConnectedCompaniesWorkflow({ companies: initialCompanies
         </div>
       </div>
 
-      {/* Companies List */}
-      <div className="bg-white/5 backdrop-blur-xl rounded-xl border border-white/10">
-        <div className="p-6 border-b border-white/10">
-          <h2 className="text-xl font-semibold text-white">Connected Companies</h2>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/10">
-                <th className="text-left p-4 text-slate-300 font-medium">Company</th>
-                <th className="text-left p-4 text-slate-300 font-medium">Status</th>
-                <th className="text-left p-4 text-slate-300 font-medium">Contact</th>
-                <th className="text-left p-4 text-slate-300 font-medium">Financial Summary</th>
-                <th className="text-left p-4 text-slate-300 font-medium">AI Analysis</th>
-                <th className="text-left p-4 text-slate-300 font-medium">Workflow Stage</th>
-                <th className="text-left p-4 text-slate-300 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {companies.map((company) => {
-                const stageInfo = getWorkflowStageDisplay(company.workflow_stage)
-                
-                return (
-                  <tr key={company.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td className="p-4">
-                      <div>
-                        <p className="font-medium text-white">{company.company_name}</p>
-                        <p className="text-sm text-slate-400">ID: {company.company_id}</p>
-                        <p className="text-xs text-slate-500">Connected {company.days_connected} days ago</p>
-                      </div>
-                    </td>
-                    
-                    <td className="p-4">
-                      <div className="flex items-center space-x-2">
-                        {company.connection_status === 'active' ? (
-                          <CheckCircle className="w-4 h-4 text-green-400" />
-                        ) : (
-                          <XCircle className="w-4 h-4 text-red-400" />
-                        )}
-                        <span className={`text-sm ${company.connection_status === 'active' ? 'text-green-400' : 'text-red-400'}`}>
-                          {company.connection_status}
+      {/* Companies List - Enhanced Card View */}
+      <div className="space-y-4">
+        {companies.map((company) => {
+          const stageInfo = getWorkflowStageDisplay(company.workflow_stage)
+          const isExpanded = expandedCompany === company.id
+          
+          return (
+            <div
+              key={company.id}
+              className="bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 overflow-hidden hover:border-white/20 transition-all duration-200"
+            >
+              {/* Company Header */}
+              <div 
+                className="p-6 cursor-pointer"
+                onClick={() => setExpandedCompany(isExpanded ? null : company.id)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-blue-600/20 rounded-lg flex items-center justify-center">
+                      <Building2 className="w-6 h-6 text-blue-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">{company.company_name}</h3>
+                      <div className="flex items-center space-x-4 mt-1">
+                        <span className="text-sm text-slate-400">ID: {company.company_id}</span>
+                        <span className={`px-3 py-1 rounded-full text-xs ${stageInfo.color} ${stageInfo.bgColor}`}>
+                          {stageInfo.label}
                         </span>
                       </div>
-                    </td>
-                    
-                    <td className="p-4">
+                    </div>
+                  </div>
+                  <ChevronRight className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                </div>
+              </div>
+
+              {/* Expanded Content */}
+              {isExpanded && (
+                <div className="border-t border-white/10 p-6 space-y-6">
+                  {/* Company Details Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Contact Information */}
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-400 mb-3">Contact Information</h4>
                       {company.has_prospect_record ? (
-                        <div>
-                          <p className="text-sm text-white">{company.contact_name}</p>
-                          <p className="text-xs text-slate-400">{company.email}</p>
+                        <div className="space-y-2">
+                          <p className="text-white">{company.contact_name || 'No name'}</p>
+                          <p className="text-sm text-slate-300">{company.email}</p>
+                          {company.phone && <p className="text-sm text-slate-300">{company.phone}</p>}
                         </div>
                       ) : (
-                        <span className="text-yellow-400 text-sm">No contact info</span>
+                        <p className="text-yellow-400">No contact information</p>
                       )}
-                    </td>
-                    
-                    <td className="p-4">
+                    </div>
+
+                    {/* Financial Summary */}
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-400 mb-3">Financial Summary</h4>
                       {company.has_financial_data ? (
-                        <div className="space-y-1">
-                          <p className="text-sm text-slate-300">
+                        <div className="space-y-2">
+                          <p className="text-sm">
                             Revenue: <span className="text-white font-medium">{formatCurrency(company.financial_summary?.revenue || 0)}</span>
                           </p>
-                          <p className="text-sm text-slate-300">
+                          <p className="text-sm">
                             Profit: <span className={`font-medium ${(company.financial_summary?.profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                               {formatCurrency(company.financial_summary?.profit || 0)}
                             </span>
                           </p>
+                          <p className="text-sm">
+                            Margin: <span className="text-white font-medium">{company.financial_summary?.profit_margin || 0}%</span>
+                          </p>
                         </div>
                       ) : (
-                        <span className="text-slate-500 text-sm">No financial data</span>
+                        <p className="text-slate-500">No financial data synced</p>
                       )}
-                    </td>
-                    
-                    <td className="p-4">
+                    </div>
+
+                    {/* AI Analysis */}
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-400 mb-3">AI Analysis</h4>
                       {company.has_ai_analysis ? (
-                        <div className="space-y-1">
-                          <p className="text-sm text-slate-300">
+                        <div className="space-y-2">
+                          <p className="text-sm">
                             Closeability: <span className="text-white font-medium">{company.ai_analysis?.closeability_score}/100</span>
                           </p>
-                          <p className="text-sm text-slate-300">
-                            Health: <span className="text-white font-medium">{company.ai_analysis?.financial_health_score}/100</span>
+                          <p className="text-sm">
+                            Health Score: <span className="text-white font-medium">{company.ai_analysis?.financial_health_score}/100</span>
+                          </p>
+                          <p className="text-sm text-slate-400">
+                            Analyzed: {new Date(company.ai_analysis?.analysis_date || '').toLocaleDateString()}
                           </p>
                         </div>
                       ) : (
-                        <span className="text-slate-500 text-sm">Not analyzed</span>
+                        <p className="text-slate-500">Not analyzed yet</p>
                       )}
-                    </td>
-                    
-                    <td className="p-4">
-                      <span className={`px-3 py-1 rounded-full text-xs text-white ${stageInfo.color}`}>
-                        {stageInfo.label}
+                    </div>
+                  </div>
+
+                  {/* Workflow Actions */}
+                  <div>
+                    <h4 className="text-sm font-medium text-slate-400 mb-3">Workflow Actions</h4>
+                    <div className="flex flex-wrap gap-3">
+                      {!company.has_prospect_record && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCompanyAction(company, 'prospect')
+                          }}
+                          className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                        >
+                          <Users className="w-4 h-4" />
+                          <span>Add Contact Info</span>
+                        </button>
+                      )}
+                      
+                      {company.has_prospect_record && !company.has_financial_data && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCompanyAction(company, 'sync')
+                          }}
+                          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          <span>Sync Financial Data</span>
+                        </button>
+                      )}
+                      
+                      {company.has_prospect_record && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCompanyAction(company, 'transcript')
+                          }}
+                          className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span>Upload Call Transcript</span>
+                        </button>
+                      )}
+                      
+                      {company.has_financial_data && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCompanyAction(company, 'analysis')
+                          }}
+                          className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                        >
+                          <Brain className="w-4 h-4" />
+                          <span>Run AI Analysis</span>
+                        </button>
+                      )}
+                      
+                      {company.workflow_stage === 'ready_for_report' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCompanyAction(company, 'report')
+                          }}
+                          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span>Generate Report</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Status Information */}
+                  <div className="flex items-center justify-between text-sm text-slate-400 pt-4 border-t border-white/10">
+                    <span>Connected {company.days_connected} days ago</span>
+                    <div className="flex items-center space-x-4">
+                      {company.transcript_count > 0 && (
+                        <span>{company.transcript_count} transcript{company.transcript_count > 1 ? 's' : ''}</span>
+                      )}
+                      <span className={`flex items-center space-x-1 ${company.connection_status === 'active' ? 'text-green-400' : 'text-red-400'}`}>
+                        {company.connection_status === 'active' ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                        <span>{company.connection_status}</span>
                       </span>
-                    </td>
-                    
-                    <td className="p-4">
-                      <div className="flex items-center space-x-2">
-                        {!company.has_prospect_record && (
-                          <button
-                            onClick={() => handleCompanyAction(company, 'prospect')}
-                            className="px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700 transition-colors"
-                          >
-                            Add Contact
-                          </button>
-                        )}
-                        
-                        {company.has_prospect_record && !company.has_financial_data && (
-                          <button
-                            onClick={() => handleCompanyAction(company, 'sync')}
-                            className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
-                          >
-                            Sync Data
-                          </button>
-                        )}
-                        
-                        {company.has_prospect_record && company.transcript_count === 0 && (
-                          <button
-                            onClick={() => handleCompanyAction(company, 'transcript')}
-                            className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition-colors"
-                          >
-                            Upload Call
-                          </button>
-                        )}
-                        
-                        {company.has_financial_data && !company.has_ai_analysis && (
-                          <button
-                            onClick={() => handleCompanyAction(company, 'analysis')}
-                            className="px-3 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700 transition-colors"
-                          >
-                            Run Analysis
-                          </button>
-                        )}
-                        
-                        {company.workflow_stage === 'ready_for_report' && (
-                          <button
-                            onClick={() => handleCompanyAction(company, 'report')}
-                            className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
-                          >
-                            Generate Report
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
+
+      {companies.length === 0 && (
+        <div className="text-center py-12 bg-white/5 backdrop-blur-xl rounded-xl border border-white/10">
+          <Building2 className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+          <p className="text-slate-400">No connected companies found</p>
+          <button
+            onClick={() => router.push('/connect')}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Connect QuickBooks
+          </button>
+        </div>
+      )}
     </div>
   )
 }
