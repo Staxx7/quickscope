@@ -3,10 +3,10 @@ import { supabase } from '@/lib/supabaseClient'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     // Update the prospect to remove QuickBooks connection
     const { error } = await supabase
