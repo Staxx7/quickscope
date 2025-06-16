@@ -65,14 +65,11 @@ export default function ConnectPage() {
                     />
                   </svg>
                 </div>
-                <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md border border-gray-200">
-                  <span className="text-green-600 font-bold text-sm">QB</span>
-                </div>
               </div>
             </div>
             
             <h1 className="text-3xl font-bold text-white mb-3">
-              Connect QuickBooks
+              Welcome to Quickscope
             </h1>
             
             <p className="text-gray-400 text-sm">
