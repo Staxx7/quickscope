@@ -16,7 +16,9 @@ export const config = {
   quickbooks: {
     clientId: process.env.QUICKBOOKS_CLIENT_ID || '',
     clientSecret: process.env.QUICKBOOKS_CLIENT_SECRET || '',
-    redirectUri: process.env.QUICKBOOKS_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/quickbooks/callback`,
+    redirectUri: process.env.NODE_ENV === 'production' 
+      ? 'https://quickscope.info/api/auth/quickbooks/callback'
+      : 'http://localhost:3005/api/auth/quickbooks/callback',
     environment: process.env.QUICKBOOKS_ENVIRONMENT || 'sandbox',
     discoveryDocumentUrl: process.env.QUICKBOOKS_DISCOVERY_DOCUMENT_URL || 'https://developer.intuit.com/.well-known/openid_configuration',
     tokenUrl: process.env.QUICKBOOKS_TOKEN_URL || 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
@@ -47,7 +49,9 @@ export const config = {
 
   // Application Configuration
   app: {
-    url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+    url: process.env.NODE_ENV === 'production' 
+      ? 'https://quickscope.info'
+      : 'http://localhost:3000',
     jwtSecret: process.env.JWT_SECRET || '',
     encryptionKey: process.env.ENCRYPTION_KEY || '',
     environment: process.env.NODE_ENV || 'development',

@@ -4,8 +4,8 @@ export async function GET(request: NextRequest) {
   try {
     const clientId = process.env.QUICKBOOKS_CLIENT_ID
     const redirectUri = process.env.NODE_ENV === 'production' 
-      ? 'https://www.quickscope.info/api/qbo/callback'
-      : 'http://localhost:3005/api/qbo/callback'
+      ? 'https://quickscope.info/api/auth/quickbooks/callback'
+      : 'http://localhost:3005/api/auth/quickbooks/callback'
     
     if (!clientId) {
       return NextResponse.json({ 
