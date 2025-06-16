@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, AlertTriangle, Play, Pause, Download, MessageSquare, Brain, Clock, User, Phone, Calendar, Search, Filter, ChevronDown, ChevronRight, Star, AlertCircle, CheckCircle, TrendingUp, Zap, Eye, BarChart3, Target, DollarSign, Users, ClipboardPaste, Type } from 'lucide-react';
+import { Upload, FileText, AlertTriangle, Play, Pause, Download, MessageSquare, Brain, Clock, User, Phone, Calendar, Search, Filter, ChevronDown, ChevronRight, Star, AlertCircle, CheckCircle, TrendingUp, Zap, Eye, BarChart3, Target, DollarSign, Users, ClipboardPaste, Type, Building2 } from 'lucide-react';
 import { useToast } from './Toast';
 
 interface CallTranscript {
@@ -139,10 +139,26 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
 
   const fetchExistingTranscripts = async () => {
     try {
-      const response = await fetch('/api/call-transcripts');
+      // If we have a defaultCompanyId, fetch only transcripts for that company
+      const url = defaultCompanyId 
+        ? `/api/call-transcripts?companyId=${defaultCompanyId}`
+        : '/api/call-transcripts';
+        
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        setTranscripts(data.transcripts || []);
+        const transcripts = data.transcripts || [];
+        
+        // If defaultCompanyId is set, ensure all transcripts have the companyId
+        if (defaultCompanyId) {
+          const transcriptsWithCompany = transcripts.map((t: CallTranscript) => ({
+            ...t,
+            companyId: t.companyId || defaultCompanyId
+          }));
+          setTranscripts(transcriptsWithCompany);
+        } else {
+          setTranscripts(transcripts);
+        }
       }
     } catch (error) {
       console.error('Error fetching transcripts:', error);
@@ -1159,7 +1175,15 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
         
         // Navigate to the financial analysis page with transcript context
         const companyName = connectedCompanies.find(c => c.realm_id === transcript.companyId)?.company_name || 'Company';
-        window.location.href = `/dashboard/advanced-analysis?account=${transcript.companyId}&company=${encodeURIComponent(companyName)}&transcript=${transcript.id}`;
+        
+        // Use the correct parameter names that the financial analysis page expects
+        const params = new URLSearchParams({
+          company_id: transcript.companyId,
+          company_name: companyName,
+          transcript: transcript.id
+        });
+        
+        window.location.href = `/dashboard/advanced-analysis?${params.toString()}`;
         
         showToast('Financial analysis generated successfully!', 'success');
       } else {
@@ -1257,6 +1281,11 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
   };
 
   const filteredTranscripts = transcripts.filter(transcript => {
+    // If we have a defaultCompanyId, only show transcripts for that company
+    if (defaultCompanyId && transcript.companyId !== defaultCompanyId) {
+      return false;
+    }
+    
     const matchesSearch = transcript.fileName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          transcript.participants.some(p => p.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesStatus = filterStatus === 'all' || transcript.status === filterStatus;
@@ -1345,22 +1374,39 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
       {/* Upload Tab */}
       {activeTab === 'upload' && (
         <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
-          {/* Company Selection */}
-          <div className="mb-6">
-            <h3 className="text-lg font-medium text-white mb-4">Select Company for Call Transcript</h3>
-            <select
-              value={selectedCompanyForUpload}
-              onChange={(e) => setSelectedCompanyForUpload(e.target.value)}
-              className="w-full px-4 py-2 bg-white/10 border border-white/25 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
-            >
-              <option value="" className="bg-slate-800">Select a connected company...</option>
-              {connectedCompanies.map((company) => (
-                <option key={company.id} value={company.realm_id} className="bg-slate-800">
-                  {company.company_name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Current Company Context */}
+          {defaultCompanyId && defaultCompanyName && (
+            <div className="mb-6 bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4">
+              <div className="flex items-center space-x-3">
+                <div className="bg-cyan-500/20 rounded-full p-2">
+                  <Building2 className="w-5 h-5 text-cyan-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-400">Currently working with:</p>
+                  <p className="text-lg font-medium text-white">{defaultCompanyName}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Company Selection - Only show if no default company */}
+          {!defaultCompanyId && (
+            <div className="mb-6">
+              <h3 className="text-lg font-medium text-white mb-4">Select Company for Call Transcript</h3>
+              <select
+                value={selectedCompanyForUpload}
+                onChange={(e) => setSelectedCompanyForUpload(e.target.value)}
+                className="w-full px-4 py-2 bg-white/10 border border-white/25 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
+              >
+                <option value="" className="bg-slate-800">Select a connected company...</option>
+                {connectedCompanies.map((company) => (
+                  <option key={company.id} value={company.realm_id} className="bg-slate-800">
+                    {company.company_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Input Mode Toggle */}
           <div className="mb-6">

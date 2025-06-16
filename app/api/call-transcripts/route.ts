@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const prospectId = searchParams.get('prospectId')
+    const companyId = searchParams.get('companyId')
     const transcriptId = searchParams.get('transcriptId')
 
     const supabase = getSupabase()
@@ -30,11 +31,14 @@ export async function GET(request: NextRequest) {
         transcripts: [data],
         count: 1
       })
-    } else if (prospectId) {
+    } else if (prospectId || companyId) {
+      // Use either prospectId or companyId (they're the same in this context)
+      const id = prospectId || companyId
+      
       const { data, error } = await supabase
         .from('call_transcripts')
         .select('*')
-        .eq('prospect_id', prospectId)
+        .eq('prospect_id', id)
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -51,10 +55,26 @@ export async function GET(request: NextRequest) {
         count: data?.length || 0
       })
     } else {
-      return NextResponse.json(
-        { error: 'Either prospectId or transcriptId is required' },
-        { status: 400 }
-      )
+      // Return all transcripts if no specific filter is provided
+      const { data, error } = await supabase
+        .from('call_transcripts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50) // Limit to prevent too much data
+
+      if (error) {
+        console.error('Error fetching all transcripts:', error)
+        return NextResponse.json(
+          { error: 'Failed to fetch transcripts', details: error.message },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        transcripts: data || [],
+        count: data?.length || 0
+      })
     }
 
   } catch (error) {
