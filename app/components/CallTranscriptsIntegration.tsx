@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, AlertTriangle, Play, Pause, Download, MessageSquare, Brain, Clock, User, Phone, Calendar, Search, Filter, ChevronDown, ChevronRight, Star, AlertCircle, CheckCircle, TrendingUp, Zap, Eye, BarChart3, Target, DollarSign, Users, ClipboardPaste, Type, Building2 } from 'lucide-react';
+import { Upload, FileText, AlertTriangle, Play, Pause, Download, MessageSquare, Brain, Clock, User, Phone, Calendar, Search, Filter, ChevronDown, ChevronRight, Star, AlertCircle, CheckCircle, TrendingUp, Zap, Eye, BarChart3, Target, DollarSign, Users, ClipboardPaste, Type, Building2, Trash2 } from 'lucide-react';
 import { useToast } from './Toast';
 
 interface CallTranscript {
@@ -66,7 +66,7 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
   const [activeTab, setActiveTab] = useState('upload');
   const [aiProcessing, setAiProcessing] = useState<AIProcessingStage | null>(null);
   const [selectedCompanyForUpload, setSelectedCompanyForUpload] = useState(defaultCompanyId || '');
-  const [inputMode, setInputMode] = useState<'upload' | 'paste'>('upload');
+  const [inputMode, setInputMode] = useState<'upload' | 'paste'>('paste');
   const [pastedTranscript, setPastedTranscript] = useState('');
   const [transcriptTitle, setTranscriptTitle] = useState('');
   const [activeToastId, setActiveToastId] = useState<string | null>(null);
@@ -1252,6 +1252,30 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
     }
   };
 
+  const deleteTranscript = async (transcript: CallTranscript) => {
+    if (!confirm(`Are you sure you want to delete "${transcript.fileName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/call-transcripts?transcriptId=${transcript.id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        // Remove from local state
+        setTranscripts(prev => prev.filter(t => t.id !== transcript.id));
+        setSelectedTranscript(null);
+        showToast('Transcript deleted successfully', 'success');
+      } else {
+        throw new Error('Failed to delete transcript');
+      }
+    } catch (error) {
+      console.error('Delete transcript error:', error);
+      showToast('Failed to delete transcript', 'error');
+    }
+  };
+
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
       case 'positive': return 'text-green-400 bg-green-500/20';
@@ -1419,17 +1443,6 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
           <div className="mb-6">
             <div className="flex bg-white/10 backdrop-blur-sm rounded-xl p-1 border border-white/25">
               <button
-                onClick={() => setInputMode('upload')}
-                className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
-                  inputMode === 'upload'
-                    ? 'bg-white/20 text-white border border-white/30'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                <Upload className="w-4 h-4" />
-                <span className="font-medium">Upload Files</span>
-              </button>
-              <button
                 onClick={() => setInputMode('paste')}
                 className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
                   inputMode === 'paste'
@@ -1439,6 +1452,17 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
               >
                 <ClipboardPaste className="w-4 h-4" />
                 <span className="font-medium">Paste Transcript</span>
+              </button>
+              <button
+                onClick={() => setInputMode('upload')}
+                className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                  inputMode === 'upload'
+                    ? 'bg-white/20 text-white border border-white/30'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Upload className="w-4 h-4" />
+                <span className="font-medium">Upload Files</span>
               </button>
             </div>
           </div>
@@ -1967,6 +1991,13 @@ Client: Thank you! Looking forward to our next conversation.`;
                       <span>Generate Deck</span>
                     </button>
                   )}
+                  <button
+                    onClick={() => deleteTranscript(selectedTranscript)}
+                    className="bg-red-600/20 text-red-400 px-4 py-2 rounded-xl hover:bg-red-600/30 transition-all duration-200 flex items-center space-x-2 border border-red-600/30"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete</span>
+                  </button>
                   <button
                     onClick={() => setSelectedTranscript(null)}
                     className="text-gray-400 hover:text-white transition-colors duration-200 p-2 hover:bg-white/10 rounded-lg"
