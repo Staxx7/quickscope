@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const realmId = searchParams.get('realmId');
     const error = searchParams.get('error');
 
-    const baseUrl = process.env.NODE_ENV === 'production' ? 'https://quickscope.info' : 'http://localhost:3005';
+    const baseUrl = process.env.NODE_ENV === 'production' ? 'https://www.quickscope.info' : 'http://localhost:3005';
 
     // Handle OAuth errors
     if (error) {
@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined
     });
-    const baseUrl = process.env.NODE_ENV === 'production' ? 'https://quickscope.info' : 'http://localhost:3005';
+    const baseUrl = process.env.NODE_ENV === 'production' ? 'https://www.quickscope.info' : 'http://localhost:3005';
     return NextResponse.redirect(`${baseUrl}/connect?error=unexpected_error`);
   }
 }
@@ -176,7 +176,7 @@ async function exchangeCodeForTokens(code: string) {
     const clientId = process.env.QUICKBOOKS_CLIENT_ID;
     const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
     const redirectUri = process.env.NODE_ENV === 'production' 
-      ? 'https://quickscope.info/api/qbo/callback'
+      ? 'https://www.quickscope.info/api/qbo/callback'
       : 'http://localhost:3005/api/qbo/callback';
 
     if (!clientId || !clientSecret) {

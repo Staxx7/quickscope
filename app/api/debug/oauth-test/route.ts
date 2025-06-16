@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   
   // Test OAuth URL generation
   const redirectUri = nodeEnv === 'production' 
-    ? 'https://quickscope.info/api/qbo/callback'
+    ? 'https://www.quickscope.info/api/qbo/callback'
     : 'http://localhost:3005/api/qbo/callback'
   
   const authUrl = new URL('https://appcenter.intuit.com/connect/oauth2')

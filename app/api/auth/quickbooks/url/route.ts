@@ -4,7 +4,7 @@ export async function GET(request: NextRequest) {
   try {
     const clientId = process.env.QUICKBOOKS_CLIENT_ID
     const redirectUri = process.env.NODE_ENV === 'production' 
-      ? 'https://quickscope.info/api/qbo/callback'
+      ? 'https://www.quickscope.info/api/qbo/callback'
       : 'http://localhost:3005/api/qbo/callback'
     
     if (!clientId) {
