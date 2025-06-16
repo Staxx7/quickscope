@@ -52,81 +52,72 @@ export async function POST(request: NextRequest) {
 
 async function analyzeTranscriptForSales(transcript: string, companyName: string, callType: string) {
   const analysisPrompt = `
-You are an AI sales intelligence analyst. Analyze this ${callType} call transcript for ${companyName} and extract actionable sales insights.
+You are an AI sales intelligence analyst specializing in B2B fractional CFO and accounting services. Analyze this ${callType} call transcript for ${companyName} and extract comprehensive, actionable sales insights.
 
 TRANSCRIPT:
 ${transcript}
 
 Please provide a comprehensive analysis in the following JSON format:
 {
-  "painPoints": [
-    {
-      "category": "operational|financial|strategic|technology",
-      "description": "specific pain point",
-      "evidence": "quote from transcript",
-      "severity": "high|medium|low",
-      "impact": "estimated business impact"
-    }
+  "pain_points": [
+    "Specific pain point mentioned in the call with direct quote or evidence"
   ],
-  "buyingSignals": [
-    {
-      "signal": "specific buying signal",
-      "strength": "strong|moderate|weak",
-      "context": "relevant context"
-    }
+  "key_insights": [
+    "Strategic business goals and objectives mentioned"
   ],
-  "decisionMakers": [
-    {
-      "name": "name if mentioned",
-      "role": "role/title",
-      "influence": "high|medium|low",
-      "concerns": ["list of concerns"],
-      "motivations": ["list of motivations"]
-    }
+  "budget_indicators": [
+    "Any mention of budget, pricing expectations, or financial capacity"
   ],
-  "budgetIndicators": [
+  "decision_makers": [
     {
-      "indicator": "budget signal",
-      "amount": "estimated amount if mentioned",
-      "context": "context"
-    }
-  ],
-  "timelineIndicators": [
-    {
-      "urgency": "high|medium|low",
-      "timeline": "specific timeline mentioned",
-      "driver": "reason for urgency"
+      "name": "Name if mentioned",
+      "role": "Title/Role",
+      "influence": "high|medium|low"
     }
   ],
   "objections": [
-    {
-      "objection": "specific objection",
-      "type": "price|trust|timing|authority|need",
-      "response_strategy": "recommended response"
-    }
+    "Specific concerns or objections raised"
   ],
-  "nextSteps": [
-    {
-      "action": "specific action",
-      "timeline": "when to complete",
-      "owner": "who is responsible"
-    }
+  "next_steps": [
+    "Clear action items and follow-up tasks"
   ],
-  "closeabilityScore": 85,
-  "urgencyLevel": "high|medium|low",
-  "keyInsights": [
-    "most important insights"
+  "closeability_score": 85,
+  "urgency_level": "high|medium|low",
+  "talking_points": [
+    "Key financial insights to emphasize in follow-up"
   ],
-  "recommendedApproach": [
-    "strategic recommendations"
+  "competitive_mentions": [
+    "Any mention of competitors or alternatives"
   ],
-  "talkingPoints": [
-    "key points to emphasize in next conversation"
-  ]
+  "timeline_indicators": [
+    "Specific timeline mentions or urgency signals"
+  ],
+  "buying_signals": [
+    "Positive indicators of purchase intent"
+  ],
+  "risk_factors": [
+    "Potential deal risks or red flags"
+  ],
+  "recommended_approach": [
+    "Strategic recommendations for next interaction"
+  ],
+  "key_quotes": [
+    "Important verbatim quotes from the prospect"
+  ],
+  "financial_pain_points": [
+    "Specific financial challenges mentioned"
+  ],
+  "technology_stack": [
+    "Any mentioned tools, software, or systems"
+  ],
+  "company_context": {
+    "size_indicators": "Company size hints",
+    "industry_specifics": "Industry-specific mentions",
+    "growth_stage": "Growth stage indicators"
+  }
 }
 
-Focus on actionable insights that will help close the deal. Be specific and quote relevant parts of the transcript as evidence.
-`
+Focus on extracting specific, actionable insights with evidence from the transcript. Be comprehensive and detailed.`
 
   try {
     const completion = await openai.chat.completions.create({
@@ -134,7 +125,7 @@ Focus on actionable insights that will help close the deal. Be specific and quot
       messages: [
         {
           role: "system",
-          content: "You are an expert sales intelligence analyst specializing in B2B fractional CFO and accounting services. Provide detailed, actionable analysis."
+          content: "You are an expert sales intelligence analyst. Extract detailed, actionable insights from sales calls. Always provide specific evidence and quotes when possible."
         },
         {
           role: "user",
@@ -151,11 +142,28 @@ Focus on actionable insights that will help close the deal. Be specific and quot
     }
 
     // Parse the JSON response
-    const analysis = JSON.parse(analysisText)
+    const rawAnalysis = JSON.parse(analysisText)
     
-    // Validate required fields
-    if (!analysis.closeabilityScore || !analysis.urgencyLevel) {
-      throw new Error('Invalid analysis format')
+    // Transform to match frontend interface
+    const analysis = {
+      pain_points: rawAnalysis.pain_points || [],
+      key_insights: rawAnalysis.key_insights || [],
+      budget_indicators: rawAnalysis.budget_indicators || [],
+      decision_makers: rawAnalysis.decision_makers || [],
+      objections: rawAnalysis.objections || [],
+      next_steps: rawAnalysis.next_steps || [],
+      closeability_score: rawAnalysis.closeability_score || 70,
+      urgency_level: rawAnalysis.urgency_level || 'medium',
+      talking_points: rawAnalysis.talking_points || [],
+      competitive_mentions: rawAnalysis.competitive_mentions || [],
+      timeline_indicators: rawAnalysis.timeline_indicators || [],
+      buying_signals: rawAnalysis.buying_signals || [],
+      risk_factors: rawAnalysis.risk_factors || [],
+      recommended_approach: rawAnalysis.recommended_approach || [],
+      key_quotes: rawAnalysis.key_quotes || [],
+      financial_pain_points: rawAnalysis.financial_pain_points || [],
+      technology_stack: rawAnalysis.technology_stack || [],
+      company_context: rawAnalysis.company_context || {}
     }
 
     return analysis
@@ -163,32 +171,458 @@ Focus on actionable insights that will help close the deal. Be specific and quot
   } catch (error) {
     console.error('OpenAI analysis error:', error)
     
-    // Return default analysis if AI fails
+    // Return comprehensive fallback analysis
+    const transcriptLower = transcript.toLowerCase()
+    
     return {
-      painPoints: [{ 
-        category: "financial", 
-        description: "Need better financial reporting", 
-        evidence: "Unable to parse transcript", 
-        severity: "medium",
-        impact: "Moderate impact on decision making"
-      }],
-      buyingSignals: [],
-      decisionMakers: [],
-      budgetIndicators: [],
-      timelineIndicators: [],
-      objections: [],
-      nextSteps: [{ 
-        action: "Follow up on transcript analysis", 
-        timeline: "Within 24 hours", 
-        owner: "Sales rep" 
-      }],
-      closeabilityScore: 50,
-      urgencyLevel: "medium",
-      keyInsights: ["Transcript analysis incomplete - manual review needed"],
-      recommendedApproach: ["Follow up with prospect to clarify key points"],
-      talkingPoints: ["Review call recording for key details"]
+      pain_points: extractDetailedPainPoints(transcript),
+      key_insights: extractBusinessInsights(transcript),
+      budget_indicators: extractBudgetDetails(transcript),
+      decision_makers: extractDecisionMakers(transcript),
+      objections: extractObjections(transcript),
+      next_steps: generateDetailedNextSteps(callType, transcript),
+      closeability_score: calculateDetailedScore(transcript),
+      urgency_level: determineUrgencyLevel(transcript),
+      talking_points: generateTalkingPoints(transcript),
+      competitive_mentions: extractCompetitors(transcript),
+      timeline_indicators: extractTimelines(transcript),
+      buying_signals: extractBuyingSignals(transcript),
+      risk_factors: extractRiskFactors(transcript),
+      recommended_approach: generateRecommendations(transcript, callType),
+      key_quotes: extractKeyQuotes(transcript),
+      financial_pain_points: extractFinancialPains(transcript),
+      technology_stack: extractTechnology(transcript),
+      company_context: extractCompanyContext(transcript)
     }
   }
+}
+
+// Enhanced extraction functions
+function extractDetailedPainPoints(text: string): string[] {
+  const painKeywords = [
+    'problem', 'issue', 'challenge', 'struggle', 'difficult', 'pain',
+    'frustrat', 'concern', 'worry', 'inefficient', 'manual', 'time-consuming',
+    'error', 'mistake', 'delay', 'slow', 'complex', 'confus', 'unclear'
+  ]
+  
+  const sentences = text.split(/[.!?]+/).filter(s => s.length > 20)
+  const painPoints: string[] = []
+  
+  sentences.forEach(sentence => {
+    const sentenceLower = sentence.toLowerCase()
+    painKeywords.forEach(keyword => {
+      if (sentenceLower.includes(keyword)) {
+        painPoints.push(sentence.trim())
+      }
+    })
+  })
+  
+  return Array.from(new Set(painPoints)).slice(0, 8)
+}
+
+function extractBusinessInsights(text: string): string[] {
+  const insightKeywords = [
+    'goal', 'objective', 'target', 'aim', 'want to', 'need to',
+    'plan to', 'looking to', 'trying to', 'growth', 'expand', 'improve',
+    'optimize', 'streamline', 'automate', 'scale', 'increase', 'reduce'
+  ]
+  
+  const sentences = text.split(/[.!?]+/).filter(s => s.length > 20)
+  const insights: string[] = []
+  
+  sentences.forEach(sentence => {
+    const sentenceLower = sentence.toLowerCase()
+    insightKeywords.forEach(keyword => {
+      if (sentenceLower.includes(keyword)) {
+        insights.push(sentence.trim())
+      }
+    })
+  })
+  
+  return Array.from(new Set(insights)).slice(0, 8)
+}
+
+function extractBudgetDetails(text: string): string[] {
+  const budgetKeywords = [
+    'budget', 'cost', 'price', 'invest', 'spend', 'dollar', '$',
+    'thousand', 'million', 'k per', 'monthly', 'annual', 'yearly',
+    'afford', 'expensive', 'cheap', 'value', 'roi', 'return'
+  ]
+  
+  const sentences = text.split(/[.!?]+/).filter(s => s.length > 15)
+  const budgetInfo: string[] = []
+  
+  sentences.forEach(sentence => {
+    const sentenceLower = sentence.toLowerCase()
+    budgetKeywords.forEach(keyword => {
+      if (sentenceLower.includes(keyword)) {
+        budgetInfo.push(sentence.trim())
+      }
+    })
+  })
+  
+  return Array.from(new Set(budgetInfo)).slice(0, 5)
+}
+
+function extractDecisionMakers(text: string): any[] {
+  const titleKeywords = [
+    'ceo', 'cfo', 'cto', 'coo', 'president', 'vp', 'vice president',
+    'director', 'manager', 'head of', 'chief', 'owner', 'founder',
+    'partner', 'controller', 'treasurer'
+  ]
+  
+  const makers: any[] = []
+  const textLower = text.toLowerCase()
+  
+  titleKeywords.forEach(title => {
+    if (textLower.includes(title)) {
+      const influence = ['ceo', 'cfo', 'president', 'owner', 'founder'].includes(title) ? 'high' :
+                       ['vp', 'director', 'head of'].includes(title) ? 'medium' : 'low'
+      
+      makers.push({
+        name: `${title.toUpperCase()} (mentioned in call)`,
+        role: title.toUpperCase(),
+        influence
+      })
+    }
+  })
+  
+  return makers.slice(0, 5)
+}
+
+function extractObjections(text: string): string[] {
+  const objectionKeywords = [
+    'concern', 'worry', 'not sure', 'hesitat', 'question', 'unclear',
+    'expensive', 'cost too much', 'budget', 'timing', 'later',
+    'think about', 'consider', 'compare', 'alternative', 'current'
+  ]
+  
+  const sentences = text.split(/[.!?]+/).filter(s => s.length > 20)
+  const objections: string[] = []
+  
+  sentences.forEach(sentence => {
+    const sentenceLower = sentence.toLowerCase()
+    objectionKeywords.forEach(keyword => {
+      if (sentenceLower.includes(keyword)) {
+        objections.push(sentence.trim())
+      }
+    })
+  })
+  
+  return Array.from(new Set(objections)).slice(0, 5)
+}
+
+function generateDetailedNextSteps(callType: string, text: string): string[] {
+  const baseSteps: { [key: string]: string[] } = {
+    discovery: [
+      'Schedule follow-up demo focusing on identified pain points',
+      'Send ROI calculator with customized assumptions',
+      'Share relevant case studies from similar companies',
+      'Connect with technical team for integration discussion',
+      'Provide detailed pricing proposal'
+    ],
+    audit: [
+      'Complete comprehensive financial analysis report',
+      'Prepare executive presentation with findings',
+      'Schedule stakeholder review meeting',
+      'Develop implementation roadmap',
+      'Create custom pricing package'
+    ],
+    'follow-up': [
+      'Address specific concerns raised in call',
+      'Provide additional references',
+      'Clarify implementation timeline',
+      'Review contract terms',
+      'Schedule final decision call'
+    ],
+    close: [
+      'Send contract for signature',
+      'Schedule kickoff meeting',
+      'Begin onboarding checklist',
+      'Assign implementation team',
+      'Set up initial data migration'
+    ]
+  }
+  
+  return baseSteps[callType] || baseSteps.discovery
+}
+
+function calculateDetailedScore(text: string): number {
+  let score = 50
+  const textLower = text.toLowerCase()
+  
+  // Positive indicators
+  const positiveIndicators = [
+    { keyword: 'interested', points: 10 },
+    { keyword: 'excited', points: 15 },
+    { keyword: 'love', points: 12 },
+    { keyword: 'definitely', points: 10 },
+    { keyword: 'budget', points: 8 },
+    { keyword: 'timeline', points: 8 },
+    { keyword: 'decision', points: 7 },
+    { keyword: 'implement', points: 10 },
+    { keyword: 'start', points: 8 },
+    { keyword: 'move forward', points: 12 }
+  ]
+  
+  // Negative indicators
+  const negativeIndicators = [
+    { keyword: 'not sure', points: -10 },
+    { keyword: 'maybe', points: -5 },
+    { keyword: 'think about', points: -5 },
+    { keyword: 'later', points: -8 },
+    { keyword: 'expensive', points: -7 },
+    { keyword: 'concern', points: -5 }
+  ]
+  
+  positiveIndicators.forEach(indicator => {
+    if (textLower.includes(indicator.keyword)) {
+      score += indicator.points
+    }
+  })
+  
+  negativeIndicators.forEach(indicator => {
+    if (textLower.includes(indicator.keyword)) {
+      score += indicator.points
+    }
+  })
+  
+  return Math.max(0, Math.min(100, score))
+}
+
+function determineUrgencyLevel(text: string): 'high' | 'medium' | 'low' {
+  const textLower = text.toLowerCase()
+  const urgentKeywords = [
+    'urgent', 'asap', 'immediately', 'right away', 'this week',
+    'this month', 'quickly', 'fast', 'soon', 'priority'
+  ]
+  
+  const urgentCount = urgentKeywords.filter(keyword => textLower.includes(keyword)).length
+  
+  if (urgentCount >= 3) return 'high'
+  if (urgentCount >= 1) return 'medium'
+  return 'low'
+}
+
+function generateTalkingPoints(text: string): string[] {
+  const points = [
+    'Emphasize ROI from automated financial reporting',
+    'Highlight time savings from streamlined processes',
+    'Discuss scalability for future growth',
+    'Review integration with existing systems',
+    'Present case studies with measurable results'
+  ]
+  
+  const textLower = text.toLowerCase()
+  
+  if (textLower.includes('cost') || textLower.includes('price')) {
+    points.unshift('Address value proposition and pricing flexibility')
+  }
+  
+  if (textLower.includes('integration') || textLower.includes('system')) {
+    points.unshift('Detail seamless integration capabilities')
+  }
+  
+  return points.slice(0, 5)
+}
+
+function extractCompetitors(text: string): string[] {
+  const competitorKeywords = [
+    'competitor', 'alternative', 'other option', 'comparing',
+    'versus', 'instead of', 'currently using', 'existing solution'
+  ]
+  
+  const mentions: string[] = []
+  const sentences = text.split(/[.!?]+/)
+  
+  sentences.forEach(sentence => {
+    const sentenceLower = sentence.toLowerCase()
+    competitorKeywords.forEach(keyword => {
+      if (sentenceLower.includes(keyword)) {
+        mentions.push(sentence.trim())
+      }
+    })
+  })
+  
+  return Array.from(new Set(mentions)).slice(0, 3)
+}
+
+function extractTimelines(text: string): string[] {
+  const timelineKeywords = [
+    'when', 'timeline', 'timeframe', 'by when', 'deadline',
+    'month', 'quarter', 'year', 'asap', 'soon', 'immediately'
+  ]
+  
+  const timelines: string[] = []
+  const sentences = text.split(/[.!?]+/)
+  
+  sentences.forEach(sentence => {
+    const sentenceLower = sentence.toLowerCase()
+    timelineKeywords.forEach(keyword => {
+      if (sentenceLower.includes(keyword)) {
+        timelines.push(sentence.trim())
+      }
+    })
+  })
+  
+  return Array.from(new Set(timelines)).slice(0, 3)
+}
+
+function extractBuyingSignals(text: string): string[] {
+  const buyingKeywords = [
+    'interested', 'excited', 'love', 'great', 'perfect',
+    'exactly what', 'need this', 'want to', 'ready to',
+    'move forward', 'next step', 'contract', 'pricing'
+  ]
+  
+  const signals: string[] = []
+  const sentences = text.split(/[.!?]+/)
+  
+  sentences.forEach(sentence => {
+    const sentenceLower = sentence.toLowerCase()
+    buyingKeywords.forEach(keyword => {
+      if (sentenceLower.includes(keyword)) {
+        signals.push(sentence.trim())
+      }
+    })
+  })
+  
+  return Array.from(new Set(signals)).slice(0, 5)
+}
+
+function extractRiskFactors(text: string): string[] {
+  const riskKeywords = [
+    'concern', 'worry', 'risk', 'problem', 'issue',
+    'budget constraint', 'not sure', 'hesitat', 'delay',
+    'competitor', 'alternative', 'current solution'
+  ]
+  
+  const risks: string[] = []
+  const sentences = text.split(/[.!?]+/)
+  
+  sentences.forEach(sentence => {
+    const sentenceLower = sentence.toLowerCase()
+    riskKeywords.forEach(keyword => {
+      if (sentenceLower.includes(keyword)) {
+        risks.push(sentence.trim())
+      }
+    })
+  })
+  
+  return Array.from(new Set(risks)).slice(0, 5)
+}
+
+function generateRecommendations(text: string, callType: string): string[] {
+  const recommendations = [
+    'Focus on ROI and value proposition in next interaction',
+    'Prepare detailed implementation timeline',
+    'Address specific pain points with targeted solutions',
+    'Leverage social proof with relevant case studies',
+    'Create urgency with limited-time incentives'
+  ]
+  
+  if (callType === 'discovery') {
+    recommendations.unshift('Schedule technical deep-dive session')
+  } else if (callType === 'close') {
+    recommendations.unshift('Prepare for contract negotiation')
+  }
+  
+  return recommendations.slice(0, 5)
+}
+
+function extractKeyQuotes(text: string): string[] {
+  // Extract sentences that seem like important quotes
+  const sentences = text.split(/[.!?]+/).filter(s => s.length > 30 && s.length < 200)
+  const importantWords = ['need', 'want', 'problem', 'goal', 'important', 'critical', 'must', 'definitely']
+  
+  const quotes = sentences.filter(sentence => {
+    const sentenceLower = sentence.toLowerCase()
+    return importantWords.some(word => sentenceLower.includes(word))
+  })
+  
+  return quotes.slice(0, 5).map(q => q.trim())
+}
+
+function extractFinancialPains(text: string): string[] {
+  const financialKeywords = [
+    'cash flow', 'revenue', 'expense', 'profit', 'margin',
+    'cost', 'budget', 'financial', 'accounting', 'bookkeeping',
+    'tax', 'compliance', 'audit', 'report', 'forecast'
+  ]
+  
+  const pains: string[] = []
+  const sentences = text.split(/[.!?]+/)
+  
+  sentences.forEach(sentence => {
+    const sentenceLower = sentence.toLowerCase()
+    financialKeywords.forEach(keyword => {
+      if (sentenceLower.includes(keyword) && 
+          (sentenceLower.includes('problem') || sentenceLower.includes('issue') || 
+           sentenceLower.includes('challenge') || sentenceLower.includes('difficult'))) {
+        pains.push(sentence.trim())
+      }
+    })
+  })
+  
+  return Array.from(new Set(pains)).slice(0, 5)
+}
+
+function extractTechnology(text: string): string[] {
+  const techKeywords = [
+    'quickbooks', 'xero', 'sage', 'netsuite', 'excel',
+    'google sheets', 'software', 'system', 'platform', 'tool',
+    'application', 'database', 'crm', 'erp'
+  ]
+  
+  const tech: string[] = []
+  const textLower = text.toLowerCase()
+  
+  techKeywords.forEach(keyword => {
+    if (textLower.includes(keyword)) {
+      tech.push(keyword.charAt(0).toUpperCase() + keyword.slice(1))
+    }
+  })
+  
+  return Array.from(new Set(tech))
+}
+
+function extractCompanyContext(text: string): any {
+  const context: any = {}
+  const textLower = text.toLowerCase()
+  
+  // Size indicators
+  if (textLower.includes('startup') || textLower.includes('small')) {
+    context.size_indicators = 'Small/Startup (1-50 employees)'
+  } else if (textLower.includes('mid-size') || textLower.includes('medium')) {
+    context.size_indicators = 'Mid-size (50-500 employees)'
+  } else if (textLower.includes('enterprise') || textLower.includes('large')) {
+    context.size_indicators = 'Enterprise (500+ employees)'
+  } else {
+    context.size_indicators = 'Size not specified'
+  }
+  
+  // Industry
+  const industries = [
+    'saas', 'software', 'technology', 'retail', 'ecommerce',
+    'manufacturing', 'healthcare', 'finance', 'real estate',
+    'consulting', 'agency', 'nonprofit'
+  ]
+  
+  const foundIndustries = industries.filter(industry => textLower.includes(industry))
+  context.industry_specifics = foundIndustries.length > 0 ? foundIndustries.join(', ') : 'Industry not specified'
+  
+  // Growth stage
+  if (textLower.includes('growing') || textLower.includes('scaling')) {
+    context.growth_stage = 'Growth/Scaling phase'
+  } else if (textLower.includes('mature') || textLower.includes('established')) {
+    context.growth_stage = 'Mature/Established'
+  } else if (textLower.includes('early') || textLower.includes('startup')) {
+    context.growth_stage = 'Early stage'
+  } else {
+    context.growth_stage = 'Growth stage not specified'
+  }
+  
+  return context
 }
 
 // GET endpoint to retrieve transcript analyses

@@ -187,27 +187,32 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
         
         // Transform the API response to match our interface
         aiAnalysis = {
-          painPoints: analysisData.analysis?.pain_points?.map((p: any) => 
-            typeof p === 'string' ? p : `${p.description} (${p.severity} severity)`
-          ) || [],
+          painPoints: analysisData.analysis?.pain_points || [],
           businessGoals: analysisData.analysis?.key_insights || [],
-          budgetIndications: analysisData.analysis?.budget_indicators?.map((b: any) => 
-            typeof b === 'string' ? b : b.indicator
-          ) || [],
+          budgetIndications: analysisData.analysis?.budget_indicators || [],
           decisionMakers: analysisData.analysis?.decision_makers || [],
-          competitiveThreats: analysisData.analysis?.objections?.map((o: any) => 
-            typeof o === 'string' ? o : o.objection
-          ) || [],
+          competitiveThreats: analysisData.analysis?.competitive_mentions || [],
           urgency: analysisData.analysis?.urgency_level || 'medium',
-          nextSteps: analysisData.analysis?.next_steps?.map((s: any) => 
-            typeof s === 'string' ? s : s.action
-          ) || [],
+          nextSteps: analysisData.analysis?.next_steps || [],
           salesScore: analysisData.analysis?.closeability_score || 70,
-          financialInsights: analysisData.analysis?.talking_points || [],
-          riskFactors: analysisData.analysis?.objections?.map((o: any) => 
-            typeof o === 'string' ? o : `${o.objection} - ${o.response_strategy}`
-          ) || []
+          financialInsights: analysisData.analysis?.financial_pain_points || [],
+          riskFactors: analysisData.analysis?.risk_factors || []
         };
+
+        // Extract additional data for enhanced display
+        const keyTopics = [
+          ...extractTopicsFromText(analysisData.analysis?.key_quotes || []),
+          ...extractTopicsFromText(analysisData.analysis?.technology_stack || [])
+        ];
+        
+        const actionItems = analysisData.analysis?.next_steps || [];
+        
+        const summary = generateSummaryFromAnalysis(analysisData.analysis);
+
+        // Update transcript with additional data
+        transcript.keyTopics = keyTopics.slice(0, 8);
+        transcript.actionItems = actionItems.slice(0, 5);
+        transcript.summary = summary;
       } else {
         throw new Error('Analysis failed');
       }
@@ -230,6 +235,11 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
         financialInsights: extractFinancialInsights(transcriptLower),
         riskFactors: extractRiskFactors(transcriptLower)
       };
+
+      // Generate basic metadata
+      transcript.keyTopics = ['Financial Analysis', 'Process Improvement', 'Growth Strategy'];
+      transcript.actionItems = aiAnalysis.nextSteps.slice(0, 3);
+      transcript.summary = 'Call transcript analyzed. Key discussion points identified around business challenges and growth opportunities.';
     } finally {
       setAiProcessing(null);
       setActiveToastId(null);
@@ -263,9 +273,54 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
       ...transcript,
       status: 'completed',
       confidence: Math.floor(Math.random() * 20) + 80, // 80-100% confidence
-      sentiment: Math.random() > 0.7 ? 'positive' : Math.random() > 0.3 ? 'neutral' : 'negative',
+      sentiment: aiAnalysis.salesScore > 70 ? 'positive' : aiAnalysis.salesScore > 40 ? 'neutral' : 'negative',
       aiAnalysis
     };
+  };
+
+  // Helper function to extract topics from arrays
+  const extractTopicsFromText = (items: string[]): string[] => {
+    const topics: string[] = [];
+    items.forEach(item => {
+      if (typeof item === 'string' && item.length > 0) {
+        // Extract key phrases
+        const words = item.split(' ').filter(word => word.length > 4);
+        if (words.length > 0) {
+          topics.push(words.slice(0, 3).join(' '));
+        }
+      }
+    });
+    return topics;
+  };
+
+  // Helper function to generate summary from analysis
+  const generateSummaryFromAnalysis = (analysis: any): string => {
+    if (!analysis) return 'Call transcript processed. Analysis pending.';
+    
+    const painPointCount = analysis.pain_points?.length || 0;
+    const goalCount = analysis.key_insights?.length || 0;
+    const score = analysis.closeability_score || 0;
+    const urgency = analysis.urgency_level || 'medium';
+    
+    let summary = `Identified ${painPointCount} pain points and ${goalCount} business goals. `;
+    
+    if (score >= 80) {
+      summary += 'High opportunity score indicates strong buying intent. ';
+    } else if (score >= 60) {
+      summary += 'Moderate opportunity score suggests continued nurturing needed. ';
+    } else {
+      summary += 'Lower opportunity score indicates early-stage prospect. ';
+    }
+    
+    if (urgency === 'high') {
+      summary += 'Urgent follow-up required.';
+    } else if (urgency === 'medium') {
+      summary += 'Standard follow-up timeline recommended.';
+    } else {
+      summary += 'Long-term nurture track suggested.';
+    }
+    
+    return summary;
   };
 
   // Helper functions for basic analysis
@@ -1367,308 +1422,338 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
 
       {/* Selected Transcript Modal */}
       {selectedTranscript && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-6 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-medium text-white">{selectedTranscript.fileName}</h2>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => exportTranscriptAnalysis(selectedTranscript)}
-                  className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 text-sm flex items-center space-x-1"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Export</span>
-                </button>
-                {selectedTranscript.status === 'completed' && selectedTranscript.aiAnalysis && (
-                  <button
-                    onClick={() => generateAuditDeck(selectedTranscript)}
-                    className="bg-purple-600 text-white px-3 py-1 rounded-lg hover:bg-purple-700 text-sm flex items-center space-x-1"
-                  >
-                    <Brain className="w-4 h-4" />
-                    <span>Generate Audit Deck</span>
-                  </button>
-                )}
-                <button
-                  onClick={() => setSelectedTranscript(null)}
-                  className="text-gray-500 hover:text-white transition-colors duration-200 text-xl"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Call Details & Summary */}
-              <div className="space-y-4">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
-                  <h3 className="font-medium text-white mb-3">Call Details</h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Type:</span>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getCallTypeColor(selectedTranscript.callType)}`}>
-                        {selectedTranscript.callType}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Duration:</span>
-                      <span className="text-white">{selectedTranscript.duration}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Date:</span>
-                      <span className="text-white">{selectedTranscript.date}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Participants:</span>
-                      <span className="text-white">{selectedTranscript.participants.join(', ')}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Sentiment:</span>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getSentimentColor(selectedTranscript.sentiment)}`}>
-                        {selectedTranscript.sentiment}
-                      </span>
-                    </div>
-                    {selectedTranscript.aiAnalysis && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Sales Score:</span>
-                        <span className="text-white font-bold">{selectedTranscript.aiAnalysis.salesScore}/100</span>
-                      </div>
-                    )}
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl border border-white/20 w-full max-w-7xl my-8">
+            {/* Header */}
+            <div className="bg-white/5 backdrop-blur-xl rounded-t-3xl border-b border-white/10 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-semibold text-white mb-2">{selectedTranscript.fileName}</h2>
+                  <div className="flex items-center space-x-4 text-sm">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getCallTypeColor(selectedTranscript.callType)}`}>
+                      {selectedTranscript.callType.toUpperCase()}
+                    </span>
+                    <span className="flex items-center text-gray-400">
+                      <Calendar className="w-4 h-4 mr-1" />
+                      {selectedTranscript.date}
+                    </span>
+                    <span className="flex items-center text-gray-400">
+                      <Clock className="w-4 h-4 mr-1" />
+                      {selectedTranscript.duration}
+                    </span>
                   </div>
                 </div>
-                
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
-                  <h3 className="font-medium text-white mb-2">Summary</h3>
-                  <p className="text-gray-300 text-sm">{selectedTranscript.summary}</p>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => exportTranscriptAnalysis(selectedTranscript)}
+                    className="bg-blue-600/20 text-blue-400 px-4 py-2 rounded-xl hover:bg-blue-600/30 transition-all duration-200 flex items-center space-x-2 border border-blue-600/30"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Export</span>
+                  </button>
+                  {selectedTranscript.status === 'completed' && selectedTranscript.aiAnalysis && (
+                    <button
+                      onClick={() => generateAuditDeck(selectedTranscript)}
+                      className="bg-purple-600/20 text-purple-400 px-4 py-2 rounded-xl hover:bg-purple-600/30 transition-all duration-200 flex items-center space-x-2 border border-purple-600/30"
+                    >
+                      <Brain className="w-4 h-4" />
+                      <span>Generate Deck</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setSelectedTranscript(null)}
+                    className="text-gray-400 hover:text-white transition-colors duration-200 p-2 hover:bg-white/10 rounded-lg"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+              {/* AI Score Overview */}
+              {selectedTranscript.aiAnalysis && (
+                <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-2xl p-6 border border-purple-500/20">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="text-center">
+                      <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
+                        <TrendingUp className="w-8 h-8 text-purple-400 mx-auto mb-2" />
+                        <div className={`text-3xl font-bold ${
+                          selectedTranscript.aiAnalysis.salesScore >= 80 ? 'text-green-400' :
+                          selectedTranscript.aiAnalysis.salesScore >= 60 ? 'text-yellow-400' :
+                          'text-red-400'
+                        }`}>
+                          {selectedTranscript.aiAnalysis.salesScore}%
+                        </div>
+                        <div className="text-sm text-gray-400">Opportunity Score</div>
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
+                        <AlertCircle className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
+                        <div className={`text-xl font-bold px-3 py-1 rounded-full inline-block ${
+                          selectedTranscript.aiAnalysis.urgency === 'high' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                          selectedTranscript.aiAnalysis.urgency === 'medium' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+                          'bg-green-500/20 text-green-400 border border-green-500/30'
+                        }`}>
+                          {selectedTranscript.aiAnalysis.urgency.toUpperCase()}
+                        </div>
+                        <div className="text-sm text-gray-400 mt-2">Urgency Level</div>
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
+                        <Star className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                        <div className={`text-xl font-bold px-3 py-1 rounded-full inline-block ${getSentimentColor(selectedTranscript.sentiment)}`}>
+                          {selectedTranscript.sentiment.toUpperCase()}
+                        </div>
+                        <div className="text-sm text-gray-400 mt-2">Sentiment</div>
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
+                        <CheckCircle className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
+                        <div className="text-xl font-bold text-cyan-400">
+                          {selectedTranscript.confidence}%
+                        </div>
+                        <div className="text-sm text-gray-400">Confidence</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Summary Card */}
+              <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                  <MessageSquare className="w-5 h-5 mr-2 text-blue-400" />
+                  Executive Summary
+                </h3>
+                <p className="text-gray-300 leading-relaxed">{selectedTranscript.summary}</p>
+              </div>
+
+              {/* Main Analysis Grid */}
+              {selectedTranscript.aiAnalysis && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Pain Points */}
+                  <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                      <AlertTriangle className="w-5 h-5 mr-2 text-red-400" />
+                      Pain Points Identified ({selectedTranscript.aiAnalysis.painPoints.length})
+                    </h3>
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {selectedTranscript.aiAnalysis.painPoints.length > 0 ? (
+                        selectedTranscript.aiAnalysis.painPoints.map((pain, index) => (
+                          <div key={index} className="bg-red-500/10 rounded-lg p-3 border border-red-500/20">
+                            <p className="text-sm text-gray-300">{pain}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 italic">No specific pain points identified</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Business Goals */}
+                  <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                      <Target className="w-5 h-5 mr-2 text-blue-400" />
+                      Business Goals ({selectedTranscript.aiAnalysis.businessGoals.length})
+                    </h3>
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {selectedTranscript.aiAnalysis.businessGoals.length > 0 ? (
+                        selectedTranscript.aiAnalysis.businessGoals.map((goal, index) => (
+                          <div key={index} className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
+                            <p className="text-sm text-gray-300">{goal}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 italic">No specific goals identified</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Budget Indicators */}
+                  <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                      <DollarSign className="w-5 h-5 mr-2 text-green-400" />
+                      Budget Indicators ({selectedTranscript.aiAnalysis.budgetIndications.length})
+                    </h3>
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {selectedTranscript.aiAnalysis.budgetIndications.length > 0 ? (
+                        selectedTranscript.aiAnalysis.budgetIndications.map((budget, index) => (
+                          <div key={index} className="bg-green-500/10 rounded-lg p-3 border border-green-500/20">
+                            <p className="text-sm text-gray-300">{budget}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 italic">No specific budget indicators mentioned</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Decision Makers */}
+                  <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                      <Users className="w-5 h-5 mr-2 text-purple-400" />
+                      Decision Makers ({selectedTranscript.aiAnalysis.decisionMakers.length})
+                    </h3>
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {selectedTranscript.aiAnalysis.decisionMakers.length > 0 ? (
+                        selectedTranscript.aiAnalysis.decisionMakers.map((dm, index) => (
+                          <div key={index} className="bg-purple-500/10 rounded-lg p-3 border border-purple-500/20">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <span className="text-white font-medium">{dm.name}</span>
+                                <span className="text-gray-400 text-sm ml-2">• {dm.role}</span>
+                              </div>
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                dm.influence === 'high' ? 'bg-red-500/20 text-red-400' :
+                                dm.influence === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                'bg-green-500/20 text-green-400'
+                              }`}>
+                                {dm.influence.toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 italic">No specific decision makers identified</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Financial Insights */}
+                  <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                      <BarChart3 className="w-5 h-5 mr-2 text-cyan-400" />
+                      Financial Insights ({selectedTranscript.aiAnalysis.financialInsights.length})
+                    </h3>
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {selectedTranscript.aiAnalysis.financialInsights.length > 0 ? (
+                        selectedTranscript.aiAnalysis.financialInsights.map((insight, index) => (
+                          <div key={index} className="bg-cyan-500/10 rounded-lg p-3 border border-cyan-500/20">
+                            <p className="text-sm text-gray-300">{insight}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 italic">No specific financial insights captured</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Risk Factors */}
+                  <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                      <AlertCircle className="w-5 h-5 mr-2 text-yellow-400" />
+                      Risk Factors ({selectedTranscript.aiAnalysis.riskFactors.length})
+                    </h3>
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {selectedTranscript.aiAnalysis.riskFactors.length > 0 ? (
+                        selectedTranscript.aiAnalysis.riskFactors.map((risk, index) => (
+                          <div key={index} className="bg-yellow-500/10 rounded-lg p-3 border border-yellow-500/20">
+                            <p className="text-sm text-gray-300">{risk}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 italic">No significant risks identified</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Next Steps & Action Items */}
+              {selectedTranscript.aiAnalysis && (
+                <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 rounded-2xl p-6 border border-green-500/20">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                    <CheckCircle className="w-5 h-5 mr-2 text-green-400" />
+                    Recommended Next Steps
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedTranscript.aiAnalysis.nextSteps.map((step, index) => (
+                      <div key={index} className="flex items-start space-x-3">
+                        <div className="bg-green-500/20 rounded-full p-1 mt-0.5">
+                          <CheckCircle className="w-4 h-4 text-green-400" />
+                        </div>
+                        <p className="text-sm text-gray-300">{step}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Key Topics & Competitive Intelligence */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Key Topics */}
+                <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                    <Zap className="w-5 h-5 mr-2 text-yellow-400" />
+                    Key Topics Discussed
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTranscript.keyTopics.map((topic, index) => (
+                      <span
+                        key={index}
+                        className="bg-yellow-500/20 text-yellow-300 px-3 py-1 rounded-full text-sm border border-yellow-500/30"
+                      >
+                        {topic}
+                      </span>
+                    ))}
+                  </div>
                 </div>
 
-                {selectedTranscript.aiAnalysis && (
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
-                    <h3 className="font-medium text-white mb-3">Decision Makers</h3>
+                {/* Competitive Intelligence */}
+                {selectedTranscript.aiAnalysis && selectedTranscript.aiAnalysis.competitiveThreats.length > 0 && (
+                  <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                      <Users className="w-5 h-5 mr-2 text-orange-400" />
+                      Competitive Intelligence
+                    </h3>
                     <div className="space-y-2">
-                      {selectedTranscript.aiAnalysis.decisionMakers.map((dm, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-white/5 rounded">
-                          <div>
-                            <span className="text-white font-medium">{dm.name}</span>
-                            <span className="text-gray-400 text-sm ml-2">({dm.role})</span>
-                          </div>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            dm.influence === 'high' ? 'bg-red-500/20 text-red-400' :
-                            dm.influence === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                            'bg-green-500/20 text-green-400'
-                          }`}>
-                            {dm.influence.toUpperCase()}
-                          </span>
+                      {selectedTranscript.aiAnalysis.competitiveThreats.map((threat, index) => (
+                        <div key={index} className="bg-orange-500/10 rounded-lg p-2 border border-orange-500/20">
+                          <p className="text-sm text-gray-300">{threat}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
               </div>
-              
-              {/* AI Analysis Results */}
-              {selectedTranscript.aiAnalysis && (
-                <div className="space-y-4">
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
-                    <h3 className="font-medium text-white mb-3">Pain Points Identified</h3>
-                    <ul className="space-y-2">
-                      {selectedTranscript.aiAnalysis.painPoints.map((pain, index) => (
-                        <li key={index} className="text-sm text-gray-300 flex items-start">
-                          <AlertTriangle className="w-4 h-4 text-red-400 mr-2 mt-0.5 flex-shrink-0" />
-                          {pain}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
 
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
-                    <h3 className="font-medium text-white mb-3">Business Goals</h3>
-                    <ul className="space-y-2">
-                      {selectedTranscript.aiAnalysis.businessGoals.map((goal, index) => (
-                        <li key={index} className="text-sm text-gray-300 flex items-start">
-                          <Target className="w-4 h-4 text-blue-400 mr-2 mt-0.5 flex-shrink-0" />
-                          {goal}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
-                    <h3 className="font-medium text-white mb-3">Budget Indicators</h3>
-                    <ul className="space-y-2">
-                      {selectedTranscript.aiAnalysis.budgetIndications.map((budget, index) => (
-                        <li key={index} className="text-sm text-gray-300 flex items-start">
-                          <DollarSign className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-                          {budget}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
-                    <h3 className="font-medium text-white mb-3">Financial Insights</h3>
-                    <ul className="space-y-2">
-                      {selectedTranscript.aiAnalysis.financialInsights.map((insight, index) => (
-                        <li key={index} className="text-sm text-gray-300 flex items-start">
-                          <Brain className="w-4 h-4 text-purple-400 mr-2 mt-0.5 flex-shrink-0" />
-                          {insight}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
-                    <h3 className="font-medium text-white mb-3">Next Steps</h3>
-                    <ul className="space-y-2">
-                      {selectedTranscript.aiAnalysis.nextSteps.map((step, index) => (
-                        <li key={index} className="text-sm text-gray-300 flex items-start">
-                          <CheckCircle className="w-4 h-4 text-cyan-400 mr-2 mt-0.5 flex-shrink-0" />
-                          {step}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
-                    <h3 className="font-medium text-white mb-3">Risk Factors</h3>
-                    <ul className="space-y-2">
-                      {selectedTranscript.aiAnalysis.riskFactors.map((risk, index) => (
-                        <li key={index} className="text-sm text-gray-300 flex items-start">
-                          <AlertTriangle className="w-4 h-4 text-yellow-400 mr-2 mt-0.5 flex-shrink-0" />
-                          {risk}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {selectedTranscript.aiAnalysis.competitiveThreats.length > 0 && (
-                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
-                      <h3 className="font-medium text-white mb-3">Competitive Threats</h3>
-                      <ul className="space-y-2">
-                        {selectedTranscript.aiAnalysis.competitiveThreats.map((threat, index) => (
-                          <li key={index} className="text-sm text-gray-300 flex items-start">
-                            <Users className="w-4 h-4 text-orange-400 mr-2 mt-0.5 flex-shrink-0" />
-                            {threat}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Urgency & Call Type Analysis */}
-                  <div className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-xl p-4 border border-purple-500/30">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-medium text-white">AI Assessment</h3>
-                      <div className="flex items-center space-x-2">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          selectedTranscript.aiAnalysis.urgency === 'high' ? 'bg-red-500/20 text-red-400' :
-                          selectedTranscript.aiAnalysis.urgency === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                          'bg-green-500/20 text-green-400'
-                        }`}>
-                          {selectedTranscript.aiAnalysis.urgency.toUpperCase()} URGENCY
-                        </span>
-                        <span className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded text-xs font-medium">
-                          {selectedTranscript.aiAnalysis.salesScore}/100 SCORE
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-sm text-gray-300">
-                      <p className="mb-2">
-                        <strong className="text-white">Opportunity Assessment:</strong> 
-                        {selectedTranscript.aiAnalysis.salesScore >= 80 ? ' High-value opportunity with strong fit indicators.' :
-                         selectedTranscript.aiAnalysis.salesScore >= 60 ? ' Moderate opportunity requiring nurturing.' :
-                         ' Lower priority opportunity - focus on qualification.'}
-                      </p>
-                      <p>
-                        <strong className="text-white">Recommended Action:</strong> 
-                        {selectedTranscript.aiAnalysis.urgency === 'high' ? ' Immediate follow-up within 24 hours.' :
-                         selectedTranscript.aiAnalysis.urgency === 'medium' ? ' Follow-up within 3-5 business days.' :
-                         ' Standard follow-up cadence.'}
-                      </p>
+              {/* Financial Integration CTA */}
+              {selectedTranscript.companyId && (
+                <div className="bg-gradient-to-r from-purple-500/20 to-cyan-500/20 rounded-2xl p-8 border border-purple-500/30">
+                  <div className="text-center">
+                    <Zap className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-white mb-2">
+                      Financial Data Integration Available
+                    </h3>
+                    <p className="text-gray-300 mb-6">
+                      Combine this call analysis with QuickBooks data for comprehensive insights
+                    </p>
+                    <div className="flex justify-center space-x-4">
+                      <button 
+                        onClick={() => generateFinancialAnalysis(selectedTranscript)}
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2"
+                      >
+                        <BarChart3 className="w-5 h-5" />
+                        <span>Generate Financial Analysis</span>
+                      </button>
+                      <button 
+                        onClick={() => generateAuditDeck(selectedTranscript)}
+                        className="bg-gradient-to-r from-green-600 to-cyan-600 text-white px-6 py-3 rounded-xl hover:from-green-700 hover:to-cyan-700 transition-all duration-200 flex items-center space-x-2"
+                      >
+                        <Brain className="w-5 h-5" />
+                        <span>Generate Audit Deck</span>
+                      </button>
                     </div>
                   </div>
                 </div>
               )}
-
-              {/* Key Topics and Action Items */}
-              <div className="lg:col-span-2 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
-                    <h3 className="font-medium text-white mb-3">Key Topics Discussed</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedTranscript.keyTopics.map((topic, index) => (
-                        <span
-                          key={index}
-                          className="bg-cyan-500/20 text-cyan-300 px-3 py-1 rounded-full text-sm border border-cyan-500/30"
-                        >
-                          {topic}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25">
-                    <h3 className="font-medium text-white mb-3">Action Items</h3>
-                    <ul className="space-y-2">
-                      {selectedTranscript.actionItems.map((item, index) => (
-                        <li key={index} className="flex items-center space-x-2 text-sm">
-                          <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-                          <span className="text-gray-300">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Financial Integration Preview */}
-                {selectedTranscript.companyId && (
-                  <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-xl p-6 border border-green-500/30">
-                    <h3 className="font-medium text-white mb-4 flex items-center">
-                      <Zap className="w-5 h-5 mr-2 text-yellow-400" />
-                      Financial Data Integration Ready
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-400 mb-1">✓</div>
-                        <div className="text-sm text-gray-300">QBO Connected</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-400 mb-1">✓</div>
-                        <div className="text-sm text-gray-300">Call Analysis Complete</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-purple-400 mb-1">→</div>
-                        <div className="text-sm text-gray-300">Ready for Reports</div>
-                      </div>
-                    </div>
-                    <div className="mt-6 space-y-3">
-                      <div className="text-center">
-                        <button 
-                          onClick={() => generateFinancialAnalysis(selectedTranscript)}
-                          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2 mx-auto"
-                        >
-                          <BarChart3 className="w-5 h-5" />
-                          <span>Generate Financial Analysis</span>
-                        </button>
-                        <p className="text-xs text-gray-400 mt-2">
-                          Combine QBO data with call insights for comprehensive analysis
-                        </p>
-                      </div>
-                      <div className="text-center">
-                        <button 
-                          onClick={() => generateAuditDeck(selectedTranscript)}
-                          className="bg-gradient-to-r from-green-600 to-cyan-600 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-cyan-700 transition-all duration-200 flex items-center space-x-2 mx-auto"
-                        >
-                          <Brain className="w-5 h-5" />
-                          <span>Generate Audit Deck</span>
-                        </button>
-                        <p className="text-xs text-gray-400 mt-2">
-                          Create presentation-ready audit deck with insights
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
