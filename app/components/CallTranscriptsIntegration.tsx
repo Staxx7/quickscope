@@ -65,7 +65,7 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
   const [filterCallType, setFilterCallType] = useState('all');
   const [activeTab, setActiveTab] = useState('upload');
   const [aiProcessing, setAiProcessing] = useState<AIProcessingStage | null>(null);
-  const [selectedCompanyForUpload, setSelectedCompanyForUpload] = useState(defaultCompanyId);
+  const [selectedCompanyForUpload, setSelectedCompanyForUpload] = useState(defaultCompanyId || '');
   const [inputMode, setInputMode] = useState<'upload' | 'paste'>('upload');
   const [pastedTranscript, setPastedTranscript] = useState('');
   const [transcriptTitle, setTranscriptTitle] = useState('');
@@ -1122,6 +1122,13 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
   };
 
   const generateFinancialAnalysis = async (transcript: CallTranscript) => {
+    console.log('generateFinancialAnalysis called with transcript:', {
+      id: transcript.id,
+      fileName: transcript.fileName,
+      companyId: transcript.companyId,
+      hasAiAnalysis: !!transcript.aiAnalysis
+    });
+    
     if (!transcript.companyId) {
       showToast('Please ensure a company is selected for this transcript', 'warning');
       return;
@@ -2234,6 +2241,9 @@ Client: Thank you! Looking forward to our next conversation.`;
                     </h3>
                     <p className="text-gray-300 mb-6">
                       Combine this call analysis with QuickBooks data for comprehensive insights
+                    </p>
+                    <p className="text-xs text-gray-500 mb-4">
+                      Company ID: {selectedTranscript.companyId} | Company: {connectedCompanies.find(c => c.realm_id === selectedTranscript.companyId)?.company_name || 'Unknown'}
                     </p>
                     <div className="flex justify-center space-x-4">
                       <button 

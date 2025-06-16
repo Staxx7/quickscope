@@ -26,9 +26,21 @@ export async function GET(request: NextRequest) {
         )
       }
 
+      // Map prospect_id to companyId for frontend compatibility
+      const mappedData = data ? {
+        ...data,
+        companyId: data.prospect_id,
+        fileName: data.file_name || 'Untitled Transcript',
+        transcriptText: data.transcript_text,
+        duration: data.duration_seconds ? `${Math.floor(data.duration_seconds / 60)}:${(data.duration_seconds % 60).toString().padStart(2, '0')}` : '00:00',
+        date: new Date(data.created_at).toLocaleDateString(),
+        status: 'completed',
+        callType: 'discovery'
+      } : null;
+
       return NextResponse.json({
         success: true,
-        transcripts: [data],
+        transcripts: [mappedData],
         count: 1
       })
     } else if (prospectId || companyId) {
@@ -49,10 +61,28 @@ export async function GET(request: NextRequest) {
         )
       }
 
+      // Map prospect_id to companyId for frontend compatibility
+      const mappedTranscripts = (data || []).map(transcript => ({
+        ...transcript,
+        companyId: transcript.prospect_id,
+        fileName: transcript.file_name || 'Untitled Transcript',
+        transcriptText: transcript.transcript_text,
+        duration: transcript.duration_seconds ? `${Math.floor(transcript.duration_seconds / 60)}:${(transcript.duration_seconds % 60).toString().padStart(2, '0')}` : '00:00',
+        date: new Date(transcript.created_at).toLocaleDateString(),
+        status: 'completed',
+        callType: 'discovery',
+        participants: ['Client', 'Sales Rep'],
+        sentiment: 'neutral',
+        keyTopics: [],
+        actionItems: [],
+        summary: 'Transcript available for analysis',
+        confidence: 0
+      }));
+
       return NextResponse.json({
         success: true,
-        transcripts: data || [],
-        count: data?.length || 0
+        transcripts: mappedTranscripts,
+        count: mappedTranscripts.length
       })
     } else {
       // Return all transcripts if no specific filter is provided
@@ -70,10 +100,28 @@ export async function GET(request: NextRequest) {
         )
       }
 
+      // Map prospect_id to companyId for frontend compatibility
+      const mappedTranscripts = (data || []).map(transcript => ({
+        ...transcript,
+        companyId: transcript.prospect_id,
+        fileName: transcript.file_name || 'Untitled Transcript',
+        transcriptText: transcript.transcript_text,
+        duration: transcript.duration_seconds ? `${Math.floor(transcript.duration_seconds / 60)}:${(transcript.duration_seconds % 60).toString().padStart(2, '0')}` : '00:00',
+        date: new Date(transcript.created_at).toLocaleDateString(),
+        status: 'completed',
+        callType: 'discovery',
+        participants: ['Client', 'Sales Rep'],
+        sentiment: 'neutral',
+        keyTopics: [],
+        actionItems: [],
+        summary: 'Transcript available for analysis',
+        confidence: 0
+      }));
+
       return NextResponse.json({
         success: true,
-        transcripts: data || [],
-        count: data?.length || 0
+        transcripts: mappedTranscripts,
+        count: mappedTranscripts.length
       })
     }
 
