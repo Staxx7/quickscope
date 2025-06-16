@@ -35,14 +35,7 @@ export async function GET(request: NextRequest) {
     const companyInfo = await getCompanyInfo(realmId, tokenData.access_token);
     const companyName = companyInfo?.name || `Company ${realmId}`;
 
-    // DEBUG: Check environment variables
-    console.log('=== SUPABASE DEBUG ===');
-    console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
-    console.log('Service Key present:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
-    console.log('Service Key length:', process.env.SUPABASE_SERVICE_ROLE_KEY?.length);
-    console.log('About to create Supabase client...');
-
-    // Create Supabase client with explicit error handling
+    // Create Supabase client
     let supabase;
     try {
       supabase = createClient(
@@ -55,62 +48,117 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${baseUrl}/connect?error=supabase_client_error`);
     }
 
-    console.log('Testing basic Supabase connectivity...');
+    // Store tokens in database
     try {
-      const { data: testData, error: testError } = await supabase
+      const expiresAt = new Date(Date.now() + (tokenData.expires_in * 1000));
+      const tokenRecord = {
+        company_id: realmId,
+        company_name: companyName,
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token,
+        expires_at: expiresAt.toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error: dbError } = await supabase
         .from('qbo_tokens')
-        .select('company_id')
-        .limit(1);
-      
-      console.log('Supabase connectivity test result:', { testData, testError });
-      
-      // If the connectivity test passes, try the upsert
-      if (!testError) {
-        console.log('Connectivity test passed, attempting upsert...');
+        .upsert(tokenRecord, {
+          onConflict: 'company_id'
+        })
+        .select()
+        .single();
+
+      if (dbError) {
+        console.error('Supabase upsert error:', dbError);
+        // Continue anyway - don't block the OAuth flow
+      } else {
+        console.log('Successfully stored tokens for company:', companyName);
+      }
+
+      // Create/update prospect record
+      // First check if a prospect with this qb_company_id exists
+      const { data: existingProspect } = await supabase
+        .from('prospects')
+        .select('id')
+        .eq('qb_company_id', realmId)
+        .single();
+
+      const prospectData = {
+        company_name: companyName,
+        contact_name: companyName,
+        email: `contact@${companyName.toLowerCase().replace(/\s+/g, '')}.com`,
+        qb_company_id: realmId,
+        workflow_stage: 'connected',
+        user_type: 'prospect',
+        updated_at: new Date().toISOString()
+      };
+
+      let prospectResult;
+      if (existingProspect) {
+        // Update existing prospect
+        const { data, error } = await supabase
+          .from('prospects')
+          .update(prospectData)
+          .eq('id', existingProspect.id)
+          .select()
+          .single();
         
-        const expiresAt = new Date(Date.now() + (tokenData.expires_in * 1000));
-        const tokenRecord = {
-          company_id: realmId,
-          company_name: companyName,
-          access_token: tokenData.access_token,
-          refresh_token: tokenData.refresh_token,
-          expires_at: expiresAt.toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-
-        const { data, error: dbError } = await supabase
-          .from('qbo_tokens')
-          .upsert(tokenRecord, {
-            onConflict: 'company_id'
-          });
-
-        if (dbError) {
-          console.error('Supabase upsert error:', dbError);
-          // Continue anyway - don't block the OAuth flow
-        } else {
-          console.log('Successfully stored tokens for company:', companyName);
+        prospectResult = data;
+        if (error) {
+          console.warn('Prospect update error:', error);
+        }
+      } else {
+        // Create new prospect
+        const { data, error } = await supabase
+          .from('prospects')
+          .insert(prospectData)
+          .select()
+          .single();
+        
+        prospectResult = data;
+        if (error) {
+          console.warn('Prospect insert error:', error);
         }
       }
+
+      if (prospectResult) {
+        console.log('Prospect saved/updated:', prospectResult.id);
+      }
       
-    } catch (connectivityError) {
-      console.error('Supabase connectivity test failed:', connectivityError);
+    } catch (dbError) {
+      console.error('Database operation failed:', dbError);
       // Continue anyway - don't block the OAuth flow
     }
 
-    // ALWAYS SUCCEED - Don't let database issues block OAuth success
-    console.log('=== OAUTH SUCCESS ===');
-    console.log('✅ QuickBooks OAuth completed successfully!');
-    console.log('📋 Token Details:');
-    console.log('- Company:', companyName);
-    console.log('- Realm ID:', realmId);
-    console.log('- Access Token (first 20 chars):', tokenData.access_token?.substring(0, 20) + '...');
-    console.log('- Refresh Token (first 20 chars):', tokenData.refresh_token?.substring(0, 20) + '...');
-    console.log('- Expires in:', tokenData.expires_in, 'seconds');
-    console.log('=== END OAUTH SUCCESS ===');
+    // Create success redirect with cookies
+    const successUrl = `${baseUrl}/success?company=${encodeURIComponent(companyName)}&realmId=${realmId}`;
+    const response = NextResponse.redirect(successUrl);
+    
+    // Set authentication cookies
+    response.cookies.set('qb_authenticated', 'true', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7 // 7 days
+    });
+    
+    response.cookies.set('qb_company_id', realmId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7 // 7 days
+    });
+    
+    response.cookies.set('qb_realm_id', realmId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7 // 7 days
+    });
 
-    // Redirect to success page regardless of database status
-    return NextResponse.redirect(`${baseUrl}/connect/success?company=${encodeURIComponent(companyName)}&realmId=${realmId}`);
+    console.log('OAuth flow completed successfully, redirecting with cookies set');
+    return response;
 
   } catch (error) {
     console.error('Unexpected error in OAuth callback:', {
