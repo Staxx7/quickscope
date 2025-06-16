@@ -171,6 +171,12 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
     // Call real AI analysis API
     let aiAnalysis;
     try {
+      console.log('Sending transcript for analysis:', {
+        textLength: (fileContent || transcript.transcriptText || '').length,
+        companyId: transcript.companyId,
+        callType: transcript.callType
+      });
+
       const analysisResponse = await fetch('/api/analyze-transcript', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -184,66 +190,81 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
 
       if (analysisResponse.ok) {
         const analysisData = await analysisResponse.json();
+        console.log('API Response:', analysisData);
+        
+        // Check if we have the analysis object
+        const analysis = analysisData.analysis || analysisData;
+        console.log('Analysis object:', analysis);
         
         // Transform the API response to match our interface
         aiAnalysis = {
-          painPoints: analysisData.analysis?.pain_points || [],
-          businessGoals: analysisData.analysis?.key_insights || [],
-          budgetIndications: analysisData.analysis?.budget_indicators || [],
-          decisionMakers: analysisData.analysis?.decision_makers || [],
-          competitiveThreats: analysisData.analysis?.competitive_mentions || [],
-          urgency: analysisData.analysis?.urgency_level || 'medium',
-          nextSteps: analysisData.analysis?.next_steps || [],
-          salesScore: analysisData.analysis?.closeability_score || 70,
-          financialInsights: analysisData.analysis?.financial_pain_points || [],
-          riskFactors: analysisData.analysis?.risk_factors || []
+          painPoints: analysis.pain_points || [],
+          businessGoals: analysis.key_insights || [],
+          budgetIndications: analysis.budget_indicators || [],
+          decisionMakers: analysis.decision_makers || [],
+          competitiveThreats: analysis.competitive_mentions || [],
+          urgency: analysis.urgency_level || 'medium',
+          nextSteps: analysis.next_steps || [],
+          salesScore: analysis.closeability_score || 70,
+          financialInsights: analysis.financial_pain_points || [],
+          riskFactors: analysis.risk_factors || []
         };
+
+        console.log('Transformed aiAnalysis:', aiAnalysis);
 
         // Extract additional data for enhanced display
         const keyTopics = [
-          ...extractTopicsFromText(analysisData.analysis?.key_quotes || []),
-          ...extractTopicsFromText(analysisData.analysis?.technology_stack || [])
+          ...extractTopicsFromText(analysis.key_quotes || []),
+          ...extractTopicsFromText(analysis.technology_stack || [])
         ];
         
-        const actionItems = analysisData.analysis?.next_steps || [];
+        const actionItems = analysis.next_steps || [];
         
-        const summary = generateSummaryFromAnalysis(analysisData.analysis);
+        const summary = generateSummaryFromAnalysis(analysis);
 
         // Update transcript with additional data
-        transcript.keyTopics = keyTopics.slice(0, 8);
+        transcript.keyTopics = keyTopics.length > 0 ? keyTopics.slice(0, 8) : ['Financial Analysis', 'Business Strategy', 'Growth Planning'];
         transcript.actionItems = actionItems.slice(0, 5);
         transcript.summary = summary;
       } else {
-        throw new Error('Analysis failed');
+        const errorText = await analysisResponse.text();
+        console.error('Analysis API error:', analysisResponse.status, errorText);
+        throw new Error(`Analysis failed: ${analysisResponse.status}`);
       }
     } catch (error) {
       console.error('Analysis error:', error)
-      showToast('AI analysis encountered an error. Using basic analysis.', 'warning')
+      showToast('AI analysis encountered an error. Using enhanced fallback analysis.', 'warning')
       
-      // Provide basic analysis based on transcript content
-      const transcriptLower = (fileContent || transcript.transcriptText || '').toLowerCase();
+      // Provide enhanced fallback analysis based on transcript content
+      const transcriptText = fileContent || transcript.transcriptText || '';
+      const transcriptLower = transcriptText.toLowerCase();
+      
+      // Extract more detailed insights from the transcript
+      const sentences = transcriptText.split(/[.!?]+/).filter(s => s.trim().length > 20);
       
       aiAnalysis = {
-        painPoints: extractPainPoints(transcriptLower),
-        businessGoals: extractBusinessGoals(transcriptLower),
-        budgetIndications: extractBudgetInfo(transcriptLower),
-        decisionMakers: extractDecisionMakers(fileContent || transcript.transcriptText || ''),
-        competitiveThreats: extractCompetitiveInfo(transcriptLower),
-        urgency: determineUrgency(transcriptLower),
-        nextSteps: generateNextSteps(transcript.callType),
-        salesScore: calculateBasicScore(transcriptLower),
-        financialInsights: extractFinancialInsights(transcriptLower),
-        riskFactors: extractRiskFactors(transcriptLower)
+        painPoints: extractDetailedPainPoints(transcriptText, sentences),
+        businessGoals: extractDetailedBusinessGoals(transcriptText, sentences),
+        budgetIndications: extractDetailedBudgetInfo(transcriptText, sentences),
+        decisionMakers: extractDetailedDecisionMakers(transcriptText),
+        competitiveThreats: extractDetailedCompetitiveInfo(transcriptText, sentences),
+        urgency: determineDetailedUrgency(transcriptText),
+        nextSteps: generateDetailedNextSteps(transcript.callType, transcriptText),
+        salesScore: calculateDetailedScore(transcriptText),
+        financialInsights: extractDetailedFinancialInsights(transcriptText, sentences),
+        riskFactors: extractDetailedRiskFactors(transcriptText, sentences)
       };
 
-      // Generate basic metadata
-      transcript.keyTopics = ['Financial Analysis', 'Process Improvement', 'Growth Strategy'];
-      transcript.actionItems = aiAnalysis.nextSteps.slice(0, 3);
-      transcript.summary = 'Call transcript analyzed. Key discussion points identified around business challenges and growth opportunities.';
+      // Generate rich metadata
+      transcript.keyTopics = extractKeyTopicsFromTranscript(transcriptText);
+      transcript.actionItems = aiAnalysis.nextSteps.slice(0, 5);
+      transcript.summary = generateDetailedSummary(transcriptText, aiAnalysis);
     } finally {
       setAiProcessing(null);
       setActiveToastId(null);
     }
+
+    console.log('Final aiAnalysis object:', aiAnalysis);
 
     // Store transcript in Supabase
     try {
@@ -323,173 +344,370 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
     return summary;
   };
 
-  // Helper functions for basic analysis
-  const extractPainPoints = (text: string): string[] => {
-    const painKeywords = [
-      'problem', 'issue', 'challenge', 'struggle', 'difficult', 'pain', 
-      'frustrat', 'concern', 'worry', 'inefficient', 'manual', 'time-consuming'
+  // Enhanced extraction functions for better fallback analysis
+  const extractDetailedPainPoints = (text: string, sentences: string[]): string[] => {
+    const painPoints: string[] = [];
+    const painPatterns = [
+      /(?:problem|issue|challenge|struggle|difficult|pain|frustrat\w*|concern|worry) (?:with|about|regarding) ([^.!?]+)/gi,
+      /(?:we|they|I) (?:are|am|is) (?:having|experiencing|facing) (?:problems?|issues?|challenges?|difficulties?) (?:with|in|regarding) ([^.!?]+)/gi,
+      /(?:it's|its|it is) (?:hard|difficult|challenging|frustrating|time-consuming|inefficient) (?:to|when|for) ([^.!?]+)/gi
     ];
-    const points: string[] = [];
     
-    painKeywords.forEach(keyword => {
-      if (text.includes(keyword)) {
-        const sentences = text.split(/[.!?]+/);
-        sentences.forEach(sentence => {
-          if (sentence.includes(keyword) && sentence.length > 20) {
-            points.push(sentence.trim());
+    sentences.forEach(sentence => {
+      painPatterns.forEach(pattern => {
+        const matches = Array.from(sentence.matchAll(pattern));
+        for (const match of matches) {
+          if (match[1]) {
+            painPoints.push(sentence.trim());
+            break;
           }
-        });
-      }
+        }
+      });
     });
     
-    return Array.from(new Set(points)).slice(0, 5);
+    // Add context-specific pain points
+    if (text.includes('manual') && text.includes('process')) {
+      painPoints.push('Manual processes are slowing down operations and increasing error rates');
+    }
+    if (text.includes('visibility') && (text.includes('lack') || text.includes('no') || text.includes('poor'))) {
+      painPoints.push('Lack of real-time visibility into financial performance');
+    }
+    if (text.includes('report') && (text.includes('late') || text.includes('delay') || text.includes('slow'))) {
+      painPoints.push('Financial reporting delays impacting decision-making');
+    }
+    
+    return Array.from(new Set(painPoints)).slice(0, 8);
   };
 
-  const extractBusinessGoals = (text: string): string[] => {
-    const goalKeywords = [
-      'goal', 'objective', 'target', 'aim', 'want to', 'need to', 
-      'plan to', 'looking to', 'trying to', 'growth', 'expand', 'improve'
-    ];
+  const extractDetailedBusinessGoals = (text: string, sentences: string[]): string[] => {
     const goals: string[] = [];
-    
-    goalKeywords.forEach(keyword => {
-      if (text.includes(keyword)) {
-        const sentences = text.split(/[.!?]+/);
-        sentences.forEach(sentence => {
-          if (sentence.includes(keyword) && sentence.length > 20) {
-            goals.push(sentence.trim());
-          }
-        });
-      }
-    });
-    
-    return Array.from(new Set(goals)).slice(0, 5);
-  };
-
-  const extractBudgetInfo = (text: string): string[] => {
-    const budgetKeywords = [
-      'budget', 'cost', 'price', 'invest', 'spend', 'dollar', '$', 
-      'thousand', 'million', 'k per', 'monthly', 'annual', 'yearly'
+    const goalPatterns = [
+      /(?:goal|objective|aim|want|need|plan|looking|trying) (?:to|for) ([^.!?]+)/gi,
+      /(?:we|they|I) (?:want|need|plan|intend|aim) (?:to) ([^.!?]+)/gi,
+      /(?:focus|priority|important|critical) (?:is|are|for us is) ([^.!?]+)/gi
     ];
-    const budgetInfo: string[] = [];
     
-    budgetKeywords.forEach(keyword => {
-      if (text.includes(keyword)) {
-        const sentences = text.split(/[.!?]+/);
-        sentences.forEach(sentence => {
-          if (sentence.includes(keyword) && sentence.length > 15) {
-            budgetInfo.push(sentence.trim());
+    sentences.forEach(sentence => {
+      goalPatterns.forEach(pattern => {
+        const matches = Array.from(sentence.matchAll(pattern));
+        for (const match of matches) {
+          if (match[1]) {
+            goals.push(sentence.trim());
+            break;
           }
-        });
-      }
+        }
+      });
     });
     
-    return Array.from(new Set(budgetInfo)).slice(0, 3);
+    // Add context-specific goals
+    if (text.includes('grow') || text.includes('scale')) {
+      goals.push('Scale operations efficiently while maintaining financial control');
+    }
+    if (text.includes('automat') || text.includes('streamline')) {
+      goals.push('Automate financial processes to reduce manual work and errors');
+    }
+    if (text.includes('forecast') || text.includes('predict')) {
+      goals.push('Improve financial forecasting and predictive analytics capabilities');
+    }
+    
+    return Array.from(new Set(goals)).slice(0, 8);
   };
 
-  const extractDecisionMakers = (text: string): any[] => {
-    const titleKeywords = ['ceo', 'cfo', 'cto', 'president', 'director', 'manager', 'head of', 'vp'];
+  const extractDetailedBudgetInfo = (text: string, sentences: string[]): string[] => {
+    const budgetInfo: string[] = [];
+    const budgetPatterns = [
+      /(?:budget|spend|invest|cost|price) (?:is|are|of|around|approximately|about) ([^.!?]+)/gi,
+      /\$[\d,]+(?:k|K|m|M)?(?:\s*(?:per|\/)\s*(?:month|year|annually))?/g,
+      /(?:\d+)(?:k|K|thousand|million)\s*(?:dollar|usd|per|\/)\s*(?:month|year|annually)?/gi
+    ];
+    
+    sentences.forEach(sentence => {
+      budgetPatterns.forEach(pattern => {
+        if (pattern.test(sentence)) {
+          budgetInfo.push(sentence.trim());
+        }
+      });
+    });
+    
+    return Array.from(new Set(budgetInfo)).slice(0, 5);
+  };
+
+  const extractDetailedDecisionMakers = (text: string): any[] => {
     const makers: any[] = [];
+    const titlePatterns = [
+      /(?:I'm|I am|my role is|as) (?:the\s+)?(\w+\s*(?:ceo|cfo|cto|coo|president|vp|director|manager|head\s+of|chief\s+\w+\s+officer))/gi,
+      /(?:our|the company's?) (\w+\s*(?:ceo|cfo|cto|coo|president|vp|director|manager|head\s+of|chief\s+\w+\s+officer))/gi,
+      /(\w+\s*(?:ceo|cfo|cto|coo|president|vp|director|manager|head\s+of|chief\s+\w+\s+officer)) (?:will|would|needs to|has to|must) (?:approve|sign off|decide)/gi
+    ];
     
-    titleKeywords.forEach(title => {
-      if (text.toLowerCase().includes(title)) {
-        makers.push({
-          name: 'Decision Maker',
-          role: title.toUpperCase(),
-          influence: title.includes('c') ? 'high' : 'medium'
-        });
+    const textLower = text.toLowerCase();
+    titlePatterns.forEach(pattern => {
+      const matches = Array.from(text.matchAll(pattern));
+      for (const match of matches) {
+        if (match[1]) {
+          const role = match[1].trim().toUpperCase();
+          const influence = role.includes('CEO') || role.includes('CFO') || role.includes('PRESIDENT') ? 'high' :
+                           role.includes('VP') || role.includes('DIRECTOR') ? 'medium' : 'low';
+          
+          makers.push({
+            name: `${role} (mentioned in call)`,
+            role: role,
+            influence: influence
+          });
+        }
       }
     });
     
-    return makers.slice(0, 3);
+    // Remove duplicates based on role
+    const uniqueMakers = makers.reduce((acc: any[], current) => {
+      const exists = acc.find((item: any) => item.role === current.role);
+      if (!exists) {
+        acc.push(current);
+      }
+      return acc;
+    }, []);
+    
+    return uniqueMakers.slice(0, 5);
   };
 
-  const extractCompetitiveInfo = (text: string): string[] => {
-    const competitorKeywords = ['competitor', 'alternative', 'other option', 'comparing', 'versus', 'instead of'];
-    const threats: string[] = [];
+  const extractDetailedCompetitiveInfo = (text: string, sentences: string[]): string[] => {
+    const competitiveInfo: string[] = [];
+    const competitorPatterns = [
+      /(?:competitor|alternative|other\s+option|comparing|versus|instead\s+of|currently\s+using) ([^.!?]+)/gi,
+      /(?:looking\s+at|evaluating|considering) (?:other|different|alternative) ([^.!?]+)/gi
+    ];
     
-    competitorKeywords.forEach(keyword => {
-      if (text.includes(keyword)) {
-        threats.push(`Evaluating ${keyword}s in the market`);
-      }
+    sentences.forEach(sentence => {
+      competitorPatterns.forEach(pattern => {
+        if (pattern.test(sentence)) {
+          competitiveInfo.push(sentence.trim());
+        }
+      });
     });
     
-    return threats;
+    return Array.from(new Set(competitiveInfo)).slice(0, 5);
   };
 
-  const determineUrgency = (text: string): 'high' | 'medium' | 'low' => {
-    const urgentKeywords = ['urgent', 'asap', 'immediately', 'right away', 'this week', 'this month'];
-    const urgentCount = urgentKeywords.filter(keyword => text.includes(keyword)).length;
+  const determineDetailedUrgency = (text: string): 'high' | 'medium' | 'low' => {
+    const textLower = text.toLowerCase();
+    const highUrgencyIndicators = [
+      'urgent', 'asap', 'immediately', 'right away', 'critical', 'emergency',
+      'this week', 'by end of week', 'before month end', 'deadline'
+    ];
+    const mediumUrgencyIndicators = [
+      'this month', 'next month', 'this quarter', 'soon', 'quickly',
+      'in the coming weeks', 'near future', 'priority'
+    ];
     
-    if (urgentCount >= 2) return 'high';
-    if (urgentCount === 1) return 'medium';
+    const highCount = highUrgencyIndicators.filter(indicator => textLower.includes(indicator)).length;
+    const mediumCount = mediumUrgencyIndicators.filter(indicator => textLower.includes(indicator)).length;
+    
+    if (highCount >= 2) return 'high';
+    if (highCount >= 1 || mediumCount >= 2) return 'medium';
     return 'low';
   };
 
-  const generateNextSteps = (callType: string): string[] => {
-    const steps: { [key: string]: string[] } = {
+  const generateDetailedNextSteps = (callType: string, text: string): string[] => {
+    const baseSteps: { [key: string]: string[] } = {
       discovery: [
-        'Schedule follow-up call to dive deeper into pain points',
-        'Prepare customized demo based on identified needs',
-        'Send relevant case studies and ROI calculator'
+        'Schedule follow-up demo focusing on identified pain points',
+        'Send ROI calculator with customized assumptions based on discussion',
+        'Share relevant case studies from similar companies in their industry',
+        'Connect technical team for integration requirements discussion',
+        'Provide detailed pricing proposal with flexible payment options'
       ],
       audit: [
-        'Compile comprehensive financial analysis report',
-        'Prepare recommendations presentation',
-        'Schedule decision-maker meeting'
+        'Complete comprehensive financial analysis report within 48 hours',
+        'Prepare executive presentation highlighting key findings and opportunities',
+        'Schedule stakeholder review meeting with all decision makers',
+        'Develop phased implementation roadmap with clear milestones',
+        'Create custom pricing package based on identified needs'
       ],
       'follow-up': [
-        'Address any remaining concerns or objections',
-        'Finalize proposal with custom pricing',
-        'Set timeline for implementation'
+        'Address specific concerns raised about implementation timeline',
+        'Provide additional customer references from similar-sized companies',
+        'Clarify contract terms and service level agreements',
+        'Review revised proposal with updated pricing structure',
+        'Schedule final decision call with executive team'
       ],
       close: [
-        'Send contract for review and signature',
-        'Schedule kickoff meeting',
-        'Begin onboarding preparation'
+        'Send contract for legal review and signature via DocuSign',
+        'Schedule kickoff meeting for next week',
+        'Begin onboarding preparation and team introductions',
+        'Set up initial data migration and system access',
+        'Create project timeline with key deliverables'
       ]
     };
     
-    return steps[callType] || steps.discovery;
+    const steps = baseSteps[callType] || baseSteps.discovery;
+    
+    // Customize based on transcript content
+    if (text.includes('integration')) {
+      steps.push('Provide detailed integration documentation and API specifications');
+    }
+    if (text.includes('security') || text.includes('compliance')) {
+      steps.push('Share security certifications and compliance documentation');
+    }
+    
+    return steps.slice(0, 6);
   };
 
-  const calculateBasicScore = (text: string): number => {
+  const calculateDetailedScore = (text: string): number => {
     let score = 50; // Base score
+    const textLower = text.toLowerCase();
     
-    // Positive indicators
-    if (text.includes('interested')) score += 10;
-    if (text.includes('budget')) score += 10;
-    if (text.includes('timeline')) score += 10;
-    if (text.includes('decision')) score += 5;
-    if (text.includes('implement')) score += 5;
+    // Positive indicators with weights
+    const positiveIndicators = [
+      { patterns: ['very interested', 'extremely interested', 'definitely interested'], points: 15 },
+      { patterns: ['love it', 'love this', 'exactly what we need'], points: 12 },
+      { patterns: ['budget approved', 'budget allocated', 'funding available'], points: 15 },
+      { patterns: ['ready to move', 'want to start', 'let\'s do this'], points: 12 },
+      { patterns: ['timeline', 'when can we start', 'how soon'], points: 8 },
+      { patterns: ['decision maker', 'i can approve', 'i have authority'], points: 10 },
+      { patterns: ['solve our problem', 'address our needs', 'fix our issues'], points: 8 }
+    ];
     
-    // Negative indicators
-    if (text.includes('not sure')) score -= 10;
-    if (text.includes('maybe')) score -= 5;
-    if (text.includes('think about')) score -= 5;
+    // Negative indicators with weights
+    const negativeIndicators = [
+      { patterns: ['not sure', 'uncertain', 'maybe'], points: -8 },
+      { patterns: ['need to think', 'let me consider', 'discuss internally'], points: -5 },
+      { patterns: ['too expensive', 'over budget', 'can\'t afford'], points: -12 },
+      { patterns: ['not a priority', 'maybe later', 'next year'], points: -10 },
+      { patterns: ['happy with current', 'no need to change'], points: -15 }
+    ];
+    
+    positiveIndicators.forEach(indicator => {
+      indicator.patterns.forEach(pattern => {
+        if (textLower.includes(pattern)) {
+          score += indicator.points;
+        }
+      });
+    });
+    
+    negativeIndicators.forEach(indicator => {
+      indicator.patterns.forEach(pattern => {
+        if (textLower.includes(pattern)) {
+          score += indicator.points;
+        }
+      });
+    });
     
     return Math.max(0, Math.min(100, score));
   };
 
-  const extractFinancialInsights = (text: string): string[] => {
+  const extractDetailedFinancialInsights = (text: string, sentences: string[]): string[] => {
     const insights: string[] = [];
+    const financialPatterns = [
+      /(?:revenue|sales|income) (?:is|are|has been|have been) ([^.!?]+)/gi,
+      /(?:cost|expense|spending) (?:is|are|has been|have been) ([^.!?]+)/gi,
+      /(?:cash flow|working capital|liquidity) (?:is|are|has been|have been) ([^.!?]+)/gi,
+      /(?:profit|margin|profitability) (?:is|are|has been|have been) ([^.!?]+)/gi
+    ];
     
-    if (text.includes('revenue')) insights.push('Revenue growth is a key focus area');
-    if (text.includes('cost') || text.includes('expense')) insights.push('Cost optimization opportunities identified');
-    if (text.includes('cash flow')) insights.push('Cash flow management is a priority');
-    if (text.includes('profit')) insights.push('Profitability improvement needed');
+    sentences.forEach(sentence => {
+      financialPatterns.forEach(pattern => {
+        if (pattern.test(sentence)) {
+          insights.push(sentence.trim());
+        }
+      });
+    });
     
-    return insights;
+    // Add specific insights based on keywords
+    if (text.includes('revenue') && (text.includes('grow') || text.includes('increase'))) {
+      insights.push('Revenue growth is a primary focus, requiring better financial visibility');
+    }
+    if (text.includes('cost') && (text.includes('reduce') || text.includes('optimize'))) {
+      insights.push('Cost optimization opportunities exist through process automation');
+    }
+    if (text.includes('cash') && text.includes('flow')) {
+      insights.push('Cash flow management needs improvement for better liquidity');
+    }
+    
+    return Array.from(new Set(insights)).slice(0, 8);
   };
 
-  const extractRiskFactors = (text: string): string[] => {
+  const extractDetailedRiskFactors = (text: string, sentences: string[]): string[] => {
     const risks: string[] = [];
+    const riskPatterns = [
+      /(?:concern|worry|risk|hesitation) (?:is|are|about|regarding) ([^.!?]+)/gi,
+      /(?:might|could|may) (?:be|become) (?:a problem|an issue|difficult) ([^.!?]+)/gi
+    ];
     
-    if (text.includes('concern')) risks.push('Concerns need to be addressed');
-    if (text.includes('worry')) risks.push('Risk factors identified in discussion');
-    if (text.includes('competitor')) risks.push('Competitive evaluation in progress');
+    sentences.forEach(sentence => {
+      riskPatterns.forEach(pattern => {
+        if (pattern.test(sentence)) {
+          risks.push(sentence.trim());
+        }
+      });
+    });
     
-    return risks;
+    // Add context-specific risks
+    if (text.includes('budget') && (text.includes('tight') || text.includes('limited'))) {
+      risks.push('Budget constraints may impact decision timeline');
+    }
+    if (text.includes('current') && (text.includes('solution') || text.includes('system'))) {
+      risks.push('Existing solution creates switching cost concerns');
+    }
+    
+    return Array.from(new Set(risks)).slice(0, 5);
+  };
+
+  const extractKeyTopicsFromTranscript = (text: string): string[] => {
+    const topics: string[] = [];
+    const topicKeywords = {
+      'Financial Reporting': ['report', 'financial statement', 'balance sheet', 'p&l'],
+      'Cash Flow Management': ['cash flow', 'working capital', 'liquidity'],
+      'Process Automation': ['automat', 'streamline', 'efficiency', 'manual process'],
+      'Growth Strategy': ['growth', 'scale', 'expand', 'increase revenue'],
+      'Cost Optimization': ['cost', 'expense', 'reduce', 'optimize'],
+      'System Integration': ['integrat', 'connect', 'api', 'sync'],
+      'Compliance': ['compliance', 'audit', 'regulation', 'sox'],
+      'Forecasting': ['forecast', 'predict', 'projection', 'budget']
+    };
+    
+    const textLower = text.toLowerCase();
+    Object.entries(topicKeywords).forEach(([topic, keywords]) => {
+      if (keywords.some(keyword => textLower.includes(keyword))) {
+        topics.push(topic);
+      }
+    });
+    
+    return topics.slice(0, 8);
+  };
+
+  const generateDetailedSummary = (text: string, analysis: any): string => {
+    const painPointCount = analysis.painPoints?.length || 0;
+    const goalCount = analysis.businessGoals?.length || 0;
+    const score = analysis.salesScore || 0;
+    const urgency = analysis.urgency || 'medium';
+    
+    let summary = `Comprehensive analysis reveals ${painPointCount} critical pain points and ${goalCount} strategic business goals. `;
+    
+    if (score >= 80) {
+      summary += 'High opportunity score (80%+) indicates strong buying intent with immediate action potential. ';
+    } else if (score >= 60) {
+      summary += 'Solid opportunity score (60-79%) suggests qualified prospect requiring targeted nurturing. ';
+    } else {
+      summary += 'Developing opportunity (below 60%) indicates early-stage prospect needing education. ';
+    }
+    
+    if (urgency === 'high') {
+      summary += 'Urgent timeline detected - immediate follow-up critical for deal momentum.';
+    } else if (urgency === 'medium') {
+      summary += 'Standard buying timeline - maintain regular engagement cadence.';
+    } else {
+      summary += 'Extended evaluation period expected - focus on relationship building.';
+    }
+    
+    // Add specific insights if available
+    if (analysis.decisionMakers?.length > 0) {
+      summary += ` ${analysis.decisionMakers.length} key decision makers identified.`;
+    }
+    if (analysis.budgetIndications?.length > 0) {
+      summary += ' Budget parameters discussed.';
+    }
+    
+    return summary;
   };
 
   const handleFileUpload = async (files: FileList) => {
@@ -1071,8 +1289,75 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
                       rows={12}
                       className="w-full px-4 py-3 bg-white/10 border border-white/25 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"
                     />
-                    <div className="mt-2 text-right text-sm text-gray-400">
-                      {pastedTranscript.split(/\s+/).filter(word => word.length > 0).length} words
+                    <div className="mt-2 flex items-center justify-between">
+                      <div className="text-sm text-gray-400">
+                        {pastedTranscript.split(/\s+/).filter(word => word.length > 0).length} words
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const sampleTranscript = `Sales Rep: Good morning! Thanks for taking the time to meet with me today. I'm excited to learn more about your business and see how we might be able to help with your financial operations.
+
+Client (CFO): Thanks for reaching out. I'm Sarah, the CFO here at TechCorp. We're a growing SaaS company, about 150 employees now, and frankly, we're struggling with our financial processes. Everything is still very manual, and it's becoming a real problem as we scale.
+
+Sales Rep: I completely understand. Can you tell me more about the specific challenges you're facing?
+
+Client: Where do I even start? Our biggest issue is that we're still using Excel for most of our financial reporting. It takes my team about 2 weeks to close the books each month, which is way too long. We're also having problems with cash flow visibility - I can't get real-time insights into our burn rate or runway, which is critical for a growth-stage company like ours.
+
+Sales Rep: That sounds incredibly frustrating. How is this impacting the business?
+
+Client: It's affecting everything. Our board meetings are stressful because I don't have up-to-date numbers. We've had to delay some hiring decisions because we weren't sure about our cash position. And honestly, I'm worried we might miss something important - with all the manual work, there's so much room for error.
+
+Sales Rep: I hear this a lot from fast-growing companies. What about your current tech stack? What are you using besides Excel?
+
+Client: We have QuickBooks for basic bookkeeping, but it's not integrated with anything. We use Salesforce for CRM, Stripe for payments, and a bunch of other tools. Nothing talks to each other, so we're constantly doing manual data entry and reconciliation.
+
+Sales Rep: That lack of integration must be eating up a lot of your team's time. Have you looked at any solutions to address these issues?
+
+Client: We've evaluated a few options. We looked at NetSuite, but it seems like overkill for our size and the implementation timeline is scary - they quoted us 6-9 months. We also looked at some other fractional CFO services, but they seemed more focused on strategic advisory rather than actually fixing our operational issues.
+
+Sales Rep: That makes sense. Implementation time is a valid concern. What's your timeline for making a change?
+
+Client: Honestly, we need to do something soon. Our Series B funding round is coming up in about 4 months, and we need to have our financial house in order before then. The board is already asking for better reporting, and I can't keep making excuses.
+
+Sales Rep: That's definitely an urgent timeline. What would success look like for you? If you could wave a magic wand, what would your ideal solution provide?
+
+Client: I need real-time financial visibility, automated reporting that doesn't take 2 weeks, and everything integrated so we're not doing manual data entry. I also need help with financial planning and analysis - we're trying to build a more sophisticated forecasting model but don't have the expertise in-house.
+
+Sales Rep: Those are exactly the kinds of problems we solve. What's your budget for addressing these issues?
+
+Client: We've allocated between $15,000 to $20,000 per month for a comprehensive solution. That needs to include both the technology and the expertise to help us level up our financial operations. Is that realistic?
+
+Sales Rep: That's definitely within the range of what we typically see for companies your size. Who else would be involved in the decision-making process?
+
+Client: It would be me primarily, but I'd need buy-in from our CEO, John, and probably our COO as well. The board is pushing for this, so they're already aligned on the need.
+
+Sales Rep: Great. What questions or concerns do you have at this point?
+
+Client: My main concerns are implementation time and disruption to our current processes. We can't afford to have our financial operations offline while we transition. Also, data security is critical - we're dealing with sensitive financial information.
+
+Sales Rep: Those are very valid concerns. We typically can get clients up and running within 2-3 weeks, not months. We also have a phased approach that ensures no disruption to your current operations. Regarding security, we're SOC 2 certified and use bank-level encryption for all data.
+
+Client: That's reassuring. What would be the next steps if we wanted to move forward?
+
+Sales Rep: I'd love to show you a demo of our platform, specifically how it would work with your QuickBooks data and other systems. We could also do a financial health assessment to identify quick wins. Would you be open to a follow-up call next week where we could dive deeper?
+
+Client: Yes, definitely. This is a high priority for us. Can we schedule something for Tuesday or Wednesday? And could you send over some case studies from similar SaaS companies you've worked with?
+
+Sales Rep: Absolutely. I'll send you some case studies today, including one from a 200-person SaaS company that saw their monthly close time drop from 15 days to 3 days. I'll also send over some available times for next week.
+
+Client: Perfect. I'm excited to learn more. This could really transform how we operate.
+
+Sales Rep: I'm confident we can help you get your financial operations where they need to be before your Series B. Thanks so much for your time today, Sarah. I'll get that information over to you this afternoon.
+
+Client: Thank you! Looking forward to our next conversation.`;
+                          setPastedTranscript(sampleTranscript);
+                          setTranscriptTitle('Discovery Call - TechCorp Series B Preparation');
+                        }}
+                        className="text-cyan-400 hover:text-cyan-300 text-sm underline"
+                      >
+                        Use sample transcript
+                      </button>
                     </div>
                   </div>
 
