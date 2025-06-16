@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { CheckCircle, Clock, FileText, TrendingUp, ArrowRight, Shield, Zap } from 'lucide-react'
 
-export default function SuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const companyName = searchParams.get('company_name') || searchParams.get('company') || 'Your Company'
@@ -143,5 +143,25 @@ export default function SuccessPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Loading component
+function LoadingSuccess() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p className="text-white">Loading success page...</p>
+      </div>
+    </div>
+  )
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={<LoadingSuccess />}>
+      <SuccessContent />
+    </Suspense>
   )
 }
