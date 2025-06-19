@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { RefreshCw, CheckCircle, XCircle, AlertCircle, FileText, Brain, Users, DollarSign, Clock, TrendingUp, ChevronRight, Building2 } from 'lucide-react'
+import { buildCompanyUrlParams, normalizeCompany } from '../../lib/companyUtils'
 
 interface Company {
   id: string
@@ -122,19 +123,17 @@ export default function ConnectedCompaniesWorkflow({ companies: initialCompanies
   }
 
   const handleCompanyAction = (company: Company, action: string) => {
+    // Normalize company data to ensure consistent property names
+    const normalizedCompany = normalizeCompany(company)
+    
     // Store selected company in session storage for context
     sessionStorage.setItem('selectedCompany', JSON.stringify({
-      id: company.company_id || company.prospect_id || company.id,
-      name: company.company_name
+      id: normalizedCompany.company_id,
+      name: normalizedCompany.company_name
     }))
     
-    // Use prospect_id as account parameter if company_id is null
-    const accountId = company.company_id || company.prospect_id || company.id
-    
-    const params = new URLSearchParams({
-      company_id: accountId,
-      company_name: company.company_name
-    })
+    // Build consistent URL parameters
+    const params = buildCompanyUrlParams(normalizedCompany)
 
     switch (action) {
       case 'sync':
@@ -150,7 +149,8 @@ export default function ConnectedCompaniesWorkflow({ companies: initialCompanies
         router.push(`/dashboard/report-generation?${params.toString()}`)
         break
       case 'prospect':
-        router.push(`/admin/prospects/create?company_id=${accountId}&company_name=${encodeURIComponent(company.company_name)}`)
+        const accountId = normalizedCompany.company_id
+        router.push(`/admin/prospects/create?company_id=${accountId}&company_name=${encodeURIComponent(normalizedCompany.company_name)}`)
         break
     }
   }
