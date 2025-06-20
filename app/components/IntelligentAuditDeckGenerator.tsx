@@ -508,7 +508,142 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
   const [loadingFinancialData, setLoadingFinancialData] = useState(false)
   const [hasRealData, setHasRealData] = useState(false)
   const [slides, setSlides] = useState<any[]>([])
+  const [hasQuickBooksConnection, setHasQuickBooksConnection] = useState(false)
+  const [dataLoadError, setDataLoadError] = useState<string | null>(null)
   const { showToast, ToastContainer } = useToast()
+
+  // Initialize financial data when component mounts
+  useEffect(() => {
+    if (companyId && companyName) {
+      console.log(`🚀 Initializing IntelligentAuditDeckGenerator for ${companyName} (${companyId})`);
+      fetchRealFinancialData();
+    }
+  }, [companyId, companyName]);
+
+  const fetchRealFinancialData = async () => {
+    setLoadingFinancialData(true);
+    setDataLoadError(null);
+    setHasQuickBooksConnection(false);
+    
+    try {
+      console.log(`🔍 Fetching financial data for company: ${companyName} (ID: ${companyId})`);
+      
+      // Get QuickBooks realm ID for the company
+      const qboResponse = await fetch('/api/qbo/auth/companies');
+      if (!qboResponse.ok) {
+        const errorMsg = `Failed to fetch QuickBooks connections (${qboResponse.status})`;
+        console.error(errorMsg);
+        setDataLoadError(errorMsg);
+        throw new Error(errorMsg);
+      }
+      
+      const qboData = await qboResponse.json();
+      console.log('📋 Available QuickBooks companies:', qboData.companies?.map((c: any) => ({ 
+        name: c.company_name, 
+        realm_id: c.realm_id, 
+        id: c.id 
+      })));
+      
+      if (!qboData.companies || qboData.companies.length === 0) {
+        const errorMsg = 'No QuickBooks companies found. Please connect your QuickBooks account first.';
+        console.error(errorMsg);
+        setDataLoadError(errorMsg);
+        throw new Error(errorMsg);
+      }
+      
+      // Enhanced company matching logic
+      const qboCompany = qboData.companies?.find((c: any) => {
+        // Try exact match first
+        if (c.realm_id === companyId || c.id === companyId) return true;
+        if (c.company_name === companyName) return true;
+        
+        // Try case-insensitive match
+        if (c.company_name?.toLowerCase() === companyName?.toLowerCase()) return true;
+        
+        // Try partial match
+        if (c.company_name?.toLowerCase().includes(companyName?.toLowerCase()) ||
+            companyName?.toLowerCase().includes(c.company_name?.toLowerCase())) return true;
+            
+        return false;
+      });
+      
+      if (!qboCompany) {
+        const availableCompanies = qboData.companies?.map((c: any) => c.company_name).join(', ') || 'none';
+        const errorMsg = `No QuickBooks connection found for "${companyName}". Available companies: ${availableCompanies}. Please ensure the correct company is connected.`;
+        console.error(errorMsg);
+        setDataLoadError(errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      const realmId = qboCompany.realm_id || qboCompany.id;
+      console.log(`Using QuickBooks realm_id: ${realmId} for company: ${qboCompany.company_name}`);
+
+      // Try fetching enhanced financial data using correct parameter
+      const params = new URLSearchParams({
+        realm_id: realmId,
+        periodType: 'quarter',
+        details: 'true'
+      });
+
+      console.log(`Fetching enhanced financials with params:`, params.toString());
+      const response = await fetch(`/api/qbo/enhanced-financials?${params}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Enhanced financials API error:', errorData);
+        
+        if (response.status === 404 || errorData.error?.includes('No QuickBooks connection')) {
+          setHasQuickBooksConnection(false);
+          setRealFinancialData(null);
+          throw new Error('No QuickBooks connection found. Please connect your QuickBooks account.');
+        }
+        
+        setHasQuickBooksConnection(false);
+        setRealFinancialData(null);
+        throw new Error('Failed to fetch financial data from QuickBooks. Please check your connection.');
+      }
+      
+      const data = await response.json();
+      
+      if (!data.success) {
+        console.error('Enhanced financials returned error:', data.error);
+        throw new Error(data.error || 'Failed to fetch financial data');
+      }
+
+      // Transform enhanced data into component format
+      const financialData = data.financialData;
+      
+      setRealFinancialData({
+        id: 'qbo_data',
+        company_id: realmId,
+        revenue: financialData.revenue.total,
+        net_income: financialData.profitability.netIncome,
+        expenses: financialData.expenses.total,
+        assets: financialData.assets.total,
+        liabilities: financialData.liabilities.total,
+        created_at: new Date().toISOString()
+      });
+
+      setHasQuickBooksConnection(true);
+      setHasRealData(true);
+      showToast(`📊 Live QuickBooks data loaded successfully for ${companyName}`, 'success');
+      
+    } catch (error) {
+      console.error('❌ Failed to load financial data:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      setDataLoadError(errorMessage);
+      setHasQuickBooksConnection(false);
+      setRealFinancialData(null);
+      setHasRealData(false);
+      
+      // Show user-friendly error message
+      showToast(`❌ Failed to load financial data: ${errorMessage}`, 'error');
+      
+    } finally {
+      setLoadingFinancialData(false);
+    }
+  };
 
   // Utility functions
   const formatCurrency = (amount: number): string => {
@@ -520,7 +655,7 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
     }).format(amount)
   }
 
-  // FIXED: Single generateIntelligentDeck method
+  // Enhanced generateIntelligentDeck method with real financial data
   const generateIntelligentDeck = async () => {
     setGenerating(true)
     setGenerationStage({ 
@@ -530,7 +665,23 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
     })
     
     try {
-      // Generate enhanced slide data
+      // Ensure we have real financial data
+      if (!hasRealData && !realFinancialData) {
+        setGenerationStage({
+          stage: 'Fetching QuickBooks data...',
+          progress: 20,
+          message: 'Loading live financial data from QuickBooks'
+        });
+        await fetchRealFinancialData();
+      }
+
+      setGenerationStage({
+        stage: 'Processing financial data...',
+        progress: 40,
+        message: 'Analyzing financial metrics and trends'
+      });
+
+      // Generate enhanced slide data with real financial data
       const enhancedData = generateEnhancedSlideData(realFinancialData, null);
       
       // Create slides for the viewer
@@ -645,9 +796,11 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
         },
         metadata: {
           generatedAt: new Date().toISOString(),
-          dataSource: dataSource === 'real' ? 'real_quickbooks' : 'enhanced_demo',
+          dataSource: hasRealData && realFinancialData ? 'real_quickbooks' : 'enhanced_demo',
           version: '4.0',
-          companyName: companyName || 'Demo Company'
+          companyName: companyName || 'Demo Company',
+          hasQuickBooksConnection: hasQuickBooksConnection,
+          analysisType: 'intelligent_audit_deck'
         }
       };
       
