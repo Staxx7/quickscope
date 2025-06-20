@@ -3,14 +3,22 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { supabase } from '@/lib/supabaseClient';
 
+// Check if API keys are configured
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+if (!ANTHROPIC_API_KEY) {
+  console.warn('WARNING: ANTHROPIC_API_KEY is not set in environment variables');
+}
+
 // Initialize Anthropic for analysis
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || '',
+  apiKey: ANTHROPIC_API_KEY || 'dummy-key-for-initialization',
 });
 
 // Keep OpenAI for Whisper transcription only
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: OPENAI_API_KEY || '',
 });
 
 export async function POST(request: NextRequest) {
@@ -28,10 +36,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if Anthropic API key is configured
+    if (!ANTHROPIC_API_KEY || ANTHROPIC_API_KEY === 'dummy-key-for-initialization') {
+      console.error('Anthropic API key is not configured');
+      return NextResponse.json(
+        { 
+          error: 'AI analysis unavailable - API key not configured', 
+          details: 'Please set ANTHROPIC_API_KEY in your environment variables',
+          fallbackAvailable: true
+        }, 
+        { status: 503 }
+      );
+    }
+
     let finalTranscript = transcriptText;
 
     // If file is provided, transcribe it using Whisper
     if (file && !transcriptText) {
+      if (!OPENAI_API_KEY) {
+        return NextResponse.json(
+          { error: 'Audio transcription unavailable - OpenAI API key not configured' }, 
+          { status: 503 }
+        );
+      }
+
       const fileBuffer = Buffer.from(await file.arrayBuffer());
       
       // Validate file type and size
@@ -150,6 +178,7 @@ Return your response as valid JSON with the following structure:
 }`;
 
     try {
+      console.log('Starting Claude AI analysis...');
       const analysisResponse = await anthropic.messages.create({
         model: "claude-4-sonnet-20250514",
         messages: [
@@ -173,6 +202,7 @@ Return your response as valid JSON with the following structure:
         throw new Error('Unexpected response type from Claude');
       }
 
+      console.log('Claude analysis completed successfully');
       const transcriptAnalysis = JSON.parse(analysisContent.text);
 
       // Generate specific talking points using Claude
@@ -281,9 +311,21 @@ Return as valid JSON with this structure:
 
     } catch (aiError) {
       console.error('AI analysis error:', aiError);
+      
+      // Check for specific error types
+      const errorMessage = aiError instanceof Error ? aiError.message : 'Unknown error';
+      const isAuthError = errorMessage.includes('401') || errorMessage.includes('authentication') || errorMessage.includes('Invalid API Key');
+      const isQuotaError = errorMessage.includes('429') || errorMessage.includes('rate limit') || errorMessage.includes('quota');
+      
       return NextResponse.json(
-        { error: 'AI analysis failed. Please try again.' }, 
-        { status: 500 }
+        { 
+          error: isAuthError ? 'Invalid Anthropic API key' : 
+                 isQuotaError ? 'API rate limit exceeded' : 
+                 'AI analysis failed',
+          details: errorMessage,
+          fallbackAvailable: true
+        }, 
+        { status: isAuthError ? 401 : isQuotaError ? 429 : 500 }
       );
     }
 

@@ -1,0 +1,65 @@
+DISCOVERY CALL TRANSCRIPT - STAXX LLC
+Date: June 20, 2025
+Participants: Sarah Johnson (CFO, STAXX LLC), Mike Chen (VP Finance, STAXX LLC), Alex Thompson (Sales Rep)
+
+Alex: Good morning Sarah and Mike, thank you for taking the time to speak with me today. I understand you're looking for ways to improve your financial operations and reporting. Can you tell me more about your current challenges?
+
+Sarah: Hi Alex, thanks for reaching out. Yes, we're definitely facing some significant challenges. Our biggest pain point right now is that our financial reporting is entirely manual. We're spending about 40 hours every month just preparing basic reports, and that's not even including the time for analysis.
+
+Mike: And to add to that, we have no real-time visibility into our cash flow. By the time we compile our reports, the data is already outdated. Last month, we almost missed a major vendor payment because we didn't realize our cash position had changed so dramatically.
+
+Alex: That sounds incredibly frustrating. How is this impacting your strategic decision-making?
+
+Sarah: It's a huge bottleneck. We're trying to scale from $2.8 million to $10 million in annual revenue over the next 18 months, but we're flying blind. Our board is pushing for more frequent updates, but with our current processes, it's just not feasible.
+
+Mike: We're also using Excel for everything - forecasting, budgeting, you name it. The error rate is concerning. Last quarter, we had a formula error that overstated our revenue projections by 15%. It was embarrassing presenting that to the board.
+
+Alex: I can imagine. What about your different departments - are they all using separate systems?
+
+Sarah: That's another major issue. Sales uses Salesforce, operations has their own system, and finance is stuck with QuickBooks and Excel. There's no integration whatsoever. We're constantly doing manual data entry and reconciliation.
+
+Alex: Have you looked at any solutions to address these challenges?
+
+Mike: We've had demos with NetSuite and Sage Intacct. NetSuite seems overly complex for our needs, and they're quoting us $15,000 per month. Sage Intacct was better, but still felt like overkill.
+
+Sarah: We have a budget of $8,000 to $12,000 per month allocated for this, and I have the authority to make the decision, but we need something that can be implemented quickly. Q1 is our target - we can't afford to wait longer than that.
+
+Alex: What specific capabilities are most important to you?
+
+Sarah: First and foremost, we need automated financial reporting. If we could reduce our month-end close from 10 days to 3 days, that alone would be transformative. We also need better cash flow visibility and forecasting capabilities.
+
+Mike: And it's critical that whatever solution we choose can handle ASC 606 compliance. We have complex multi-year contracts, and revenue recognition is becoming a nightmare. We also need segment reporting across our three business units.
+
+Alex: Those are definitely areas where we can help. What's driving the urgency for Q1 implementation?
+
+Sarah: Several factors. First, we're in the middle of a funding round, and investors are demanding better financial visibility. Second, our auditors flagged our manual processes as a material weakness. And third, we're launching a new product line in Q2, and we need proper systems in place before that happens.
+
+Mike: There's also competitive pressure. Our main competitor just announced they're using AI-powered financial analytics, and our board is asking why we're still in the stone age with Excel.
+
+Alex: I understand. Beyond the technical requirements, what would success look like for you in 12 months?
+
+Sarah: Success would be having real-time financial dashboards that our executives can access anytime. We'd have automated reporting, accurate forecasting, and the ability to run different scenarios for strategic planning. Most importantly, my team would be focused on analysis and strategy, not data entry.
+
+Mike: And from my perspective, reducing errors and having confidence in our numbers. If we could also integrate with our other systems and have everything in one place, that would be ideal.
+
+Alex: This all makes perfect sense. One last question - who else would be involved in evaluating and implementing a solution?
+
+Sarah: It would primarily be Mike and myself. I have final approval authority. We'd also loop in our Controller, Lisa Park, for the implementation phase, but she's more focused on day-to-day operations.
+
+Alex: Excellent. Based on everything you've shared, I believe we can definitely help you achieve these goals. Our solution is specifically designed for companies in your situation - growing businesses that need sophisticated financial capabilities without the complexity of enterprise systems. 
+
+Sarah: That sounds promising. What would be the next steps?
+
+Alex: I'd like to schedule a follow-up call where I can show you a customized demo based on your specific needs. I can also prepare an ROI analysis showing how quickly you'd recoup your investment through time savings alone. Would next Tuesday or Wednesday work for you?
+
+Sarah: Wednesday afternoon would work well for both Mike and me. 
+
+Mike: Yes, Wednesday at 2 PM would be perfect.
+
+Alex: Perfect, I'll send over a calendar invitation. I'll also email you some case studies of similar SaaS companies we've helped scale their financial operations. Thank you both for your time today!
+
+Sarah: Thank you, Alex. Looking forward to seeing the demo.
+
+Mike: Yes, thanks Alex. Talk to you next week.
+
+[END OF TRANSCRIPT] 

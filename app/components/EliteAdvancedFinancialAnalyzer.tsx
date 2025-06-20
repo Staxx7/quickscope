@@ -1083,6 +1083,8 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
     setLoadingFinancialData(true);
     setDataLoadError(null);
     try {
+      console.log(`Initializing financial data for company: ${companyName} (ID: ${companyId})`);
+      
       // First, get the QuickBooks realm_id for this company
       const qbCompaniesResponse = await fetch('/api/qbo/auth/companies');
       if (!qbCompaniesResponse.ok) {
@@ -1090,12 +1092,26 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
       }
       
       const qbCompaniesData = await qbCompaniesResponse.json();
-      const qbCompany = qbCompaniesData.companies?.find((c: any) => 
-        c.company_name === companyName || c.id === companyId
-      );
+      console.log('Available QuickBooks companies:', qbCompaniesData.companies);
+      
+      // Try to find the company with more flexible matching
+      const qbCompany = qbCompaniesData.companies?.find((c: any) => {
+        // Case-insensitive name match
+        const nameMatch = c.company_name?.toLowerCase() === companyName?.toLowerCase();
+        // ID match (could be realm_id or company_id)
+        const idMatch = c.realm_id === companyId || c.id === companyId;
+        // Partial name match if exact match fails
+        const partialNameMatch = c.company_name?.toLowerCase().includes(companyName?.toLowerCase()) || 
+                               companyName?.toLowerCase().includes(c.company_name?.toLowerCase());
+        
+        return nameMatch || idMatch || partialNameMatch;
+      });
       
       if (!qbCompany) {
-        throw new Error('No QuickBooks connection found for this company');
+        console.error('No QuickBooks connection found. Available companies:', 
+          qbCompaniesData.companies?.map((c: any) => ({ name: c.company_name, id: c.id, realm_id: c.realm_id }))
+        );
+        throw new Error(`No QuickBooks connection found for ${companyName}. Please ensure QuickBooks is connected.`);
       }
       
       const realmId = qbCompany.realm_id || qbCompany.id;
@@ -1134,6 +1150,7 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
       }
 
       // If no valid snapshot, try direct QuickBooks API with realm_id
+      console.log(`Fetching fresh QuickBooks data for realm_id: ${realmId}`);
       const qbResponse = await fetch(`/api/qbo/financial-snapshot?realm_id=${realmId}`);
       const balanceResponse = await fetch(`/api/qbo/balance-sheet?realm_id=${realmId}`);
       const plResponse = await fetch(`/api/qbo/profit-loss?realm_id=${realmId}`);
@@ -1142,6 +1159,8 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
         const qbData = await qbResponse.json();
         const balanceData = await balanceResponse.json();
         const plData = await plResponse.json();
+        
+        console.log('QuickBooks API responses:', { qbData, balanceData, plData });
         
         // Validate that we have actual data
         const hasAnyData = (qbData[0]?.revenue > 0 || 
@@ -1162,6 +1181,8 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
           
           if (enhancedResponse.ok) {
             const enhancedData = await enhancedResponse.json();
+            console.log('Enhanced financials response:', enhancedData);
+            
             if (enhancedData.success && enhancedData.financialData) {
               // Transform enhanced data into component format
               const fd = enhancedData.financialData;
@@ -1185,13 +1206,24 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
           throw new Error('QuickBooks returned no financial data - the company may have no transactions');
         }
       } else {
-        throw new Error('Unable to load real financial data from QuickBooks');
+        const errors = [];
+        if (!qbResponse.ok) errors.push('financial snapshot');
+        if (!balanceResponse.ok) errors.push('balance sheet');
+        if (!plResponse.ok) errors.push('profit/loss');
+        throw new Error(`Failed to load: ${errors.join(', ')}. Please check QuickBooks connection.`);
       }
     } catch (error) {
       console.error('Failed to load real data:', error);
       setDataLoadError(error instanceof Error ? error.message : 'Unable to load financial data. Please ensure QuickBooks is connected and has financial data.');
       setDataSource('mock'); // Keep as mock to prevent crashes, but show error
-      showToast('Failed to load real financial data - using sample data', 'error');
+      
+      // Show more helpful error message
+      if (error instanceof Error && error.message.includes('No QuickBooks connection found')) {
+        showToast('No QuickBooks connection found for this company. Please connect QuickBooks first.', 'error');
+      } else {
+        showToast('Failed to load real financial data - using enhanced sample data', 'warning');
+      }
+      
       generateAdvancedMockData(); // Generate mock data to show something
     } finally {
       setLoadingFinancialData(false);
