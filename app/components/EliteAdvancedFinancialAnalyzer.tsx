@@ -296,9 +296,12 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
         throw new Error('No QuickBooks connection found for this company');
       }
 
+      const realmId = qboCompany.realm_id || qboCompany.id;
+      console.log(`Using QuickBooks realm_id: ${realmId} for enhanced financial data`);
+
       // Fetch enhanced financial data with date range
       const params = new URLSearchParams({
-        realm_id: qboCompany.realm_id || qboCompany.id,
+        realm_id: realmId,
         periodType: dateRange?.periodType || selectedTimeframe === '1Q' ? 'quarter' : 
                    selectedTimeframe === '1Y' ? 'year' : 
                    selectedTimeframe === 'YTD' ? 'ytd' : 'quarter',
@@ -1080,8 +1083,26 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
     setLoadingFinancialData(true);
     setDataLoadError(null);
     try {
-      // First try to get stored financial snapshot from data extraction
-      const snapshotResponse = await fetch(`/api/financial-snapshots?company_id=${companyId}`);
+      // First, get the QuickBooks realm_id for this company
+      const qbCompaniesResponse = await fetch('/api/qbo/auth/companies');
+      if (!qbCompaniesResponse.ok) {
+        throw new Error('Failed to fetch QuickBooks connections');
+      }
+      
+      const qbCompaniesData = await qbCompaniesResponse.json();
+      const qbCompany = qbCompaniesData.companies?.find((c: any) => 
+        c.company_name === companyName || c.id === companyId
+      );
+      
+      if (!qbCompany) {
+        throw new Error('No QuickBooks connection found for this company');
+      }
+      
+      const realmId = qbCompany.realm_id || qbCompany.id;
+      console.log(`Found QuickBooks realm_id: ${realmId} for company: ${companyName}`);
+      
+      // Try to get stored financial snapshot using realm_id
+      const snapshotResponse = await fetch(`/api/financial-snapshots?company_id=${realmId}`);
       if (snapshotResponse.ok) {
         const snapshots = await snapshotResponse.json();
         console.log('Snapshots received:', snapshots);
@@ -1090,40 +1111,88 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
         if (snapshots && snapshots.length > 0) {
           const latestSnapshot = snapshots[0]; // Get most recent snapshot
           
-          // Generate data from the saved snapshot
-          await generateDataFromQuickBooks(
-            latestSnapshot,
-            { totalAssets: latestSnapshot.assets, totalLiabilities: latestSnapshot.liabilities },
-            { totalRevenue: latestSnapshot.revenue, totalExpenses: latestSnapshot.expenses }
-          );
-          setDataSource('real');
-          showToast(`Live ${companyName} financial data loaded successfully! 📊`, 'success');
-          return;
+          // Check if data is not all zeros
+          const hasValidData = latestSnapshot.revenue > 0 || 
+                             latestSnapshot.expenses > 0 || 
+                             latestSnapshot.total_assets > 0 || 
+                             latestSnapshot.total_liabilities > 0;
+          
+          if (hasValidData) {
+            // Generate data from the saved snapshot
+            await generateDataFromQuickBooks(
+              latestSnapshot,
+              { totalAssets: latestSnapshot.total_assets, totalLiabilities: latestSnapshot.total_liabilities },
+              { totalRevenue: latestSnapshot.revenue, totalExpenses: latestSnapshot.expenses }
+            );
+            setDataSource('real');
+            showToast(`Live ${companyName} financial data loaded successfully! 📊`, 'success');
+            return;
+          } else {
+            console.warn('Snapshot contains all zero values, fetching fresh data...');
+          }
         }
       }
 
-      // If no snapshot, try direct QuickBooks API
-      const qbResponse = await fetch(`/api/qbo/financial-snapshot?companyId=${companyId}`);
-      const balanceResponse = await fetch(`/api/qbo/balance-sheet?companyId=${companyId}`);
-      const plResponse = await fetch(`/api/qbo/profit-loss?companyId=${companyId}`);
+      // If no valid snapshot, try direct QuickBooks API with realm_id
+      const qbResponse = await fetch(`/api/qbo/financial-snapshot?realm_id=${realmId}`);
+      const balanceResponse = await fetch(`/api/qbo/balance-sheet?realm_id=${realmId}`);
+      const plResponse = await fetch(`/api/qbo/profit-loss?realm_id=${realmId}`);
 
       if (qbResponse.ok && balanceResponse.ok && plResponse.ok) {
         const qbData = await qbResponse.json();
         const balanceData = await balanceResponse.json();
         const plData = await plResponse.json();
         
-        // Transform real QB data into our component format
-        await generateDataFromQuickBooks(qbData, balanceData, plData);
-        setDataSource('real');
-        showToast(`Live ${companyName} QuickBooks data loaded successfully! 📊`, 'success');
+        // Validate that we have actual data
+        const hasAnyData = (qbData[0]?.revenue > 0 || 
+                          qbData[0]?.expenses > 0 || 
+                          qbData[0]?.total_assets > 0 || 
+                          qbData[0]?.total_liabilities > 0) ||
+                         (balanceData?.totalAssets > 0 || plData?.totalRevenue > 0);
+        
+        if (hasAnyData) {
+          // Transform real QB data into our component format
+          await generateDataFromQuickBooks(qbData[0] || qbData, balanceData, plData);
+          setDataSource('real');
+          showToast(`Live ${companyName} QuickBooks data loaded successfully! 📊`, 'success');
+        } else {
+          // Try enhanced financials API for more comprehensive data
+          console.log('Basic APIs returned zero values, trying enhanced financials...');
+          const enhancedResponse = await fetch(`/api/qbo/enhanced-financials?realm_id=${realmId}&details=true`);
+          
+          if (enhancedResponse.ok) {
+            const enhancedData = await enhancedResponse.json();
+            if (enhancedData.success && enhancedData.financialData) {
+              // Transform enhanced data into component format
+              const fd = enhancedData.financialData;
+              await generateDataFromQuickBooks(
+                {
+                  revenue: fd.revenue.total,
+                  expenses: fd.expenses.total,
+                  profit: fd.profitability.netIncome,
+                  total_assets: fd.assets.total,
+                  total_liabilities: fd.liabilities.total
+                },
+                { totalAssets: fd.assets.total, totalLiabilities: fd.liabilities.total },
+                { totalRevenue: fd.revenue.total, totalExpenses: fd.expenses.total }
+              );
+              setDataSource('real');
+              showToast(`Enhanced ${companyName} financial data loaded successfully! 📊`, 'success');
+              return;
+            }
+          }
+          
+          throw new Error('QuickBooks returned no financial data - the company may have no transactions');
+        }
       } else {
         throw new Error('Unable to load real financial data from QuickBooks');
       }
     } catch (error) {
       console.error('Failed to load real data:', error);
-      setDataLoadError('Unable to load financial data. Please ensure QuickBooks is connected and try refreshing the data extraction.');
+      setDataLoadError(error instanceof Error ? error.message : 'Unable to load financial data. Please ensure QuickBooks is connected and has financial data.');
       setDataSource('mock'); // Keep as mock to prevent crashes, but show error
-      showToast('Failed to load real financial data - please refresh data extraction', 'error');
+      showToast('Failed to load real financial data - using sample data', 'error');
+      generateAdvancedMockData(); // Generate mock data to show something
     } finally {
       setLoadingFinancialData(false);
     }

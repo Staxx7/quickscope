@@ -84,6 +84,12 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
     if (defaultCompanyId) {
       setSelectedCompanyForUpload(defaultCompanyId);
     }
+    
+    // Check for selected transcript in localStorage
+    const storedTranscriptId = localStorage.getItem(`selectedTranscript_${defaultCompanyId}`);
+    if (storedTranscriptId) {
+      // Will be set after transcripts are loaded
+    }
   }, [defaultCompanyId]);
   
   // Refetch transcripts when returning to the page
@@ -95,6 +101,36 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, [defaultCompanyId]);
+  
+  // Restore selected transcript after transcripts are loaded
+  useEffect(() => {
+    if (transcripts.length > 0 && defaultCompanyId) {
+      const storedTranscriptId = localStorage.getItem(`selectedTranscript_${defaultCompanyId}`);
+      if (storedTranscriptId) {
+        const transcript = transcripts.find(t => t.id === storedTranscriptId);
+        if (transcript) {
+          handleSelectTranscript(transcript);
+        }
+      }
+    }
+  }, [transcripts, defaultCompanyId]);
+
+  const handleSelectTranscript = (transcript: CallTranscript | null) => {
+    setSelectedTranscript(transcript);
+    
+    if (transcript && defaultCompanyId) {
+      // Store the transcript ID
+      localStorage.setItem(`selectedTranscript_${defaultCompanyId}`, transcript.id);
+      
+      // Store the transcript text separately if it exists
+      if (transcript.transcriptText) {
+        localStorage.setItem(`transcriptText_${transcript.id}`, transcript.transcriptText);
+      }
+    } else if (defaultCompanyId) {
+      // Clear stored data when deselecting
+      localStorage.removeItem(`selectedTranscript_${defaultCompanyId}`);
+    }
+  };
 
   const fetchConnectedCompanies = async () => {
     try {
@@ -783,7 +819,7 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
                 <div
                   key={transcript.id}
                   className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/25 hover:bg-white/15 transition-all duration-200 cursor-pointer"
-                  onClick={() => setSelectedTranscript(transcript)}
+                                      onClick={() => handleSelectTranscript(transcript)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
@@ -1058,7 +1094,7 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
                 {selectedTranscript.status === 'completed' && (
                   <button
                     onClick={() => {
-                      setSelectedTranscript(null);
+                      handleSelectTranscript(null);
                       router.push('/admin/dashboard/advanced-analysis');
                     }}
                     className="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 text-sm flex items-center space-x-1"
@@ -1068,7 +1104,7 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
                   </button>
                 )}
                 <button
-                  onClick={() => setSelectedTranscript(null)}
+                  onClick={() => handleSelectTranscript(null)}
                   className="text-gray-500 hover:text-white transition-colors duration-200 text-xl"
                 >
                   ✕
@@ -1322,10 +1358,10 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
                     <div className="mt-4 text-center">
                       <button 
                         onClick={() => {
-                          setSelectedTranscript(null);
-                          router.push('/admin/dashboard/advanced-analysis');
-                        }}
-                        className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:from-green-700 hover:to-blue-700 transition-all duration-200 flex items-center space-x-2 mx-auto"
+                                                  handleSelectTranscript(null);
+                        router.push('/admin/dashboard/advanced-analysis');
+                      }}
+                      className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:from-green-700 hover:to-blue-700 transition-all duration-200 flex items-center space-x-2 mx-auto"
                       >
                         <BarChart3 className="w-4 h-4" />
                         <span>Generate Financial Analysis</span>
