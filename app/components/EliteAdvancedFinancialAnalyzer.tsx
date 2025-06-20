@@ -1262,20 +1262,35 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
       // Always try to fetch real data first
       await fetchRealFinancialData();
       
-      // Generate trend data
-      generateTrendData();
-      
-      // Generate benchmark data
-      generateBenchmarkData();
-      
-      // Generate risk factors
-      generateRiskFactors();
-      
-      // Generate performance alerts
-      generatePerformanceAlerts();
+      // Only generate additional data if we successfully loaded real data
+      if (hasQuickBooksConnection && realFinancialData && realFinancialData.revenue > 0) {
+        // Generate trend data
+        generateTrendData();
+        
+        // Generate benchmark data
+        generateBenchmarkData();
+        
+        // Generate risk factors
+        generateRiskFactors();
+        
+        // Generate performance alerts
+        generatePerformanceAlerts();
+      } else {
+        // Clear any stale data
+        setTrendData([]);
+        setBenchmarkData([]);
+        setRiskFactors([]);
+        setAlerts([]);
+      }
       
     } catch (error) {
       console.error('Failed to initialize financial data:', error);
+      
+      // Clear all data on error
+      setTrendData([]);
+      setBenchmarkData([]);
+      setRiskFactors([]);
+      setAlerts([]);
       
       // No fallback to mock data - just show error state
       if (!hasQuickBooksConnection) {
@@ -1298,7 +1313,10 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
     try {
       // Refresh with the latest data
       await initializeFinancialData();
-      showToast('Advanced analysis refreshed successfully', 'success');
+      // Only show success if we actually have data
+      if (hasQuickBooksConnection && realFinancialData && realFinancialData.revenue > 0) {
+        showToast('Advanced analysis refreshed successfully', 'success');
+      }
     } catch (error) {
       showToast('Failed to refresh analysis', 'error');
     } finally {
@@ -1883,25 +1901,33 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
 
   // Add missing helper functions
   const generateTrendData = () => {
+    // Don't generate trend data if we don't have real data
+    if (!realFinancialData || realFinancialData.revenue === 0) {
+      setTrendData([]);
+      return;
+    }
+    
     const basePeriods = ['Q1 2024', 'Q2 2024', 'Q3 2024', 'Q4 2024'];
-    const currentMetrics = metrics[0] || { value: 1000000 };
-    const baseRevenue = currentMetrics.value;
+    const baseRevenue = realFinancialData.revenue;
+    const baseExpenses = realFinancialData.expenses;
+    const baseAssets = realFinancialData.assets;
+    const baseLiabilities = realFinancialData.liabilities;
     
     const trendData: TrendData[] = basePeriods.map((period, index) => {
       const factor = 0.7 + (index * 0.1); // Progressive growth
       return {
         period,
         revenue: baseRevenue * factor,
-        expenses: baseRevenue * factor * 0.75,
-        netIncome: baseRevenue * factor * 0.15,
-        cashFlow: baseRevenue * factor * 0.12,
+        expenses: baseExpenses * factor,
+        netIncome: (baseRevenue - baseExpenses) * factor,
+        cashFlow: (baseRevenue - baseExpenses) * factor * 0.8,
         grossProfit: baseRevenue * factor * 0.4,
-        operatingIncome: baseRevenue * factor * 0.2,
-        ebitda: baseRevenue * factor * 0.18,
-        totalAssets: baseRevenue * 3 * factor,
-        totalLiabilities: baseRevenue * 1.2 * factor,
-        equity: baseRevenue * 1.8 * factor,
-        freeCashFlow: baseRevenue * factor * 0.1,
+        operatingIncome: (baseRevenue - baseExpenses) * factor * 0.9,
+        ebitda: (baseRevenue - baseExpenses) * factor * 1.2,
+        totalAssets: baseAssets * (0.85 + index * 0.05),
+        totalLiabilities: baseLiabilities * (0.8 + index * 0.05),
+        equity: (baseAssets - baseLiabilities) * (0.85 + index * 0.05),
+        freeCashFlow: (baseRevenue - baseExpenses) * factor * 0.7,
         capex: baseRevenue * factor * 0.05,
         employees: Math.floor(50 + (index * 10)),
         customerCount: Math.floor(100 + (index * 25))
@@ -2331,7 +2357,7 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
       </div>
 
       {/* Financial Health Score Dashboard */}
-      {hasQuickBooksConnection && (advancedMetrics || metrics.length > 0) ? (
+      {hasQuickBooksConnection && realFinancialData && realFinancialData.revenue > 0 ? (
         <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-8 mb-8">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div className="lg:col-span-1">
@@ -2341,7 +2367,8 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
                   <div className={`text-7xl font-bold mb-4 ${getHealthScoreColor(advancedMetrics?.healthScore || 0)}`}>
                     {advancedMetrics?.healthScore || 0}
                   </div>
-                <div className="text-gray-300 text-lg">out of 100</div>
+                  <div className="text-gray-300 text-lg">out of 100</div>
+                </div>
                 <div className="mt-6 relative">
                   <div className="w-full bg-white/10 rounded-full h-4">
                     <div
@@ -2377,110 +2404,109 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="lg:col-span-3">
-            <h3 className="text-xl font-bold text-white mb-6">Key Performance Indicators</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-300">Revenue Growth</span>
-                  <TrendingUp className="w-5 h-5 text-green-400" />
+            <div className="lg:col-span-3">
+              <h3 className="text-xl font-bold text-white mb-6">Key Performance Indicators</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-gray-300">Revenue Growth</span>
+                    <TrendingUp className="w-5 h-5 text-green-400" />
+                  </div>
+                  <div className="text-3xl font-bold text-white mb-2">
+                    {growthMetrics ? `+${formatPercent(growthMetrics.revenueGrowth, true)}` : 'N/A'}
+                  </div>
+                  <div className="text-sm text-green-400">QoQ Growth</div>
                 </div>
-                <div className="text-3xl font-bold text-white mb-2">
-                  {growthMetrics ? `+${formatPercent(growthMetrics.revenueGrowth, true)}` : 'N/A'}
+
+                <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-gray-300">Gross Margin</span>
+                    <Target className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div className="text-3xl font-bold text-white mb-2">
+                    {formatPercent(advancedMetrics?.grossMargin || 0)}
+                  </div>
+                  <div className="text-sm text-blue-400">Industry Leading</div>
                 </div>
-                <div className="text-sm text-green-400">QoQ Growth</div>
+
+                <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-gray-300">Free Cash Flow</span>
+                    <DollarSign className="w-5 h-5 text-cyan-400" />
+                  </div>
+                  <div className="text-3xl font-bold text-white mb-2">
+                    {formatCurrency(advancedMetrics?.freeCashFlow || 0, true)}
+                  </div>
+                  <div className="text-sm text-cyan-400">Strong Generation</div>
+                </div>
+
+                <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-gray-300">Current Ratio</span>
+                    <Shield className="w-5 h-5 text-green-400" />
+                  </div>
+                  <div className="text-3xl font-bold text-white mb-2">
+                    {(advancedMetrics?.currentRatio || 0).toFixed(1)}
+                  </div>
+                  <div className="text-sm text-green-400">Well Capitalized</div>
+                </div>
+
+                <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-gray-300">ROA</span>
+                    <Award className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div className="text-3xl font-bold text-white mb-2">
+                    {formatPercent(advancedMetrics?.returnOnAssets || 0)}
+                  </div>
+                  <div className="text-sm text-purple-400">Top Quartile</div>
+                </div>
+
+                <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-gray-300">Debt/Equity</span>
+                    <Activity className="w-5 h-5 text-yellow-400" />
+                  </div>
+                  <div className="text-3xl font-bold text-white mb-2">
+                    {(advancedMetrics?.debtToEquity || 0).toFixed(1)}
+                  </div>
+                  <div className="text-sm text-yellow-400">Conservative</div>
+                </div>
               </div>
 
-              <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-300">Gross Margin</span>
-                  <Target className="w-5 h-5 text-blue-400" />
+              {/* Quick Growth Metrics */}
+              {growthMetrics && (
+                <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-400">
+                      +{formatPercent(growthMetrics.revenueGrowth, false)}
+                    </div>
+                    <div className="text-sm text-gray-400">Revenue Growth</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-400">
+                      +{formatPercent(growthMetrics.profitGrowth, false)}
+                    </div>
+                    <div className="text-sm text-gray-400">Profit Growth</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-cyan-400">
+                      +{formatPercent(growthMetrics.customerGrowth, false)}
+                    </div>
+                    <div className="text-sm text-gray-400">Customer Growth</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-400">
+                      +{formatPercent(growthMetrics.employeeGrowth, false)}
+                    </div>
+                    <div className="text-sm text-gray-400">Team Growth</div>
+                  </div>
                 </div>
-                <div className="text-3xl font-bold text-white mb-2">
-                  {formatPercent(advancedMetrics?.grossMargin || 0)}
-                </div>
-                <div className="text-sm text-blue-400">Industry Leading</div>
-              </div>
-
-              <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-300">Free Cash Flow</span>
-                  <DollarSign className="w-5 h-5 text-cyan-400" />
-                </div>
-                <div className="text-3xl font-bold text-white mb-2">
-                  {formatCurrency(advancedMetrics?.freeCashFlow || 0, true)}
-                </div>
-                <div className="text-sm text-cyan-400">Strong Generation</div>
-              </div>
-
-              <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-300">Current Ratio</span>
-                  <Shield className="w-5 h-5 text-green-400" />
-                </div>
-                <div className="text-3xl font-bold text-white mb-2">
-                  {(advancedMetrics?.currentRatio || 0).toFixed(1)}
-                </div>
-                <div className="text-sm text-green-400">Well Capitalized</div>
-              </div>
-
-              <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-300">ROA</span>
-                  <Award className="w-5 h-5 text-purple-400" />
-                </div>
-                <div className="text-3xl font-bold text-white mb-2">
-                  {formatPercent(advancedMetrics?.returnOnAssets || 0)}
-                </div>
-                <div className="text-sm text-purple-400">Top Quartile</div>
-              </div>
-
-              <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-300">Debt/Equity</span>
-                  <Activity className="w-5 h-5 text-yellow-400" />
-                </div>
-                <div className="text-3xl font-bold text-white mb-2">
-                  {(advancedMetrics?.debtToEquity || 0).toFixed(1)}
-                </div>
-                <div className="text-sm text-yellow-400">Conservative</div>
-              </div>
+              )}
             </div>
-
-            {/* Quick Growth Metrics */}
-            {growthMetrics && (
-              <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-400">
-                    +{formatPercent(growthMetrics.revenueGrowth, false)}
-                  </div>
-                  <div className="text-sm text-gray-400">Revenue Growth</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-400">
-                    +{formatPercent(growthMetrics.profitGrowth, false)}
-                  </div>
-                  <div className="text-sm text-gray-400">Profit Growth</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-cyan-400">
-                    +{formatPercent(growthMetrics.customerGrowth, false)}
-                  </div>
-                  <div className="text-sm text-gray-400">Customer Growth</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-400">
-                    +{formatPercent(growthMetrics.employeeGrowth, false)}
-                  </div>
-                  <div className="text-sm text-gray-400">Team Growth</div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
-      </div>
       ) : null}
 
       {/* Enhanced Tab Navigation */}
