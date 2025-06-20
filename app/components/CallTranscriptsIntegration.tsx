@@ -4,6 +4,7 @@ import { Upload, FileText, AlertTriangle, Play, Pause, Download, MessageSquare, 
 import { useToast } from './Toast';
 import { useRouter } from 'next/navigation';
 import EnhancedCallTranscriptAnalysis from './EnhancedCallTranscriptAnalysis';
+import jsPDF from 'jspdf';
 
 interface CallTranscript {
   id: string;
@@ -567,33 +568,295 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
   };
 
   const exportTranscriptAnalysis = (transcript: CallTranscript) => {
-    const exportData = {
-      summary: {
-        fileName: transcript.fileName,
-        date: transcript.date,
-        duration: transcript.duration,
-        callType: transcript.callType,
-        sentiment: transcript.sentiment,
-        salesScore: transcript.aiAnalysis?.salesScore || 0,
-        companyName: connectedCompanies.find(c => c.realm_id === transcript.companyId)?.company_name || 'Unknown'
-      },
-      insights: transcript.aiAnalysis,
-      actionItems: transcript.actionItems,
-      keyTopics: transcript.keyTopics,
-      transcriptText: transcript.transcriptText
-    };
+    try {
+      // Initialize jsPDF
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const companyName = connectedCompanies.find(c => c.realm_id === transcript.companyId)?.company_name || 'Unknown Company';
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const contentWidth = pageWidth - (2 * margin);
+      let yPosition = margin;
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `transcript-analysis-${transcript.fileName.replace(/\.[^/.]+$/, '')}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      // Helper function to add new page if needed
+      const checkPageBreak = (requiredSpace: number) => {
+        if (yPosition + requiredSpace > pageHeight - margin) {
+          doc.addPage();
+          yPosition = margin;
+          return true;
+        }
+        return false;
+      };
 
-    showToast('Transcript analysis exported', 'success');
+      // Helper function to add section headers
+      const addSectionHeader = (title: string, bgColor: string = '#1e293b') => {
+        checkPageBreak(20);
+        doc.setFillColor(bgColor);
+        doc.rect(margin, yPosition, contentWidth, 12, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(title, margin + 5, yPosition + 8);
+        yPosition += 15;
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+      };
+
+      // Page 1: Cover Page
+      doc.setFillColor('#1e40af');
+      doc.rect(0, 0, pageWidth, 60, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Call Transcript Analysis Report', pageWidth / 2, 25, { align: 'center' });
+      
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'normal');
+      doc.text(companyName, pageWidth / 2, 40, { align: 'center' });
+      
+      yPosition = 80;
+      
+      // Executive Summary Box
+      doc.setFillColor('#f8fafc');
+      doc.rect(margin, yPosition, contentWidth, 80, 'F');
+      doc.setDrawColor('#e2e8f0');
+      doc.rect(margin, yPosition, contentWidth, 80, 'D');
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(12);
+      
+      // Call Details
+      const details = [
+        ['Call Type:', transcript.callType.charAt(0).toUpperCase() + transcript.callType.slice(1)],
+        ['Date:', transcript.date],
+        ['Duration:', transcript.duration],
+        ['Participants:', transcript.participants.join(', ')],
+        ['Overall Sentiment:', transcript.sentiment.charAt(0).toUpperCase() + transcript.sentiment.slice(1)],
+        ['Sales Score:', `${transcript.aiAnalysis?.salesScore || 0}/100`]
+      ];
+      
+      let detailY = yPosition + 10;
+      details.forEach(([label, value]) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(label, margin + 5, detailY);
+        doc.setFont('helvetica', 'normal');
+        doc.text(value, margin + 50, detailY);
+        detailY += 10;
+      });
+      
+      yPosition += 90;
+      
+      // AI Assessment Score
+      if (transcript.aiAnalysis) {
+        const scoreColor = transcript.aiAnalysis.salesScore >= 80 ? '#22c55e' : 
+                          transcript.aiAnalysis.salesScore >= 60 ? '#f59e0b' : '#ef4444';
+        
+        doc.setFillColor(scoreColor);
+        doc.circle(pageWidth / 2, yPosition + 25, 20, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${transcript.aiAnalysis.salesScore}`, pageWidth / 2, yPosition + 30, { align: 'center' });
+        
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(12);
+        doc.text('Sales Readiness Score', pageWidth / 2, yPosition + 55, { align: 'center' });
+        
+        yPosition += 70;
+      }
+      
+      // Page 2: Pain Points & Business Goals
+      doc.addPage();
+      yPosition = margin;
+      
+      if (transcript.aiAnalysis) {
+        // Pain Points Section
+        addSectionHeader('Pain Points Identified', '#dc2626');
+        
+        doc.setFontSize(11);
+        transcript.aiAnalysis.painPoints.forEach((pain, index) => {
+          checkPageBreak(15);
+          doc.setFont('helvetica', 'normal');
+          const lines = doc.splitTextToSize(`${index + 1}. ${pain}`, contentWidth - 10);
+          lines.forEach(line => {
+            doc.text(line, margin + 5, yPosition);
+            yPosition += 6;
+          });
+          yPosition += 2;
+        });
+        
+        yPosition += 10;
+        
+        // Business Goals Section
+        addSectionHeader('Business Goals', '#059669');
+        
+        transcript.aiAnalysis.businessGoals.forEach((goal, index) => {
+          checkPageBreak(15);
+          const lines = doc.splitTextToSize(`${index + 1}. ${goal}`, contentWidth - 10);
+          lines.forEach(line => {
+            doc.text(line, margin + 5, yPosition);
+            yPosition += 6;
+          });
+          yPosition += 2;
+        });
+      }
+      
+      // Page 3: Decision Makers & Budget
+      doc.addPage();
+      yPosition = margin;
+      
+      if (transcript.aiAnalysis) {
+        // Decision Makers Section
+        addSectionHeader('Decision Makers', '#7c3aed');
+        
+        transcript.aiAnalysis.decisionMakers.forEach((dm) => {
+          checkPageBreak(25);
+          doc.setFont('helvetica', 'bold');
+          doc.text(`${dm.name} - ${dm.role}`, margin + 5, yPosition);
+          yPosition += 6;
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(10);
+          const influenceColor = dm.influence === 'high' ? '#dc2626' : 
+                               dm.influence === 'medium' ? '#f59e0b' : '#22c55e';
+          doc.setTextColor(influenceColor);
+          doc.text(`Influence: ${dm.influence.toUpperCase()}`, margin + 10, yPosition);
+          doc.setTextColor(0, 0, 0);
+          yPosition += 8;
+        });
+        
+        yPosition += 10;
+        
+        // Budget Indicators Section
+        addSectionHeader('Budget Indicators', '#0891b2');
+        
+        doc.setFontSize(11);
+        transcript.aiAnalysis.budgetIndications.forEach((budget, index) => {
+          checkPageBreak(15);
+          const lines = doc.splitTextToSize(`• ${budget}`, contentWidth - 10);
+          lines.forEach(line => {
+            doc.text(line, margin + 5, yPosition);
+            yPosition += 6;
+          });
+        });
+      }
+      
+      // Page 4: Insights & Next Steps
+      doc.addPage();
+      yPosition = margin;
+      
+      if (transcript.aiAnalysis) {
+        // Financial Insights Section
+        addSectionHeader('Financial Insights', '#1e40af');
+        
+        doc.setFontSize(11);
+        transcript.aiAnalysis.financialInsights.forEach((insight, index) => {
+          checkPageBreak(15);
+          const lines = doc.splitTextToSize(`• ${insight}`, contentWidth - 10);
+          lines.forEach(line => {
+            doc.text(line, margin + 5, yPosition);
+            yPosition += 6;
+          });
+        });
+        
+        yPosition += 10;
+        
+        // Next Steps Section
+        addSectionHeader('Recommended Next Steps', '#059669');
+        
+        transcript.aiAnalysis.nextSteps.forEach((step, index) => {
+          checkPageBreak(15);
+          doc.setFont('helvetica', 'bold');
+          doc.text(`${index + 1}.`, margin + 5, yPosition);
+          doc.setFont('helvetica', 'normal');
+          const lines = doc.splitTextToSize(step, contentWidth - 15);
+          lines.forEach((line, lineIndex) => {
+            doc.text(line, margin + 12, yPosition + (lineIndex * 6));
+          });
+          yPosition += lines.length * 6 + 2;
+        });
+      }
+      
+      // Page 5: Risk Assessment & Summary
+      doc.addPage();
+      yPosition = margin;
+      
+      if (transcript.aiAnalysis) {
+        // Risk Factors Section
+        addSectionHeader('Risk Factors', '#f59e0b');
+        
+        doc.setFontSize(11);
+        transcript.aiAnalysis.riskFactors.forEach((risk, index) => {
+          checkPageBreak(15);
+          const lines = doc.splitTextToSize(`⚠ ${risk}`, contentWidth - 10);
+          lines.forEach(line => {
+            doc.text(line, margin + 5, yPosition);
+            yPosition += 6;
+          });
+          yPosition += 2;
+        });
+        
+        yPosition += 10;
+        
+        // Competitive Threats
+        if (transcript.aiAnalysis.competitiveThreats.length > 0) {
+          addSectionHeader('Competitive Landscape', '#dc2626');
+          
+          transcript.aiAnalysis.competitiveThreats.forEach((threat) => {
+            checkPageBreak(15);
+            const lines = doc.splitTextToSize(`• ${threat}`, contentWidth - 10);
+            lines.forEach(line => {
+              doc.text(line, margin + 5, yPosition);
+              yPosition += 6;
+            });
+          });
+        }
+      }
+      
+      // Final Summary Box
+      yPosition = pageHeight - 60;
+      doc.setFillColor('#f0f9ff');
+      doc.rect(margin, yPosition, contentWidth, 40, 'F');
+      doc.setDrawColor('#0284c7');
+      doc.rect(margin, yPosition, contentWidth, 40, 'D');
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Call Summary', margin + 5, yPosition + 10);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      const summaryLines = doc.splitTextToSize(transcript.summary, contentWidth - 10);
+      summaryLines.forEach((line, index) => {
+        if (index < 4) { // Limit to 4 lines
+          doc.text(line, margin + 5, yPosition + 18 + (index * 5));
+        }
+      });
+      
+      // Footer on each page
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(128, 128, 128);
+        doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        doc.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+      }
+      
+      // Save the PDF
+      const fileName = `${companyName.replace(/[^a-z0-9]/gi, '_')}_Call_Analysis_${transcript.date}.pdf`;
+      doc.save(fileName);
+      
+      showToast('Call analysis PDF exported successfully!', 'success');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      showToast('Failed to export PDF. Please try again.', 'error');
+    }
   };
 
   const generateAuditDeck = async (transcript: CallTranscript) => {
