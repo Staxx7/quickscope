@@ -5,9 +5,9 @@ import { supabase } from '@/lib/supabaseClient';
 
 export async function POST(request: NextRequest) {
   try {
-    // Get API keys at request time
-    const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-    const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+    // Get API keys at request time and trim whitespace
+    const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY?.trim();
+    const OPENAI_API_KEY = process.env.OPENAI_API_KEY?.trim();
     
     // Log for debugging
     console.log('Runtime env check - ANTHROPIC_API_KEY exists:', !!ANTHROPIC_API_KEY);
@@ -179,7 +179,7 @@ Return your response as valid JSON with the following structure:
     try {
       console.log('Starting Claude AI analysis...');
       const analysisResponse = await anthropic.messages.create({
-        model: "claude-4-sonnet-20250514",
+        model: "claude-sonnet-4-20250514",
         messages: [
           {
             role: "user",
@@ -202,7 +202,20 @@ Return your response as valid JSON with the following structure:
       }
 
       console.log('Claude analysis completed successfully');
-      const transcriptAnalysis = JSON.parse(analysisContent.text);
+      
+      // Extract JSON from response, handling potential markdown code blocks
+      let analysisText = analysisContent.text.trim();
+      if (analysisText.startsWith('```json')) {
+        analysisText = analysisText.slice(7); // Remove ```json
+      }
+      if (analysisText.startsWith('```')) {
+        analysisText = analysisText.slice(3); // Remove ```
+      }
+      if (analysisText.endsWith('```')) {
+        analysisText = analysisText.slice(0, -3); // Remove trailing ```
+      }
+      
+      const transcriptAnalysis = JSON.parse(analysisText.trim());
 
       // Generate specific talking points using Claude
       const talkingPointsPrompt = `Based on the transcript analysis for ${companyName}, generate specific talking points for the audit call presentation:
@@ -232,7 +245,7 @@ Return as valid JSON with this structure:
 }`;
 
       const talkingPointsResponse = await anthropic.messages.create({
-        model: "claude-4-sonnet-20250514",
+        model: "claude-sonnet-4-20250514",
         messages: [
           {
             role: "user",
@@ -254,7 +267,19 @@ Return as valid JSON with this structure:
         throw new Error('Unexpected response type from Claude');
       }
 
-      const talkingPoints = JSON.parse(talkingPointsContent.text);
+      // Extract JSON from response, handling potential markdown code blocks
+      let talkingPointsText = talkingPointsContent.text.trim();
+      if (talkingPointsText.startsWith('```json')) {
+        talkingPointsText = talkingPointsText.slice(7); // Remove ```json
+      }
+      if (talkingPointsText.startsWith('```')) {
+        talkingPointsText = talkingPointsText.slice(3); // Remove ```
+      }
+      if (talkingPointsText.endsWith('```')) {
+        talkingPointsText = talkingPointsText.slice(0, -3); // Remove trailing ```
+      }
+
+      const talkingPoints = JSON.parse(talkingPointsText.trim());
 
       // Calculate engagement scores
       const closeabilityScore = Math.min(100, Math.max(0, 
