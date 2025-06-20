@@ -276,28 +276,59 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
   const [selectedCompany, setSelectedCompany] = useState(companyName || 'Unknown Company');
   const [viewMode, setViewMode] = useState<'summary' | 'detailed' | 'executive'>('summary');
   const [dataLoadError, setDataLoadError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize component data when mounted or company changes
+  useEffect(() => {
+    if (companyId && companyName && !isInitialized) {
+      console.log(`🚀 Initializing EliteAdvancedFinancialAnalyzer for ${companyName} (${companyId})`);
+      initializeFinancialData();
+      setIsInitialized(true);
+    }
+  }, [companyId, companyName, isInitialized]);
+
+  // Reset when company changes
+  useEffect(() => {
+    if (companyId && companyName) {
+      setIsInitialized(false);
+      setDataLoadError(null);
+      setRealFinancialData(null);
+      setHasQuickBooksConnection(false);
+    }
+  }, [companyId, companyName]);
+
   const renderHealthScoreGauge = (score: number) => { /* from artifact 4 */ }
 
   const fetchRealFinancialData = async (dateRange?: { startDate?: string; endDate?: string; periodType?: string }) => {
     setLoadingFinancialData(true);
     setDataLoadError(null);
+    setHasQuickBooksConnection(false);
     
     try {
-      console.log(`Fetching financial data for company: ${companyName} (ID: ${companyId})`);
+      console.log(`🔍 Fetching financial data for company: ${companyName} (ID: ${companyId})`);
       
       // Get QuickBooks realm ID for the company
       const qboResponse = await fetch('/api/qbo/auth/companies');
       if (!qboResponse.ok) {
-        console.error('Failed to fetch QuickBooks connections');
-        throw new Error('Failed to fetch QuickBooks connections');
+        const errorMsg = `Failed to fetch QuickBooks connections (${qboResponse.status})`;
+        console.error(errorMsg);
+        setDataLoadError(errorMsg);
+        throw new Error(errorMsg);
       }
       
       const qboData = await qboResponse.json();
-      console.log('Available QuickBooks companies:', qboData.companies?.map((c: any) => ({ 
+      console.log('📋 Available QuickBooks companies:', qboData.companies?.map((c: any) => ({ 
         name: c.company_name, 
         realm_id: c.realm_id, 
         id: c.id 
       })));
+      
+      if (!qboData.companies || qboData.companies.length === 0) {
+        const errorMsg = 'No QuickBooks companies found. Please connect your QuickBooks account first.';
+        console.error(errorMsg);
+        setDataLoadError(errorMsg);
+        throw new Error(errorMsg);
+      }
       
       // Enhanced company matching logic
       const qboCompany = qboData.companies?.find((c: any) => {
@@ -316,9 +347,11 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
       });
       
       if (!qboCompany) {
-        console.error(`No QuickBooks connection found for company: ${companyName} (ID: ${companyId})`);
-        console.log('Available companies:', qboData.companies?.map((c: any) => c.company_name));
-        throw new Error(`No QuickBooks connection found for ${companyName}. Please ensure the company is connected to QuickBooks.`);
+        const availableCompanies = qboData.companies?.map((c: any) => c.company_name).join(', ') || 'none';
+        const errorMsg = `No QuickBooks connection found for "${companyName}". Available companies: ${availableCompanies}. Please ensure the correct company is connected.`;
+        console.error(errorMsg);
+        setDataLoadError(errorMsg);
+        throw new Error(errorMsg);
       }
 
       const realmId = qboCompany.realm_id || qboCompany.id;
@@ -1257,56 +1290,69 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
 
   const initializeFinancialData = async () => {
     try {
-      console.log(`Initializing financial data for ${companyName}`);
+      console.log(`🚀 Initializing financial data for ${companyName}`);
+      
+      // Show loading state
+      setLoadingFinancialData(true);
+      setDataLoadError(null);
       
       // Always try to fetch real data first
       await fetchRealFinancialData();
       
       // Only generate additional data if we successfully loaded real data
       if (hasQuickBooksConnection && realFinancialData && realFinancialData.revenue > 0) {
-        // Generate trend data
+        console.log(`✅ Successfully loaded real financial data - Revenue: ${formatCurrency(realFinancialData.revenue)}`);
+        
+        // Generate comprehensive analysis data
         generateTrendData();
-        
-        // Generate benchmark data
         generateBenchmarkData();
-        
-        // Generate risk factors
         generateRiskFactors();
-        
-        // Generate performance alerts
         generatePerformanceAlerts();
+        
+        // Show success message
+        showToast(`📊 Live QuickBooks data loaded successfully for ${companyName}`, 'success');
       } else {
+        console.log(`⚠️ No valid financial data found for ${companyName}`);
+        
         // Clear any stale data
         setTrendData([]);
         setBenchmarkData([]);
         setRiskFactors([]);
         setAlerts([]);
+        setAIInsights([]);
+        
+        // Set appropriate error message
+        const errorMsg = hasQuickBooksConnection 
+          ? 'QuickBooks connected but no financial data found. Please ensure the company has financial records.'
+          : 'QuickBooks not connected. Please connect your QuickBooks account to view real financial data.';
+        
+        setDataLoadError(errorMsg);
+        showToast(`⚠️ ${errorMsg}`, 'warning');
       }
       
     } catch (error) {
-      console.error('Failed to initialize financial data:', error);
+      console.error('❌ Failed to initialize financial data:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
       // Clear all data on error
       setTrendData([]);
       setBenchmarkData([]);
       setRiskFactors([]);
       setAlerts([]);
+      setAIInsights([]);
+      setRealFinancialData(null);
+      setHasQuickBooksConnection(false);
       
-      // No fallback to mock data - just show error state
-      if (!hasQuickBooksConnection) {
-        setDataLoadError('No QuickBooks connection available. Please connect QuickBooks to view financial data.');
-      }
+      // Set comprehensive error message
+      setDataLoadError(errorMessage);
+      
+      // Show user-friendly error message
+      showToast(`❌ Failed to load financial data: ${errorMessage}`, 'error');
+      
+    } finally {
+      setLoadingFinancialData(false);
     }
   };
-
-  // Initialize data when component mounts
-  useEffect(() => {
-    console.log(`EliteAdvancedFinancialAnalyzer mounted for company: ${companyName} (ID: ${companyId})`);
-    setHasQuickBooksConnection(false); // Start with assumption of no connection
-    setRealFinancialData(null);
-    setMetrics([]);
-    initializeFinancialData();
-  }, [companyId, companyName]);
 
   const runAdvancedAnalysis = async () => {
     setIsAnalyzing(true);
@@ -1323,10 +1369,6 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
       setIsAnalyzing(false);
     }
   };
-
-  useEffect(() => {
-    initializeFinancialData();
-  }, [companyId]);
 
   const calculateHealthScore = (financialData: any): number => {
     let score = 50; // Base score
@@ -2138,6 +2180,17 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900 p-6" style={{ fontFamily: 'Poppins, sans-serif' }}>
       <ToastContainer />
+      
+      {/* Loading Overlay */}
+      {loadingFinancialData && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+            <h3 className="text-xl font-semibold text-white mb-2">Loading Financial Data</h3>
+            <p className="text-gray-300">Fetching live data from QuickBooks for {companyName}...</p>
+          </div>
+        </div>
+      )}
       
       {/* Demo Data Warning Banner */}
       {!hasQuickBooksConnection && (
