@@ -311,10 +311,16 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
       const qboResponse = await fetch('/api/qbo/auth/companies');
       if (!qboResponse.ok) {
         const responseText = await qboResponse.text();
-        const errorMsg = `Failed to fetch QuickBooks connections (${qboResponse.status}): ${responseText}`;
-        console.error(errorMsg);
-        setDataLoadError(`QuickBooks API not accessible. Status: ${qboResponse.status}`);
-        throw new Error(errorMsg);
+        console.error(`QBO Companies API failed (${qboResponse.status}): ${responseText}`);
+        
+        // If API is redirecting, show helpful message
+        if (responseText.includes('Redirecting') || qboResponse.status === 302) {
+          setDataLoadError(`QuickBooks API is redirecting. This may be an authentication issue. Please try connecting QuickBooks directly.`);
+          showToast(`🔀 API redirect detected. Please connect QuickBooks manually.`, 'warning');
+        } else {
+          setDataLoadError(`QuickBooks API not accessible. Status: ${qboResponse.status}`);
+        }
+        throw new Error(`API Error: ${qboResponse.status} - ${responseText}`);
       }
       
       const qboData = await qboResponse.json();
@@ -2227,9 +2233,12 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
             </div>
           </div>
           <button
-            onClick={() => router.push('/admin/connected-accounts')}
-            className="px-4 py-2 bg-yellow-500 text-gray-900 rounded-lg hover:bg-yellow-400 transition-colors font-medium text-sm"
+            onClick={() => window.open('/admin/connected-accounts', '_blank')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm flex items-center gap-2"
           >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+            </svg>
             Connect QuickBooks
           </button>
         </div>
@@ -2248,11 +2257,23 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
               <div className="flex space-x-4">
                 <button
                   onClick={() => {
+                    // Direct link to QuickBooks connection
+                    window.open('/admin/connected-accounts', '_blank');
+                  }}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all text-sm flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                  </svg>
+                  Connect QuickBooks
+                </button>
+                <button
+                  onClick={() => {
                     // Pass return URL so extraction page can navigate back here
                     const currentPath = `/admin/financial-analysis?account=${encodeURIComponent(companyId)}&company=${encodeURIComponent(companyName)}`;
                     router.push(`/admin/dashboard/data-extraction?return=${encodeURIComponent(currentPath)}`);
                   }}
-                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-all text-sm"
+                  className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-all text-sm"
                 >
                   Re-run Data Extraction
                 </button>

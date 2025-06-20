@@ -532,10 +532,16 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
       const qboResponse = await fetch('/api/qbo/auth/companies');
       if (!qboResponse.ok) {
         const responseText = await qboResponse.text();
-        const errorMsg = `Failed to fetch QuickBooks connections (${qboResponse.status}): ${responseText}`;
-        console.error(errorMsg);
-        setDataLoadError(`QuickBooks API not accessible. Status: ${qboResponse.status}`);
-        throw new Error(errorMsg);
+        console.error(`QBO Companies API failed (${qboResponse.status}): ${responseText}`);
+        
+        // If API is redirecting, show helpful message
+        if (responseText.includes('Redirecting') || qboResponse.status === 302) {
+          setDataLoadError(`QuickBooks API is redirecting. This may be an authentication issue. Please try connecting QuickBooks directly.`);
+          showToast(`🔀 API redirect detected. Please connect QuickBooks manually.`, 'warning');
+        } else {
+          setDataLoadError(`QuickBooks API not accessible. Status: ${qboResponse.status}`);
+        }
+        throw new Error(`API Error: ${qboResponse.status} - ${responseText}`);
       }
       
       const qboData = await qboResponse.json();
