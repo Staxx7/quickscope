@@ -265,20 +265,67 @@ export default function AIEnhancedAccountWorkflowDashboard() {
     setShowAIInsightsModal(true)
   }
 
-  const handleUploadTranscript = (prospect: Prospect) => {
-    router.push(`/admin/dashboard/call-transcripts?account=${prospect.company_id}&company=${encodeURIComponent(prospect.company_name)}`)
-  }
-
-  const handleGenerateReport = (prospect: Prospect) => {
-    router.push(`/admin/dashboard/report-generation?account=${prospect.company_id}&company=${encodeURIComponent(prospect.company_name)}&prospectId=${prospect.id}`)
-  }
-
   const handleDataExtraction = (prospect: Prospect) => {
-    router.push(`/admin/dashboard/data-extraction?account=${prospect.company_id}&company=${encodeURIComponent(prospect.company_name)}`)
+    // Store company info in session storage for context
+    sessionStorage.setItem('selectedCompany', JSON.stringify({
+      id: prospect.company_id,
+      name: prospect.company_name,
+      email: prospect.email
+    }))
+    
+    // Navigate directly to data extraction with proper parameters
+    const url = `/admin/dashboard/data-extraction?account=${prospect.company_id}&company=${encodeURIComponent(prospect.company_name)}`
+    console.log('Navigating to:', url)
+    
+    // Try router.push first, then fallback to window.location
+    try {
+      router.push(url)
+    } catch (error) {
+      console.error('Router navigation failed, using window.location:', error)
+      window.location.href = url
+    }
   }
 
   const handleFinancialAnalysis = (prospect: Prospect) => {
-    router.push(`/admin/dashboard/advanced-analysis?company_id=${prospect.company_id}&company_name=${encodeURIComponent(prospect.company_name)}`)
+    // Store company info in session storage for context
+    sessionStorage.setItem('selectedCompany', JSON.stringify({
+      id: prospect.company_id,
+      name: prospect.company_name,
+      email: prospect.email
+    }))
+    
+    // Navigate with proper parameters
+    const url = `/admin/dashboard/advanced-analysis?company_id=${prospect.company_id}&company_name=${encodeURIComponent(prospect.company_name)}`
+    console.log('Navigating to:', url)
+    router.push(url)
+  }
+
+  const handleUploadTranscript = (prospect: Prospect) => {
+    // Store company info in session storage for context
+    sessionStorage.setItem('selectedCompany', JSON.stringify({
+      id: prospect.company_id,
+      name: prospect.company_name,
+      email: prospect.email
+    }))
+    
+    // Navigate with proper parameters
+    const url = `/admin/dashboard/call-transcripts?account=${prospect.company_id}&company=${encodeURIComponent(prospect.company_name)}`
+    console.log('Navigating to:', url)
+    router.push(url)
+  }
+
+  const handleGenerateReport = (prospect: Prospect) => {
+    // Store company info in session storage for context
+    sessionStorage.setItem('selectedCompany', JSON.stringify({
+      id: prospect.company_id,
+      name: prospect.company_name,
+      email: prospect.email
+    }))
+    
+    // Navigate with proper parameters
+    const url = `/admin/dashboard/report-generation?account=${prospect.company_id}&company=${encodeURIComponent(prospect.company_name)}&prospect_id=${prospect.id}`
+    console.log('Navigating to:', url)
+    router.push(url)
   }
 
   const triggerSync = async (prospectId: string) => {
@@ -608,7 +655,11 @@ export default function AIEnhancedAccountWorkflowDashboard() {
                         Details
                       </button>
                       <button
-                        onClick={() => handleDataExtraction(prospect)}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleDataExtraction(prospect)
+                        }}
                         className="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700 transition-colors"
                       >
                         Extract
@@ -903,7 +954,9 @@ export default function AIEnhancedAccountWorkflowDashboard() {
                       Financial Analysis
                     </button>
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
                         handleDataExtraction(selectedProspect)
                         setShowDetailsModal(false)
                       }}

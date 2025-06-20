@@ -125,11 +125,28 @@ export default function CorrectedAccountWorkflowDashboard() {
 
   // FIXED: Proper navigation with company context
   const handleViewDetails = (prospect: Prospect) => {
+    // Store company info in session storage for context
+    sessionStorage.setItem('selectedCompany', JSON.stringify({
+      id: prospect.company_id || prospect.id,
+      name: prospect.name,
+      email: prospect.email
+    }))
+    
     const params = new URLSearchParams({
       account: prospect.company_id || prospect.id,
       company: prospect.name
     })
-    router.push(`/admin/dashboard/data-extraction?${params.toString()}`)
+    
+    const url = `/admin/dashboard/data-extraction?${params.toString()}`
+    console.log('Navigating to:', url)
+    
+    // Try router.push first, then fallback to window.location
+    try {
+      router.push(url)
+    } catch (error) {
+      console.error('Router navigation failed, using window.location:', error)
+      window.location.href = url
+    }
   }
 
   const handleUploadTranscript = (prospect: Prospect) => {

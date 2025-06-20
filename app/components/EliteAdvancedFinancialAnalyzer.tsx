@@ -397,9 +397,29 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
   };
 
   useEffect(() => {
-    // Load comprehensive analysis on mount
-    fetchComprehensiveAnalysis();
-  }, [companyId]); // Re-fetch if company changes
+    // Load data based on the companyId prop
+    if (companyId) {
+      setDataSource('real')
+      // Fetch real financial data for the company
+      const fetchRealData = async () => {
+        setLoadingFinancialData(true)
+        try {
+          // Fetch comprehensive analysis which includes financial data
+          await fetchComprehensiveAnalysis()
+        } catch (error) {
+          console.error('Error fetching real data:', error)
+          // Don't fall back to demo data - show empty state instead
+        } finally {
+          setLoadingFinancialData(false)
+        }
+      }
+      fetchRealData()
+    } else {
+      // Only generate mock data if no company is selected
+      generateAdvancedMockData()
+      setDataSource('mock')
+    }
+  }, [companyId])
 
   // Enhanced data generation
   const generateAdvancedMockData = useCallback(() => {
