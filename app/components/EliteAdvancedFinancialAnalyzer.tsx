@@ -340,8 +340,16 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
       const response = await fetch(`/api/qbo/enhanced-financials?${params}`);
       
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         console.error('Enhanced financials API error:', errorData);
+        
+        // Check if it's a connection issue
+        if (response.status === 404 || errorData.error?.includes('No QuickBooks connection')) {
+          setHasQuickBooksConnection(false);
+          setRealFinancialData(null);
+          setMetrics([]);
+          throw new Error('No QuickBooks connection found. Please connect your QuickBooks account.');
+        }
         
         // If enhanced fails, try basic financial endpoints
         console.log('Falling back to basic financial endpoints...');
@@ -349,6 +357,9 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
         const profitLossResponse = await fetch(`/api/qbo/profit-loss?realm_id=${realmId}`);
         
         if (!balanceSheetResponse.ok || !profitLossResponse.ok) {
+          setHasQuickBooksConnection(false);
+          setRealFinancialData(null);
+          setMetrics([]);
           throw new Error('Failed to fetch financial data from QuickBooks. Please check your connection.');
         }
         
@@ -1276,6 +1287,9 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
   // Initialize data when component mounts
   useEffect(() => {
     console.log(`EliteAdvancedFinancialAnalyzer mounted for company: ${companyName} (ID: ${companyId})`);
+    setHasQuickBooksConnection(false); // Start with assumption of no connection
+    setRealFinancialData(null);
+    setMetrics([]);
     initializeFinancialData();
   }, [companyId, companyName]);
 
@@ -2132,7 +2146,11 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
               <p className="text-gray-300 mb-4">{dataLoadError}</p>
               <div className="flex space-x-4">
                 <button
-                  onClick={() => router.push('/admin/dashboard/data-extraction')}
+                  onClick={() => {
+                    // Pass return URL so extraction page can navigate back here
+                    const currentPath = `/admin/financial-analysis?account=${encodeURIComponent(companyId)}&company=${encodeURIComponent(companyName)}`;
+                    router.push(`/admin/dashboard/data-extraction?return=${encodeURIComponent(currentPath)}`);
+                  }}
                   className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-all text-sm"
                 >
                   Re-run Data Extraction
@@ -2186,11 +2204,13 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
               </div>
               <div className="bg-white/5 rounded-xl p-4">
                 <div className="text-gray-400 text-sm">Data Source</div>
-                <div className={`font-medium ${hasQuickBooksConnection ? 'text-green-400' : 'text-gray-400'}`}>
-                  {hasQuickBooksConnection ? '🔗 Live QuickBooks' : '❌ Not Connected'}
+                <div className={`font-medium ${hasQuickBooksConnection && realFinancialData && realFinancialData.revenue > 0 ? 'text-green-400' : 'text-gray-400'}`}>
+                  {hasQuickBooksConnection && realFinancialData && realFinancialData.revenue > 0 ? '🔗 Live QuickBooks' : '❌ Not Connected'}
                 </div>
                 <div className="text-gray-500 text-xs">
-                  {hasQuickBooksConnection ? 'Real-time data' : 'No connection available'}
+                  {dataLoadError ? 'Data loading failed' : 
+                   hasQuickBooksConnection && realFinancialData && realFinancialData.revenue > 0 ? 'Real-time data' : 
+                   'No connection available'}
                 </div>
               </div>
               <div className="bg-white/5 rounded-xl p-4">
@@ -2311,15 +2331,16 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
       </div>
 
       {/* Financial Health Score Dashboard */}
-      <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-8 mb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-1">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-white mb-6">Financial Health Score</h2>
-              <div className="relative">
-                <div className={`text-7xl font-bold mb-4 ${getHealthScoreColor(advancedMetrics?.healthScore || 0)}`}>
-                  {advancedMetrics?.healthScore || 0}
-                </div>
+      {hasQuickBooksConnection && (advancedMetrics || metrics.length > 0) ? (
+        <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-8 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="lg:col-span-1">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-white mb-6">Financial Health Score</h2>
+                <div className="relative">
+                  <div className={`text-7xl font-bold mb-4 ${getHealthScoreColor(advancedMetrics?.healthScore || 0)}`}>
+                    {advancedMetrics?.healthScore || 0}
+                  </div>
                 <div className="text-gray-300 text-lg">out of 100</div>
                 <div className="mt-6 relative">
                   <div className="w-full bg-white/10 rounded-full h-4">
@@ -2460,6 +2481,7 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
           </div>
         </div>
       </div>
+      ) : null}
 
       {/* Enhanced Tab Navigation */}
       <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 mb-8">

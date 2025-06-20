@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabaseClient'
 import { QBOClient } from '../lib/qboClient'
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 interface DataFile {
   id: string;
@@ -83,6 +84,7 @@ const qboClient = new QBOClient()
 
 const EnhancedQBODataExtractor: React.FC<EnhancedQBODataExtractorProps> = ({ companyId, companyName }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [files, setFiles] = useState<DataFile[]>([]);
   const [connectedCompanies, setConnectedCompanies] = useState<ConnectedCompany[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<ConnectedCompany | null>(null);
@@ -94,6 +96,9 @@ const EnhancedQBODataExtractor: React.FC<EnhancedQBODataExtractorProps> = ({ com
   const [filterType, setFilterType] = useState('all');
   const [aiAnalysisProgress, setAiAnalysisProgress] = useState<AIAnalysisProgress | null>(null);
   const [extractionMode, setExtractionMode] = useState<'live' | 'file'>('live');
+
+  // Get return URL from search params
+  const returnUrl = searchParams?.get('return') || null;
 
   // Enhanced data type selection
   const [selectedDataTypes, setSelectedDataTypes] = useState<string[]>([
@@ -401,9 +406,15 @@ const extractComprehensiveFinancials = async (companyId: string) => {
           : company
       ));
 
-      // Navigate to call-transcripts page after successful extraction
+      // Navigate back to return URL or to call-transcripts page after successful extraction
       setTimeout(() => {
-        router.push('/admin/dashboard/call-transcripts');
+        if (returnUrl) {
+          // Return to the page that sent us here (e.g., financial analysis)
+          router.push(returnUrl);
+        } else {
+          // Default behavior: go to call-transcripts
+          router.push('/admin/dashboard/call-transcripts');
+        }
       }, 1500);
 
     } catch (error) {

@@ -91,6 +91,26 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
     if (storedTranscriptId) {
       // Will be set after transcripts are loaded
     }
+    
+    // Restore last viewed tab
+    const storedTab = sessionStorage.getItem(`transcriptTab_${defaultCompanyId}`);
+    if (storedTab === 'upload' || storedTab === 'library' || storedTab === 'insights') {
+      setActiveTab(storedTab);
+    }
+    
+    // Restore completed analysis if exists
+    const storedAnalysis = sessionStorage.getItem(`completedAnalysis_${defaultCompanyId}`);
+    if (storedAnalysis) {
+      try {
+        const analysis = JSON.parse(storedAnalysis);
+        setCompletedAnalysis(analysis);
+        setShowAnalysisModal(true);
+        // Clear after restoring to avoid showing it repeatedly
+        sessionStorage.removeItem(`completedAnalysis_${defaultCompanyId}`);
+      } catch (error) {
+        console.error('Error restoring analysis:', error);
+      }
+    }
   }, [defaultCompanyId]);
   
   // Refetch transcripts when returning to the page
@@ -102,6 +122,27 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, [defaultCompanyId]);
+  
+  // Save tab state when it changes
+  useEffect(() => {
+    if (defaultCompanyId && activeTab) {
+      sessionStorage.setItem(`transcriptTab_${defaultCompanyId}`, activeTab);
+    }
+  }, [activeTab, defaultCompanyId]);
+  
+  // Save completed analysis before navigation
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (completedAnalysis && defaultCompanyId) {
+        sessionStorage.setItem(`completedAnalysis_${defaultCompanyId}`, JSON.stringify(completedAnalysis));
+      }
+    };
+    
+    // Save when component unmounts or navigates away
+    return () => {
+      handleBeforeUnload();
+    };
+  }, [completedAnalysis, defaultCompanyId]);
   
   // Restore selected transcript after transcripts are loaded
   useEffect(() => {
@@ -1441,11 +1482,22 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
                 {selectedTranscript.status === 'completed' && (
                   <button
                     onClick={() => {
+                      // Save the transcript data before navigating
+                      if (selectedTranscript.id && selectedTranscript.transcriptText) {
+                        localStorage.setItem(`transcriptData_${selectedTranscript.companyId}`, JSON.stringify({
+                          id: selectedTranscript.id,
+                          fileName: selectedTranscript.fileName,
+                          date: selectedTranscript.date,
+                          aiAnalysis: selectedTranscript.aiAnalysis,
+                          transcriptText: selectedTranscript.transcriptText
+                        }));
+                      }
+                      
                       handleSelectTranscript(null);
                       // Find the actual company name from connected companies
                       const company = connectedCompanies.find(c => c.realm_id === selectedTranscript.companyId || c.id === selectedTranscript.companyId);
                       const actualCompanyName = company?.company_name || defaultCompanyName;
-                      router.push(`/admin/dashboard/advanced-analysis?company=${encodeURIComponent(actualCompanyName)}&companyId=${selectedTranscript.companyId}`);
+                      router.push(`/admin/financial-analysis?account=${selectedTranscript.companyId}&company=${encodeURIComponent(actualCompanyName)}&transcriptId=${selectedTranscript.id}`);
                     }}
                     className="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 text-sm flex items-center space-x-1"
                   >
