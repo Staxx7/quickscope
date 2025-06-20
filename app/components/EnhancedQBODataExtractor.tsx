@@ -310,14 +310,31 @@ const extractComprehensiveFinancials = async (companyId: string) => {
         throw new Error(errorData.error || 'Live data extraction failed');
       }
 
-      const extractionData = await response.json();
+      let extractionData;
+      const responseText = await response.text();
+      
+      try {
+        extractionData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse response:', responseText);
+        throw new Error(`Invalid response from server: ${responseText.substring(0, 200)}`);
+      }
       
       // Handle array response from API
       const snapshotData = Array.isArray(extractionData) ? extractionData[0] : extractionData;
       
       if (!snapshotData) {
+        console.error('No snapshot data in response:', extractionData);
         throw new Error('No financial data returned from QuickBooks');
       }
+      
+      // Log the data we received for debugging
+      console.log('Received snapshot data:', {
+        hasRevenue: !!snapshotData.revenue,
+        hasExpenses: !!snapshotData.expenses,
+        hasAssets: !!snapshotData.assets,
+        dataKeys: Object.keys(snapshotData)
+      });
       
       // Transform the financial snapshot data into the expected format
       const transformedData = {
@@ -339,6 +356,18 @@ const extractComprehensiveFinancials = async (companyId: string) => {
           end: new Date().toISOString().split('T')[0]
         }
       };
+      
+      // Check if all financial data is zero
+      const hasAnyFinancialData = 
+        transformedData.summary.totalRevenue > 0 || 
+        transformedData.summary.totalExpenses > 0 || 
+        transformedData.summary.totalAssets > 0 || 
+        transformedData.summary.totalLiabilities > 0;
+      
+      if (!hasAnyFinancialData) {
+        console.warn('QuickBooks returned all zero values');
+        showToast('Warning: QuickBooks returned no financial data. The company may not have any transactions yet.', 'warning');
+      }
       
       // Process the extracted live data
       const processedResults = await processExtractedFinancialData(transformedData, selectedDataTypes);
@@ -364,12 +393,31 @@ const extractComprehensiveFinancials = async (companyId: string) => {
 
     } catch (error) {
       console.error('Live extraction error:', error);
+      
+      // Provide more detailed error messages
+      let errorMessage = 'Failed to extract live financial data';
+      let errorDetails = 'Please check connection and try again';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message || errorMessage;
+        
+        // Check for specific error scenarios
+        if (error.message.includes('No financial data returned')) {
+          errorDetails = 'QuickBooks returned no data. Please verify the company has financial data.';
+        } else if (error.message.includes('No real financial data available')) {
+          errorDetails = 'Unable to retrieve financial data from QuickBooks. The account may not have any transactions.';
+        } else if (error.message.includes('fetch')) {
+          errorDetails = 'Network error. Please check your connection and try again.';
+        }
+      }
+      
       setAiAnalysisProgress({ 
         stage: 'Extraction failed', 
         progress: 0, 
-        message: 'Please check connection and try again' 
+        message: errorDetails
       });
-      showToast('Failed to extract live financial data', 'error');
+      
+      showToast(`${errorMessage}: ${errorDetails}`, 'error');
     } finally {
       setIsProcessing(false);
       setTimeout(() => setAiAnalysisProgress(null), 2000);

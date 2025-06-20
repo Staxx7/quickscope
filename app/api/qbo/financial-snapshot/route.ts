@@ -144,6 +144,26 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
+    // Log the financial data for debugging
+    console.log('Financial data to store:', {
+      company_id: realm_id,
+      revenue: financialData.data.revenue,
+      expenses: financialData.data.expenses,
+      net_income: financialData.data.net_income,
+      assets: financialData.data.assets,
+      liabilities: financialData.data.liabilities
+    });
+
+    // Check if all data is zero
+    const hasAnyData = financialData.data.revenue > 0 || 
+                       financialData.data.expenses > 0 || 
+                       financialData.data.assets > 0 || 
+                       financialData.data.liabilities > 0;
+
+    if (!hasAnyData) {
+      console.warn('QuickBooks returned all zero values - company may have no financial data');
+    }
+
     // Store the new financial snapshot
     const { data: newSnapshot, error: insertError } = await supabase
       .from('financial_snapshots')
