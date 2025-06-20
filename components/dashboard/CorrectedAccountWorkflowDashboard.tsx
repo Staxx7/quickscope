@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { WorkflowManager } from '@/lib/workflowManager'
 
 interface Prospect {
   id: string
@@ -123,55 +124,83 @@ export default function CorrectedAccountWorkflowDashboard() {
     averageCloseability: 78
   })
 
-  // FIXED: Proper navigation with company context
-  const handleViewDetails = (prospect: Prospect) => {
-    // Store company info in session storage for context
-    sessionStorage.setItem('selectedCompany', JSON.stringify({
-      id: prospect.company_id || prospect.id,
-      name: prospect.name,
-      email: prospect.email
-    }))
+  // Handle Extract Data button click
+  const handleExtractData = (e: React.MouseEvent, prospect: Prospect) => {
+    e.preventDefault()
+    e.stopPropagation()
     
-    const params = new URLSearchParams({
-      account: prospect.company_id || prospect.id,
-      company: prospect.name
-    })
+    const companyId = prospect.company_id || prospect.id
+    const companyName = prospect.name
     
-    const url = `/admin/dashboard/data-extraction?${params.toString()}`
-    console.log('Navigating to:', url)
+    console.log('Extract Data clicked for:', companyName)
     
-    // Try router.push first, then fallback to window.location
-    try {
-      router.push(url)
-    } catch (error) {
-      console.error('Router navigation failed, using window.location:', error)
-      window.location.href = url
+    // Start or update workflow
+    WorkflowManager.startWorkflow(companyId, companyName, prospect.email)
+    
+    // Navigate to data extraction
+    WorkflowManager.navigateToStep(router, 'data-extraction', companyId, companyName)
+  }
+
+  // Handle Upload Transcript button click
+  const handleUploadTranscript = (e: React.MouseEvent, prospect: Prospect) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const companyId = prospect.company_id || prospect.id
+    const companyName = prospect.name
+    
+    console.log('Upload Transcript clicked for:', companyName)
+    
+    // Start or update workflow if not started
+    const workflowState = WorkflowManager.getWorkflowState(companyId)
+    if (!workflowState) {
+      WorkflowManager.startWorkflow(companyId, companyName, prospect.email)
     }
+    
+    // Navigate to call transcripts
+    WorkflowManager.navigateToStep(router, 'call-transcripts', companyId, companyName)
   }
 
-  const handleUploadTranscript = (prospect: Prospect) => {
-    const params = new URLSearchParams({
-      account: prospect.company_id || prospect.id,
-      company: prospect.name
-    })
-    router.push(`/admin/dashboard/call-transcripts?${params.toString()}`)
-  }
-
-  const handleGenerateReport = (prospect: Prospect) => {
-    const params = new URLSearchParams({
-      account: prospect.company_id || prospect.id,
-      company: prospect.name,
+  // Handle Generate Report button click
+  const handleGenerateReport = (e: React.MouseEvent, prospect: Prospect) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const companyId = prospect.company_id || prospect.id
+    const companyName = prospect.name
+    
+    console.log('Generate Report clicked for:', companyName)
+    
+    // Start or update workflow if not started
+    const workflowState = WorkflowManager.getWorkflowState(companyId)
+    if (!workflowState) {
+      WorkflowManager.startWorkflow(companyId, companyName, prospect.email)
+    }
+    
+    // Navigate to report generation
+    WorkflowManager.navigateToStep(router, 'report-generation', companyId, companyName, {
       prospect_id: prospect.id
     })
-    router.push(`/admin/dashboard/report-generation?${params.toString()}`)
   }
 
-  const handleFinancialAnalysis = (prospect: Prospect) => {
-    const params = new URLSearchParams({
-      account: prospect.company_id || prospect.id,
-      company: prospect.name
-    })
-    router.push(`/admin/advanced-analysis?${params.toString()}`)
+  // Handle Financial Analysis button click
+  const handleFinancialAnalysis = (e: React.MouseEvent, prospect: Prospect) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const companyId = prospect.company_id || prospect.id
+    const companyName = prospect.name
+    
+    console.log('Financial Analysis clicked for:', companyName)
+    
+    // Start or update workflow if not started
+    const workflowState = WorkflowManager.getWorkflowState(companyId)
+    if (!workflowState) {
+      WorkflowManager.startWorkflow(companyId, companyName, prospect.email)
+    }
+    
+    // Navigate to financial analysis
+    WorkflowManager.navigateToStep(router, 'financial-analysis', companyId, companyName)
   }
 
   if (loading) {
@@ -207,7 +236,7 @@ export default function CorrectedAccountWorkflowDashboard() {
             <div className="flex items-center space-x-3">
               <div className="text-blue-400">👥</div>
               <div>
-                <div className="text-2xl font-bold text-white">2</div>
+                <div className="text-2xl font-bold text-white">{prospects.length}</div>
                 <div className="text-slate-400 text-sm">Total Prospects</div>
               </div>
             </div>
@@ -216,7 +245,7 @@ export default function CorrectedAccountWorkflowDashboard() {
             <div className="flex items-center space-x-3">
               <div className="text-emerald-400">✅</div>
               <div>
-                <div className="text-2xl font-bold text-white">0</div>
+                <div className="text-2xl font-bold text-white">{prospects.filter(p => p.status === 'connected').length}</div>
                 <div className="text-slate-400 text-sm">Active</div>
               </div>
             </div>
@@ -225,7 +254,7 @@ export default function CorrectedAccountWorkflowDashboard() {
             <div className="flex items-center space-x-3">
               <div className="text-purple-400">🧠</div>
               <div>
-                <div className="text-2xl font-bold text-white">0</div>
+                <div className="text-2xl font-bold text-white">{prospects.filter(p => p.status === 'analysis_complete').length}</div>
                 <div className="text-slate-400 text-sm">AI Analyzed</div>
               </div>
             </div>
@@ -234,7 +263,7 @@ export default function CorrectedAccountWorkflowDashboard() {
             <div className="flex items-center space-x-3">
               <div className="text-yellow-400">⭐</div>
               <div>
-                <div className="text-2xl font-bold text-white">0</div>
+                <div className="text-2xl font-bold text-white">{stats.highProbabilityDeals}</div>
                 <div className="text-slate-400 text-sm">High Value</div>
               </div>
             </div>
@@ -243,7 +272,7 @@ export default function CorrectedAccountWorkflowDashboard() {
             <div className="flex items-center space-x-3">
               <div className="text-red-400">🔥</div>
               <div>
-                <div className="text-2xl font-bold text-white">0</div>
+                <div className="text-2xl font-bold text-white">{stats.urgentFollowUps}</div>
                 <div className="text-slate-400 text-sm">Urgent</div>
               </div>
             </div>
@@ -252,7 +281,7 @@ export default function CorrectedAccountWorkflowDashboard() {
             <div className="flex items-center space-x-3">
               <div className="text-orange-400">⚠️</div>
               <div>
-                <div className="text-2xl font-bold text-white">0</div>
+                <div className="text-2xl font-bold text-white">{prospects.filter(p => p.status === 'expired').length}</div>
                 <div className="text-slate-400 text-sm">Expired</div>
               </div>
             </div>
@@ -274,7 +303,10 @@ export default function CorrectedAccountWorkflowDashboard() {
           <select className="px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option>All AI Status</option>
           </select>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <button 
+            onClick={loadDashboardData}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
             🔄 Refresh
           </button>
           <button className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
@@ -333,25 +365,25 @@ export default function CorrectedAccountWorkflowDashboard() {
                     <td className="p-4">
                       <div className="flex space-x-2">
                         <button
-                          onClick={() => handleViewDetails(prospect)}
+                          onClick={(e) => handleExtractData(e, prospect)}
                           className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
                         >
                           Extract Data
                         </button>
                         <button
-                          onClick={() => handleUploadTranscript(prospect)}
+                          onClick={(e) => handleUploadTranscript(e, prospect)}
                           className="px-3 py-1 bg-slate-600 text-white text-xs rounded hover:bg-slate-700 transition-colors"
                         >
                           Transcript
                         </button>
                         <button
-                          onClick={() => handleGenerateReport(prospect)}
+                          onClick={(e) => handleGenerateReport(e, prospect)}
                           className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
                         >
                           Generate Report
                         </button>
                         <button
-                          onClick={() => handleFinancialAnalysis(prospect)}
+                          onClick={(e) => handleFinancialAnalysis(e, prospect)}
                           className="px-3 py-1 bg-slate-600 text-white text-xs rounded hover:bg-slate-700 transition-colors"
                         >
                           Analysis
