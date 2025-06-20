@@ -48,17 +48,23 @@ export default function AuditDeckGenerator({ companyId, companyName }: AuditDeck
   const generateAuditDeck = async () => {
     setGenerating(true)
     try {
-      const response = await fetch('/api/qbo/generate-audit-deck', {
+      const response = await fetch('/api/audit-deck/generate-with-qb', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           companyId,
-          template: selectedTemplate
+          companyName,
+          includeTranscripts: true,
+          includeFinancials: true
         })
       })
 
       const result = await response.json()
-      setDeckData(result.data)
+      if (result.success) {
+        setDeckData(result.auditDeck)
+      } else {
+        throw new Error(result.error || 'Failed to generate audit deck')
+      }
     } catch (error) {
       console.error('Error generating audit deck:', error)
     } finally {

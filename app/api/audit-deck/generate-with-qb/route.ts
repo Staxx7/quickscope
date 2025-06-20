@@ -73,12 +73,20 @@ export async function POST(request: NextRequest) {
 
 async function getFinancialData(companyId: string) {
   try {
-    // Get enhanced financial data
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/qbo/enhanced-financials?companyId=${companyId}`)
-    if (!response.ok) return null
+    // Get enhanced financial data using correct parameter name
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/qbo/enhanced-financials?realm_id=${companyId}`)
+    if (!response.ok) {
+      console.error(`Enhanced financials API failed: ${response.status} ${response.statusText}`)
+      return null
+    }
     
     const data = await response.json()
-    return data.data
+    if (!data.success) {
+      console.error('Enhanced financials API returned error:', data.error)
+      return null
+    }
+    
+    return data.financialData
   } catch (error) {
     console.error('Error fetching financial data:', error)
     return null
