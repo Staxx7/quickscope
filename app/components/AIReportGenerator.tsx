@@ -294,19 +294,8 @@ export default function EnhancedAIReportGenerator() {
         if (financialData && financialData.length > 0) {
           setFinancialData(financialData[0]);
         } else {
-          // Generate mock financial data for demonstration
-          setFinancialData({
-            revenue: 4200000,
-            net_income: 924000,
-            expenses: 3276000,
-            assets: 2100000,
-            liabilities: 735000,
-            growth_rate: 0.285,
-            profit_margin: 0.22,
-            current_ratio: 2.1,
-            debt_to_equity: 0.35,
-            created_at: new Date().toISOString()
-          });
+          showToast('No financial data available. Please connect QuickBooks to generate reports.', 'warning');
+          setFinancialData(null);
         }
       }
 
@@ -316,41 +305,7 @@ export default function EnhancedAIReportGenerator() {
         const transcriptsData = await transcriptsResponse.json();
         setTranscripts(transcriptsData || []);
       } else {
-        // Generate mock transcript data for demonstration
-        setTranscripts([
-          {
-            id: 'transcript_1',
-            title: 'Discovery Call - TechStart Solutions',
-            duration_seconds: 1800,
-            participant_count: 3,
-            call_date: '2024-06-08',
-            call_type: 'discovery',
-            sentiment: 'positive',
-            sales_score: 87,
-            key_topics: ['Financial Planning', 'Growth Strategy', 'Cash Flow Management', 'System Integration'],
-            action_items: ['Provide financial analysis', 'Schedule audit call', 'Send proposal'],
-            pain_points: ['Manual reporting processes', 'Limited cash flow visibility', 'Scaling operational challenges'],
-            business_goals: ['Scale to $10M ARR', 'Improve efficiency', 'Prepare for Series B'],
-            budget_indicators: ['$8-12K monthly budget', 'Approved for Q2 implementation'],
-            urgency: 'high'
-          },
-          {
-            id: 'transcript_2',
-            title: 'Follow-up Call - Financial Review',
-            duration_seconds: 1200,
-            participant_count: 2,
-            call_date: '2024-06-10',
-            call_type: 'follow-up',
-            sentiment: 'positive',
-            sales_score: 92,
-            key_topics: ['Financial Results Review', 'Implementation Timeline', 'Team Integration'],
-            action_items: ['Finalize contract terms', 'Schedule onboarding', 'Introduce team'],
-            pain_points: ['Month-end close delays', 'Investor reporting gaps'],
-            business_goals: ['Automate financial processes', 'Enhance investor relations'],
-            budget_indicators: ['Budget confirmed at $10K monthly'],
-            urgency: 'high'
-          }
-        ]);
+        setTranscripts([]);
       }
     } catch (error) {
       console.error('Error fetching company data:', error);

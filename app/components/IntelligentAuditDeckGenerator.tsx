@@ -506,7 +506,7 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
   const [selectedTemplate, setSelectedTemplate] = useState('ai-enhanced')
   const [realFinancialData, setRealFinancialData] = useState<FinancialSnapshot | null>(null)
   const [loadingFinancialData, setLoadingFinancialData] = useState(false)
-  const [dataSource, setDataSource] = useState<'real' | 'mock' | 'ai_enhanced'>('mock')
+  const [hasRealData, setHasRealData] = useState(false)
   const [slides, setSlides] = useState<any[]>([])
   const { showToast, ToastContainer } = useToast()
 

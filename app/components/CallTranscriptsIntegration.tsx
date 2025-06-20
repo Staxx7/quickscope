@@ -306,16 +306,22 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
         });
 
         if (!saveResponse.ok) {
-          console.error('Failed to save transcript to database');
+          const errorData = await saveResponse.json();
+          console.error('Failed to save transcript to database:', errorData);
+          showToast('Warning: Transcript analysis completed but failed to save to database', 'warning');
         } else {
           const savedData = await saveResponse.json();
           console.log('Transcript saved successfully:', savedData);
           
           // Update the transcript with the database ID
           processedTranscript.id = savedData.transcript?.id || processedTranscript.id;
+          
+          // Ensure transcript is saved before returning
+          showToast('Transcript saved successfully', 'success');
         }
       } catch (error) {
         console.error('Error saving transcript:', error);
+        showToast('Error: Failed to save transcript to database', 'error');
       }
 
       setAiProcessing(null);
@@ -467,6 +473,9 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
 
         showToast(`${file.name} processed successfully with AI insights`, 'success');
         
+        // Wait a moment to ensure database write completes
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         // Refresh transcripts from database
         await fetchExistingTranscripts();
         
@@ -536,6 +545,9 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
       ));
 
       showToast(`Transcript processed successfully with AI insights`, 'success');
+      
+      // Wait a moment to ensure database write completes
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Refresh transcripts from database
       await fetchExistingTranscripts();

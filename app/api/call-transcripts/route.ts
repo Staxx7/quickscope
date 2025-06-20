@@ -58,21 +58,31 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // Ensure we have required fields with proper defaults
+    const transcriptData = {
+      prospect_id,
+      company_id,
+      company_name: company_name || 'Unknown Company',
+      file_name: file_name || `Transcript_${new Date().toISOString()}`,
+      file_type: file_type || 'text/plain',
+      file_size: file_size || transcript_text?.length || 0,
+      transcript_text: transcript_text || '',
+      analysis_results: analysis_results || {},
+      audio_url: audio_url || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+
+    console.log('Saving transcript to database:', {
+      prospect_id,
+      company_id,
+      file_name: transcriptData.file_name,
+      text_length: transcript_text?.length || 0
+    })
+
     const { data: transcript, error } = await supabase
       .from('call_transcripts')
-      .insert({
-        prospect_id,
-        company_id,
-        company_name: company_name || 'Unknown Company',
-        file_name: file_name || 'transcript.txt',
-        file_type: file_type || 'text/plain',
-        file_size: file_size || 0,
-        transcript_text: transcript_text || '',
-        analysis_results,
-        audio_url,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      .insert(transcriptData)
       .select()
       .single()
 
@@ -81,11 +91,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ transcript })
+    console.log('Transcript saved successfully:', transcript?.id)
+
+    // Return the full transcript object
+    return NextResponse.json({ 
+      success: true,
+      transcript,
+      message: 'Transcript saved successfully'
+    })
 
   } catch (error) {
-    console.error('Unexpected error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Unexpected error in transcript POST:', error)
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
 

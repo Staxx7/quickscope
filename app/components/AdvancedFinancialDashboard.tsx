@@ -112,157 +112,16 @@ export default function AIEnhancedFinancialDashboard({
         const result = await response.json()
         setMetrics(result.data)
       } else {
-        // Use mock data for demonstration
-        generateMockData()
+        showToast('Failed to load financial data. Please check your QuickBooks connection.', 'error')
       }
     } catch (error) {
       console.error('Error fetching financial metrics:', error)
-      generateMockData()
+      showToast('Error loading financial data. Please reconnect QuickBooks.', 'error')
     } finally {
       setLoading(false)
     }
   }
 
-  const generateMockData = () => {
-    const mockMetrics: FinancialMetrics = {
-      revenue: {
-        current: 2850000,
-        previous: 2200000,
-        trend: 'up',
-        monthlyGrowth: 0.048,
-        yearlyGrowth: 0.295,
-        seasonalPatterns: [
-          { month: 'Jan', amount: 220000, variance: -8.2 },
-          { month: 'Feb', amount: 235000, variance: 6.8 },
-          { month: 'Mar', amount: 260000, variance: 10.6 },
-          { month: 'Apr', amount: 245000, variance: -5.8 },
-          { month: 'May', amount: 275000, variance: 12.2 },
-          { month: 'Jun', amount: 290000, variance: 5.5 }
-        ]
-      },
-      expenses: {
-        current: 1995000,
-        previous: 1760000,
-        categories: [
-          { name: 'Cost of Goods Sold', amount: 1140000, percentage: 57.1, trend: 'up' },
-          { name: 'Salaries & Benefits', amount: 456000, percentage: 22.9, trend: 'stable' },
-          { name: 'Marketing & Advertising', amount: 159600, percentage: 8.0, trend: 'up' },
-          { name: 'Rent & Utilities', amount: 119700, percentage: 6.0, trend: 'stable' },
-          { name: 'Professional Services', amount: 59850, percentage: 3.0, trend: 'down' },
-          { name: 'Other Operating', amount: 59850, percentage: 3.0, trend: 'stable' }
-        ],
-        fixedVsVariable: { fixed: 735600, variable: 1259400 },
-        efficiency: 0.83
-      },
-      profitMargin: {
-        gross: 0.60,
-        net: 0.30,
-        operating: 0.35,
-        trends: [
-          { period: 'Q1 2024', gross: 0.58, net: 0.28, operating: 0.33 },
-          { period: 'Q2 2024', gross: 0.61, net: 0.31, operating: 0.36 },
-          { period: 'Q3 2024', gross: 0.59, net: 0.29, operating: 0.34 },
-          { period: 'Q4 2024', gross: 0.62, net: 0.32, operating: 0.37 }
-        ]
-      },
-      cashFlow: {
-        operating: 697500,
-        investing: -142500,
-        financing: -85500,
-        free: 555000,
-        runway: 14.2,
-        burnRate: 49375,
-        projections: [
-          { month: 'Jul', projected: 58000, confidence: 0.92 },
-          { month: 'Aug', projected: 62000, confidence: 0.89 },
-          { month: 'Sep', projected: 55000, confidence: 0.86 },
-          { month: 'Oct', projected: 68000, confidence: 0.84 },
-          { month: 'Nov', projected: 71000, confidence: 0.81 },
-          { month: 'Dec', projected: 74000, confidence: 0.78 }
-        ]
-      },
-      ratios: {
-        currentRatio: 2.35,
-        quickRatio: 1.87,
-        debtToEquity: 0.42,
-        returnOnAssets: 0.18,
-        returnOnEquity: 0.24,
-        inventoryTurnover: 8.2,
-        receivablesTurnover: 11.5,
-        workingCapital: 485000
-      },
-      healthScore: {
-        overall: 82,
-        factors: [
-          { name: 'Revenue Growth', score: 88, impact: 'Very Positive', recommendation: 'Maintain growth trajectory through continued market expansion' },
-          { name: 'Profitability', score: 85, impact: 'Positive', recommendation: 'Optimize cost structure to improve margins further' },
-          { name: 'Liquidity', score: 78, impact: 'Positive', recommendation: 'Strong cash position provides operational flexibility' },
-          { name: 'Efficiency', score: 76, impact: 'Positive', recommendation: 'Focus on inventory and receivables management' },
-          { name: 'Leverage', score: 81, impact: 'Positive', recommendation: 'Conservative debt levels support growth opportunities' }
-        ],
-        benchmarks: [
-          { metric: 'Revenue Growth', company: 29.5, industry: 12.3, percentile: 85 },
-          { metric: 'Gross Margin', company: 60.0, industry: 45.2, percentile: 78 },
-          { metric: 'Current Ratio', company: 2.35, industry: 1.85, percentile: 72 },
-          { metric: 'ROE', company: 24.0, industry: 15.8, percentile: 81 }
-        ]
-      },
-      aiInsights: {
-        strengths: [
-          'Exceptional revenue growth rate of 29.5% exceeds industry benchmark by 17.2 percentage points',
-          'Strong gross margin of 60% indicates effective pricing strategy and cost control',
-          'Healthy cash flow generation with 14+ months runway provides strategic flexibility',
-          'Conservative debt-to-equity ratio of 0.42 maintains financial stability while supporting growth'
-        ],
-        weaknesses: [
-          'Working capital management could be optimized - receivables turnover below industry average',
-          'Fixed cost base represents 37% of expenses, creating operational leverage risk',
-          'Seasonal revenue patterns create Q1 cash flow vulnerability',
-          'Marketing spend efficiency metrics suggest ROI optimization opportunities'
-        ],
-        opportunities: [
-          'Geographic expansion potential based on current market penetration analysis',
-          'Product line diversification could reduce seasonal revenue volatility',
-          'Automation investments could improve operational efficiency by 15-20%',
-          'Strategic partnerships could accelerate growth while reducing customer acquisition costs'
-        ],
-        threats: [
-          'Increasing competition in core markets may pressure margins',
-          'Supply chain disruptions could impact cost of goods sold',
-          'Interest rate changes may affect financing costs for growth initiatives',
-          'Economic downturn could reduce demand in key customer segments'
-        ],
-        predictions: [
-          { metric: 'Revenue', prediction: 'Continued growth at 25-30% annually', confidence: 0.87, timeframe: '12 months' },
-          { metric: 'Gross Margin', prediction: 'Margin compression to 57-58%', confidence: 0.74, timeframe: '6 months' },
-          { metric: 'Cash Position', prediction: 'Stable with seasonal variations', confidence: 0.91, timeframe: '12 months' },
-          { metric: 'Market Share', prediction: 'Expansion in target demographics', confidence: 0.82, timeframe: '18 months' }
-        ],
-        anomalies: [
-          { description: 'March revenue spike of 10.6% above trend - investigate one-time factors', severity: 'low', recommendation: 'Analyze contributing factors for replication' },
-          { description: 'Professional services expenses decreased 15% - verify service levels maintained', severity: 'medium', recommendation: 'Review service provider contracts and deliverables' }
-        ]
-      },
-      competitiveAnalysis: {
-        industryBenchmarks: {
-          revenueGrowth: 12.3,
-          grossMargin: 45.2,
-          netMargin: 18.7,
-          currentRatio: 1.85,
-          debtToEquity: 0.65,
-          roe: 15.8
-        },
-        peerComparison: [
-          { metric: 'Revenue Growth', company: 29.5, industry: 12.3, ranking: 'Top 15%' },
-          { metric: 'Profitability', company: 30.0, industry: 18.7, ranking: 'Top 20%' },
-          { metric: 'Efficiency', company: 83.0, industry: 76.0, ranking: 'Above Average' },
-          { metric: 'Financial Health', company: 82.0, industry: 68.0, ranking: 'Top 25%' }
-        ],
-        marketPosition: 'Strong - Top quartile performance across key metrics with sustainable competitive advantages'
-      }
-    }
-    setMetrics(mockMetrics)
-  }
 
   const runAIAnalysis = async () => {
     setAiAnalysis(prev => ({ ...prev, isAnalyzing: true, stage: 'Initializing AI analysis...', progress: 0 }))

@@ -263,7 +263,7 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
   const [acknowledgedAlerts, setAcknowledgedAlerts] = useState<Set<string>>(new Set());
   const [loadingFinancialData, setLoadingFinancialData] = useState(false);
   const [realFinancialData, setRealFinancialData] = useState<FinancialSnapshot | null>(null);
-  const [dataSource, setDataSource] = useState<'real' | 'mock'>('mock');
+  const [hasQuickBooksConnection, setHasQuickBooksConnection] = useState(false);
   const [metrics, setMetrics] = useState<FinancialMetric[]>([]);
   const [advancedMetrics, setAdvancedMetrics] = useState<AdvancedFinancialMetrics | null>(null);
   const [trendData, setTrendData] = useState<TrendData[]>([]);
@@ -273,7 +273,7 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
   const [alerts, setAlerts] = useState<PerformanceAlert[]>([]);
   const [selectedTimeframe, setSelectedTimeframe] = useState('4Q');
   const [activeTab, setActiveTab] = useState('executive-summary');
-  const [selectedCompany, setSelectedCompany] = useState(companyName || 'TechCorp Solutions');
+  const [selectedCompany, setSelectedCompany] = useState(companyName || 'Unknown Company');
   const [viewMode, setViewMode] = useState<'summary' | 'detailed' | 'executive'>('summary');
   const [dataLoadError, setDataLoadError] = useState<string | null>(null);
   const renderHealthScoreGauge = (score: number) => { /* from artifact 4 */ }
@@ -378,7 +378,7 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
         
         // Generate basic metrics
         generateMetricsFromBasicData(revenue, expenses, netIncome, assets, liabilities);
-        setDataSource('real');
+        setHasQuickBooksConnection(true);
         showToast('Live QuickBooks data loaded (basic view)', 'success');
         return;
       }
@@ -495,20 +495,26 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
       const realInsights = generateInsightsFromFinancialData(financialData, data.insights);
       setAIInsights(realInsights);
 
-      setDataSource('real');
+      setHasQuickBooksConnection(true);
       showToast(
         `✅ Live QuickBooks data loaded for ${metadata.dateRange.label} (${metadata.dateRange.daysIncluded} days)`,
         'success'
       );
       
-      // Log data quality
+      // Log data quality and show clear warnings
       if (financialData.dataQuality && financialData.dataQuality.score < 80) {
         console.warn('⚠️ Data quality issues:', financialData.dataQuality.issues);
         if (financialData.dataQuality.issues.length > 0) {
+          const issueMessage = financialData.dataQuality.issues.join(', ');
           showToast(
-            `Data Quality Warning: ${financialData.dataQuality.issues.join(', ')}`,
+            `⚠️ Data Quality Warning: ${issueMessage}. Some financial metrics may be incomplete.`,
             'warning'
           );
+          
+          // If critical data is missing, set appropriate flags
+          if (issueMessage.includes('No revenue') || issueMessage.includes('No expense')) {
+            setDataLoadError('Critical financial data missing from QuickBooks');
+          }
         }
       }
 
@@ -520,20 +526,22 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
       // Show specific error message to user
       if (errorMessage.includes('No QuickBooks connection')) {
         showToast(
-          `Unable to load real financial data: ${errorMessage}. Using sample data instead.`,
+          `⚠️ No QuickBooks connection found. Connect QuickBooks to see real financial data.`,
           'warning'
         );
       } else {
         showToast(
-          `Failed to load real financial data. Using sample data. Error: ${errorMessage}`,
+          `❌ Failed to load real financial data: ${errorMessage}`,
           'error'
         );
       }
       
-      setDataSource('mock');
+      setHasQuickBooksConnection(false);
       
-      // Fall back to mock data
-      generateAdvancedMockData();
+      // No data available - prompt user to connect QuickBooks
+      if (!metrics || metrics.length === 0) {
+        showToast('No financial data available. Please connect QuickBooks to view real data.', 'warning');
+      }
     } finally {
       setLoadingFinancialData(false);
     }
@@ -1258,9 +1266,9 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
     } catch (error) {
       console.error('Failed to initialize financial data:', error);
       
-      // If real data fails, ensure we have mock data
-      if (!dataSource || dataSource === 'mock') {
-        generateAdvancedMockData();
+      // No fallback to mock data - just show error state
+      if (!hasQuickBooksConnection) {
+        setDataLoadError('No QuickBooks connection available. Please connect QuickBooks to view financial data.');
       }
     }
   };
@@ -1269,177 +1277,7 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
   useEffect(() => {
     console.log(`EliteAdvancedFinancialAnalyzer mounted for company: ${companyName} (ID: ${companyId})`);
     initializeFinancialData();
-  }, [companyId, companyName]); // Re-initialize if company changes
-
-  // Ensure mock data generation is working
-  const generateAdvancedMockData = () => {
-    console.log('Generating mock financial data...');
-    
-    // Generate comprehensive mock metrics
-    const mockMetrics: FinancialMetric[] = [
-      {
-        id: 'revenue',
-        name: 'Total Revenue',
-        value: 8547000,
-        previousValue: 7284000,
-        change: 1263000,
-        changePercent: 17.3,
-        trend: 'up',
-        category: 'revenue'
-      },
-      {
-        id: 'gross-profit',
-        name: 'Gross Profit',
-        value: 3419000,
-        previousValue: 2914000,
-        change: 505000,
-        changePercent: 17.3,
-        trend: 'up',
-        category: 'profit'
-      },
-      {
-        id: 'operating-expenses',
-        name: 'Operating Expenses',
-        value: 2564000,
-        previousValue: 2185000,
-        change: 379000,
-        changePercent: 17.3,
-        trend: 'up',
-        category: 'expense'
-      },
-      {
-        id: 'net-profit',
-        name: 'Net Profit',
-        value: 855000,
-        previousValue: 729000,
-        change: 126000,
-        changePercent: 17.3,
-        trend: 'up',
-        category: 'profit'
-      },
-      {
-        id: 'cash-flow',
-        name: 'Operating Cash Flow',
-        value: 1026000,
-        previousValue: 875000,
-        change: 151000,
-        changePercent: 17.3,
-        trend: 'up',
-        category: 'efficiency'
-      },
-      {
-        id: 'accounts-receivable',
-        name: 'Accounts Receivable',
-        value: 1427000,
-        previousValue: 1189000,
-        change: 238000,
-        changePercent: 20.0,
-        trend: 'up',
-        category: 'efficiency'
-      }
-    ];
-
-    setMetrics(mockMetrics);
-
-    // Generate mock advanced metrics
-    const mockAdvancedMetrics: AdvancedFinancialMetrics = {
-      healthScore: 78,
-      liquidityRatio: 2.45,
-      profitMargin: 0.10,
-      debtToEquity: 0.68,
-      returnOnAssets: 0.12,
-      returnOnEquity: 0.18,
-      workingCapital: 2145000,
-      cashFlowRatio: 0.12,
-      quickRatio: 1.85,
-      currentRatio: 2.45,
-      inventoryTurnover: 8.5,
-      receivablesTurnover: 6.0,
-      assetTurnover: 1.2,
-      grossMargin: 0.40,
-      operatingMargin: 0.15,
-      netMargin: 0.10,
-      ebitda: 1282500,
-      freeCashFlow: 718200,
-      cashConversionCycle: 45,
-      debtServiceCoverage: 3.2,
-      interestCoverage: 5.5,
-      equityMultiplier: 1.68,
-      priceToBook: 2.4,
-      workingCapitalRatio: 2.45
-    };
-
-    setAdvancedMetrics(mockAdvancedMetrics);
-
-    // Generate trend data
-    generateTrendData();
-
-    // Generate benchmark data
-    generateBenchmarkData();
-
-    // Generate mock AI insights
-    const mockInsights: EnhancedAIInsight[] = [
-      {
-        id: 'insight-1',
-        type: 'opportunity',
-        title: 'Cash Flow Optimization Opportunity',
-        description: 'Your accounts receivable days have increased by 20% YoY. Implementing automated invoicing and collection processes could reduce DSO by 15 days, improving cash flow by approximately $350K.',
-        confidence: 0.92,
-        impact: 'high',
-        timeline: '3-6 months',
-        actionItems: [
-          'Implement automated invoice generation and delivery',
-          'Set up payment reminder sequences',
-          'Offer early payment discounts (2/10 net 30)',
-          'Review and update credit policies'
-        ],
-        expectedOutcome: 'Reduce DSO from 60 to 45 days, improving working capital by $350K',
-        investmentRequired: 25000,
-        roi: 14.0,
-        kpiTargets: [
-          { metric: 'DSO', target: 45, timeframe: '6 months' },
-          { metric: 'Cash Flow', target: 1200000, timeframe: '6 months' }
-        ],
-        dataPoints: ['AR increased 20% YoY', 'DSO at 60 days vs industry avg 45', 'Collection efficiency at 85%'],
-        priority: 1
-      },
-      {
-        id: 'insight-2',
-        type: 'concern',
-        title: 'Operating Expense Growth Outpacing Revenue',
-        description: 'Operating expenses grew 17.3% while revenue grew 17.3%. This 1:1 ratio suggests limited operating leverage. Focus on cost optimization to improve margins.',
-        confidence: 0.88,
-        impact: 'medium',
-        timeline: '6-12 months',
-        actionItems: [
-          'Conduct spend analysis across all departments',
-          'Identify automation opportunities',
-          'Renegotiate vendor contracts',
-          'Implement zero-based budgeting'
-        ],
-        expectedOutcome: 'Reduce OpEx growth to 10% while maintaining 17%+ revenue growth',
-        investmentRequired: 50000,
-        roi: 8.5,
-        kpiTargets: [
-          { metric: 'Operating Margin', target: 18, timeframe: '12 months' },
-          { metric: 'OpEx Ratio', target: 0.25, timeframe: '12 months' }
-        ],
-        dataPoints: ['OpEx grew 17.3%', 'Operating margin at 15%', 'Peer average margin 18%'],
-        priority: 2
-      }
-    ];
-
-    setAIInsights(mockInsights);
-
-    // Generate risk factors
-    generateRiskFactors();
-
-    // Generate performance alerts
-    generatePerformanceAlerts();
-
-    setDataSource('mock');
-    showToast('Using sample financial data for demonstration', 'info');
-  };
+  }, [companyId, companyName]);
 
   const runAdvancedAnalysis = async () => {
     setIsAnalyzing(true);
@@ -1548,7 +1386,7 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
         contextualInsights: [
           'Analysis based on real QuickBooks financial data',
           `Company: ${companyName}`,
-          `Data source: ${dataSource === 'real' ? 'Live QuickBooks API' : 'Historical database'}`,
+          `Data source: ${hasQuickBooksConnection ? 'Live QuickBooks API' : 'No connection - please connect QuickBooks'}`,
           'AI-powered insights combining financial metrics with industry benchmarks'
         ],
         callToAction: healthScore > 80 ? 
@@ -1772,7 +1610,7 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
         company: {
           name: companyName || selectedCompany,
           id: companyId,
-          industry: 'SaaS Technology',
+          industry: hasQuickBooksConnection ? 'Financial Services' : 'Unknown Industry',
           analysis_date: new Date().toISOString()
         },
         executive_summary: {
@@ -2261,6 +2099,27 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
     <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900 p-6" style={{ fontFamily: 'Poppins, sans-serif' }}>
       <ToastContainer />
       
+      {/* Demo Data Warning Banner */}
+      {!hasQuickBooksConnection && (
+        <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-xl p-4 mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-yellow-400" />
+            <div>
+              <h3 className="font-semibold text-yellow-300">No Financial Data Available</h3>
+              <p className="text-sm text-yellow-200">
+                Connect QuickBooks to view real financial data for {companyName}.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => router.push('/admin/connected-accounts')}
+            className="px-4 py-2 bg-yellow-500 text-gray-900 rounded-lg hover:bg-yellow-400 transition-colors font-medium text-sm"
+          >
+            Connect QuickBooks
+          </button>
+        </div>
+      )}
+      
       {/* Error Banner */}
       {dataLoadError && (
         <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-6 mb-6">
@@ -2309,29 +2168,29 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
               <div className="bg-white/5 rounded-xl p-4">
                 <div className="text-gray-400 text-sm">Company</div>
                 <div className="text-white font-medium">{selectedCompany}</div>
-                <div className="text-gray-500 text-xs">SaaS Technology</div>
+                <div className="text-gray-500 text-xs">
+                  {hasQuickBooksConnection && realFinancialData ? 'Live Financial Data' : 'No Data Available'}
+                </div>
               </div>
               <div className="bg-white/5 rounded-xl p-4">
                 <div className="text-gray-400 text-sm">Annual Revenue</div>
                 <div className="text-white font-medium">
-                  {formatCurrency(
-                    realFinancialData?.revenue || 
-                    metrics.find(m => m.id === 'revenue')?.value || 
-                    11360000, 
-                    true
-                  )}
+                  {hasQuickBooksConnection && realFinancialData && realFinancialData.revenue > 0
+                    ? formatCurrency(realFinancialData.revenue, true)
+                    : 'No Data Available'
+                  }
                 </div>
                 <div className="text-gray-500 text-xs">
-                  {Math.floor((realFinancialData?.revenue || metrics.find(m => m.id === 'revenue')?.value || 11360000) / 75000) || 148} employees
+                  {hasQuickBooksConnection ? 'Actual revenue from QuickBooks' : 'Connect QuickBooks to view data'}
                 </div>
               </div>
               <div className="bg-white/5 rounded-xl p-4">
                 <div className="text-gray-400 text-sm">Data Source</div>
-                <div className={`font-medium ${dataSource === 'real' ? 'text-green-400' : 'text-yellow-400'}`}>
-                  {dataSource === 'real' ? '🔗 Live QuickBooks' : '📊 Demo Data'}
+                <div className={`font-medium ${hasQuickBooksConnection ? 'text-green-400' : 'text-gray-400'}`}>
+                  {hasQuickBooksConnection ? '🔗 Live QuickBooks' : '❌ Not Connected'}
                 </div>
                 <div className="text-gray-500 text-xs">
-                  {dataSource === 'real' ? 'Real-time data' : 'No live data available'}
+                  {hasQuickBooksConnection ? 'Real-time data' : 'No connection available'}
                 </div>
               </div>
               <div className="bg-white/5 rounded-xl p-4">
@@ -2351,7 +2210,7 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
                       value={selectedTimeframe}
                       onChange={(e) => {
                         setSelectedTimeframe(e.target.value);
-                        if (dataSource === 'real') {
+                        if (hasQuickBooksConnection) {
                           const periodMap: Record<string, string> = {
                             '1M': 'month',
                             '1Q': 'quarter',
@@ -2375,7 +2234,7 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
                     </select>
                   </div>
                   
-                  {dataSource === 'real' && realFinancialData && (
+                  {hasQuickBooksConnection && realFinancialData && (
                     <div className="text-sm">
                       <span className="text-gray-400">Data includes: </span>
                       <span className="text-cyan-400">
@@ -2633,95 +2492,128 @@ const EliteAdvancedFinancialAnalyzer: React.FC<EliteAdvancedFinancialAnalyzerPro
       {/* Tab Content */}
       {activeTab === 'executive-summary' && (
         <div className="space-y-8">
-          {/* Priority Strategic Insights */}
-          <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-8">
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
-              <Star className="w-6 h-6 mr-3 text-yellow-400" />
-              Priority Strategic Insights
-            </h2>
-            {priorityInsights.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {priorityInsights.map((insight) => (
-                  <div key={insight.id} className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className={`p-3 rounded-xl ${
-                        insight.impact === 'transformational' ? 'bg-purple-500/20 border border-purple-500/30' :
-                        insight.impact === 'high' ? 'bg-red-500/20 border border-red-500/30' :
-                        insight.impact === 'medium' ? 'bg-yellow-500/20 border border-yellow-500/30' :
-                        'bg-green-500/20 border border-green-500/30'
-                      }`}>
-                        {getInsightIcon(insight.type)}
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm text-gray-400">ROI</div>
-                        <div className="text-lg font-bold text-green-400">{insight.roi.toFixed(1)}x</div>
-                      </div>
-                    </div>
-
-                    <h3 className="text-lg font-bold text-white mb-3">{insight.title}</h3>
-                    <p className="text-gray-300 text-sm mb-4 line-clamp-3">{insight.description}</p>
-
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Investment Required</span>
-                        <span className="text-white font-medium">{formatCurrency(insight.investmentRequired, true)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Timeline</span>
-                        <span className="text-cyan-400">{insight.timeline}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Confidence</span>
-                        <span className="text-green-400">{insight.confidence}%</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="text-gray-400 text-lg mb-2">🤖 AI Analysis in Progress</div>
-                <p className="text-gray-500">Priority insights will appear here once analysis is complete.</p>
-              </div>
-            )}
-          </div>
-
-          {/* Critical Risks Overview */}
-          {criticalRisks.length > 0 && (
-            <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-8">
-              <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
-                <AlertTriangle className="w-6 h-6 mr-3 text-red-400" />
-                Critical Risk Factors
-              </h2>
-              <div className="space-y-4">
-                {criticalRisks.map((risk) => (
-                  <div key={risk.id} className="bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-2xl p-6 border border-red-500/20">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-lg font-bold text-white mb-2">{risk.risk}</h3>
-                        <div className="flex items-center space-x-4">
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getRiskSeverityColor(risk.severity)}`}>
-                            {risk.severity} risk
-                          </span>
-                          <span className="text-gray-400 text-sm">{risk.probability}% probability</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm text-gray-400">Financial Impact</div>
-                        <div className="text-xl font-bold text-red-400">{formatCurrency(risk.financialImpact, true)}</div>
-                      </div>
-                    </div>
-
-                    <p className="text-gray-300 mb-4">{risk.impact}</p>
-
-                    <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-4">
-                      <h4 className="text-cyan-300 font-medium mb-2">Immediate Action Required:</h4>
-                      <p className="text-cyan-200 text-sm">{risk.recommendation}</p>
-                    </div>
-                  </div>
-                ))}
+          {/* Check if we have data */}
+          {!hasQuickBooksConnection || !metrics || metrics.length === 0 ? (
+            <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-12">
+              <div className="text-center">
+                <div className="mb-6">
+                  <AlertTriangle className="w-16 h-16 text-yellow-400 mx-auto" />
+                </div>
+                <h2 className="text-3xl font-bold text-white mb-4">No Financial Data Available</h2>
+                <p className="text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
+                  To view financial analysis and insights, please connect your QuickBooks account. 
+                  This will enable real-time financial data synchronization and comprehensive analysis.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <button
+                    onClick={() => router.push('/admin/connected-accounts')}
+                    className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-4 rounded-xl font-medium hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 flex items-center justify-center space-x-2"
+                  >
+                    <Shield className="w-5 h-5" />
+                    <span>Connect QuickBooks</span>
+                  </button>
+                  <button
+                    onClick={() => router.push('/admin/dashboard')}
+                    className="bg-white/10 border border-white/20 text-white px-8 py-4 rounded-xl font-medium hover:bg-white/20 transition-all duration-200"
+                  >
+                    Back to Dashboard
+                  </button>
+                </div>
               </div>
             </div>
+          ) : (
+            <>
+              {/* Priority Strategic Insights */}
+              <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-8">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                  <Star className="w-6 h-6 mr-3 text-yellow-400" />
+                  Priority Strategic Insights
+                </h2>
+                {priorityInsights.length > 0 ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {priorityInsights.map((insight) => (
+                      <div key={insight.id} className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className={`p-3 rounded-xl ${
+                            insight.impact === 'transformational' ? 'bg-purple-500/20 border border-purple-500/30' :
+                            insight.impact === 'high' ? 'bg-red-500/20 border border-red-500/30' :
+                            insight.impact === 'medium' ? 'bg-yellow-500/20 border border-yellow-500/30' :
+                            'bg-green-500/20 border border-green-500/30'
+                          }`}>
+                            {getInsightIcon(insight.type)}
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-gray-400">ROI</div>
+                            <div className="text-lg font-bold text-green-400">{insight.roi.toFixed(1)}x</div>
+                          </div>
+                        </div>
+
+                        <h3 className="text-lg font-bold text-white mb-3">{insight.title}</h3>
+                        <p className="text-gray-300 text-sm mb-4 line-clamp-3">{insight.description}</p>
+
+                        <div className="space-y-3">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">Investment Required</span>
+                            <span className="text-white font-medium">{formatCurrency(insight.investmentRequired, true)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">Timeline</span>
+                            <span className="text-cyan-400">{insight.timeline}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">Confidence</span>
+                            <span className="text-green-400">{insight.confidence}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="text-gray-400 text-lg mb-2">🤖 AI Analysis in Progress</div>
+                    <p className="text-gray-500">Priority insights will appear here once analysis is complete.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Critical Risks Overview */}
+              {criticalRisks.length > 0 && (
+                <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-8">
+                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                    <AlertTriangle className="w-6 h-6 mr-3 text-red-400" />
+                    Critical Risk Factors
+                  </h2>
+                  <div className="space-y-4">
+                    {criticalRisks.map((risk) => (
+                      <div key={risk.id} className="bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-2xl p-6 border border-red-500/20">
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <h3 className="text-lg font-bold text-white mb-2">{risk.risk}</h3>
+                            <div className="flex items-center space-x-4">
+                              <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getRiskSeverityColor(risk.severity)}`}>
+                                {risk.severity} risk
+                              </span>
+                              <span className="text-gray-400 text-sm">{risk.probability}% probability</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-gray-400">Financial Impact</div>
+                            <div className="text-xl font-bold text-red-400">{formatCurrency(risk.financialImpact, true)}</div>
+                          </div>
+                        </div>
+
+                        <p className="text-gray-300 mb-4">{risk.impact}</p>
+
+                        <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-4">
+                          <h4 className="text-cyan-300 font-medium mb-2">Immediate Action Required:</h4>
+                          <p className="text-cyan-200 text-sm">{risk.recommendation}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
