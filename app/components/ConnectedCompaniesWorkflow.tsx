@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { RefreshCw, CheckCircle, XCircle, AlertCircle, FileText, Brain, Users, DollarSign, Clock, TrendingUp, ChevronRight, Building2 } from 'lucide-react'
-import { buildCompanyUrlParams, normalizeCompany } from '../../lib/companyUtils'
+import { normalizeCompany } from '../../lib/companyUtils'
+import { WorkflowManager } from '@/lib/workflowManager'
 
 interface Company {
   id: string
@@ -123,35 +124,31 @@ export default function ConnectedCompaniesWorkflow({ companies: initialCompanies
   }
 
   const handleCompanyAction = (company: Company, action: string) => {
-    // Normalize company data to ensure consistent property names
-    const normalizedCompany = normalizeCompany(company)
-    
-    // Store selected company in session storage for context
-    sessionStorage.setItem('selectedCompany', JSON.stringify({
-      id: normalizedCompany.company_id,
-      name: normalizedCompany.company_name
-    }))
-    
-    // Build consistent URL parameters
-    const params = buildCompanyUrlParams(normalizedCompany)
+    const normalized = normalizeCompany(company)
+    const companyId = normalized.company_id
+    const companyName = normalized.company_name
 
-    switch (action) {
-      case 'sync':
-        router.push(`/dashboard/data-extraction?${params.toString()}`)
-        break
-      case 'transcript':
-        router.push(`/dashboard/call-transcripts?${params.toString()}`)
-        break
-      case 'analysis':
-        router.push(`/dashboard/advanced-analysis?${params.toString()}`)
-        break
-      case 'report':
-        router.push(`/dashboard/report-generation?${params.toString()}`)
-        break
-      case 'prospect':
-        const accountId = normalizedCompany.company_id
-        router.push(`/admin/prospects/create?company_id=${accountId}&company_name=${encodeURIComponent(normalizedCompany.company_name)}`)
-        break
+    // Ensure workflow exists
+    if (!WorkflowManager.getWorkflowState(companyId)) {
+      WorkflowManager.startWorkflow(companyId, companyName, normalized.email)
+    }
+
+    const stepMap: Record<string, any> = {
+      sync: 'data-extraction',
+      transcript: 'call-transcripts',
+      analysis: 'financial-analysis',
+      report: 'report-generation'
+    }
+
+    if (action in stepMap) {
+      const step = stepMap[action]
+      const extra = action === 'report' ? { prospect_id: normalized.id } : undefined
+      WorkflowManager.navigateToStep(router, step, companyId, companyName, extra)
+      return
+    }
+
+    if (action === 'prospect') {
+      router.push(`/admin/prospects/create?company_id=${companyId}&company_name=${encodeURIComponent(companyName)}`)
     }
   }
 
