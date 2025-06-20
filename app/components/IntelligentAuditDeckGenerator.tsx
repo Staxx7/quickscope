@@ -531,23 +531,31 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
       // Get QuickBooks realm ID for the company
       const qboResponse = await fetch('/api/qbo/auth/companies');
       if (!qboResponse.ok) {
-        const errorMsg = `Failed to fetch QuickBooks connections (${qboResponse.status})`;
+        const responseText = await qboResponse.text();
+        const errorMsg = `Failed to fetch QuickBooks connections (${qboResponse.status}): ${responseText}`;
         console.error(errorMsg);
-        setDataLoadError(errorMsg);
+        setDataLoadError(`QuickBooks API not accessible. Status: ${qboResponse.status}`);
         throw new Error(errorMsg);
       }
       
       const qboData = await qboResponse.json();
+      console.log('🔍 FULL QBO Response:', qboData);
       console.log('📋 Available QuickBooks companies:', qboData.companies?.map((c: any) => ({ 
         name: c.company_name, 
         realm_id: c.realm_id, 
         id: c.id 
       })));
       
+      console.log(`🎯 Looking for company match:`, {
+        searchingFor: { companyId, companyName },
+        availableCompanies: qboData.companies?.length || 0
+      });
+      
       if (!qboData.companies || qboData.companies.length === 0) {
         const errorMsg = 'No QuickBooks companies found. Please connect your QuickBooks account first.';
         console.error(errorMsg);
         setDataLoadError(errorMsg);
+        showToast(`❌ No QuickBooks connections found. Please connect QuickBooks first.`, 'error');
         throw new Error(errorMsg);
       }
       
@@ -569,9 +577,19 @@ const IntelligentAuditDeckGenerator: React.FC<IntelligentAuditDeckGeneratorProps
       
       if (!qboCompany) {
         const availableCompanies = qboData.companies?.map((c: any) => c.company_name).join(', ') || 'none';
-        const errorMsg = `No QuickBooks connection found for "${companyName}". Available companies: ${availableCompanies}. Please ensure the correct company is connected.`;
+        const errorMsg = `No QuickBooks connection found for "${companyName}" (ID: ${companyId}). Available companies: ${availableCompanies}. Please ensure the correct company is connected.`;
         console.error(errorMsg);
+        console.error('🔍 Detailed matching attempt:', {
+          searchCompanyId: companyId,
+          searchCompanyName: companyName,
+          availableCompanies: qboData.companies?.map((c: any) => ({
+            name: c.company_name,
+            id: c.id,
+            realm_id: c.realm_id
+          }))
+        });
         setDataLoadError(errorMsg);
+        showToast(`❌ "${companyName}" not connected to QuickBooks. Please connect this company first.`, 'error');
         throw new Error(errorMsg);
       }
 
