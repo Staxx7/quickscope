@@ -294,6 +294,8 @@ const extractComprehensiveFinancials = async (companyId: string) => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        
+        // Handle specific error codes
         if (errorData.code === 'TOKEN_EXPIRED') {
           showToast('QuickBooks connection expired. Please reconnect your account.', 'error');
           setAiAnalysisProgress({ 
@@ -307,7 +309,20 @@ const extractComprehensiveFinancials = async (companyId: string) => {
           }, 2000);
           return;
         }
-        throw new Error(errorData.error || 'Live data extraction failed');
+        
+        // Log detailed error information
+        console.error('API Error Response:', errorData);
+        
+        // Provide more detailed error message
+        let errorMessage = errorData.error || 'Live data extraction failed';
+        if (errorData.details) {
+          errorMessage += `: ${errorData.details}`;
+        }
+        if (errorData.hint) {
+          errorMessage += ` (${errorData.hint})`;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       let extractionData;

@@ -2,9 +2,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing Supabase environment variables:', {
+    hasUrl: !!supabaseUrl,
+    hasKey: !!supabaseKey
+  });
+}
+
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  supabaseUrl || '',
+  supabaseKey || ''
 );
 
 interface QBOToken {
@@ -73,6 +83,14 @@ interface EnhancedFinancialSnapshot {
 
 export async function GET(request: NextRequest) {
   try {
+    // Check if Supabase is properly initialized
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json({ 
+        error: 'Database configuration error',
+        details: 'Missing required environment variables'
+      }, { status: 500 });
+    }
+
     const { searchParams } = new URL(request.url);
     const realm_id = searchParams.get('realm_id');
 
@@ -177,24 +195,34 @@ export async function GET(request: NextRequest) {
       console.warn('QuickBooks returned all zero values - company may have no financial data');
     }
 
+    // Prepare data to insert
+    const dataToInsert = {
+      company_id: realm_id,
+      revenue: financialData.data.revenue || 0,
+      net_income: financialData.data.net_income || 0,
+      expenses: financialData.data.expenses || 0,
+      assets: financialData.data.assets || 0,
+      liabilities: financialData.data.liabilities || 0,
+      created_at: new Date().toISOString()
+    };
+
+    console.log('Attempting to insert financial snapshot:', dataToInsert);
+
     // Store the new financial snapshot
     const { data: newSnapshot, error: insertError } = await supabase
       .from('financial_snapshots')
-      .insert({
-        company_id: realm_id,
-        revenue: financialData.data.revenue,
-        net_income: financialData.data.net_income,
-        expenses: financialData.data.expenses,
-        assets: financialData.data.assets,
-        liabilities: financialData.data.liabilities,
-        created_at: new Date().toISOString()
-      })
+      .insert(dataToInsert)
       .select()
       .single();
 
     if (insertError) {
       console.error('Error storing financial snapshot:', insertError);
-      return NextResponse.json({ error: 'Failed to store financial data' }, { status: 500 });
+      return NextResponse.json({ 
+        error: 'Failed to store financial data',
+        details: insertError.message,
+        code: insertError.code,
+        hint: insertError.hint || insertError.details
+      }, { status: 500 });
     }
 
     return NextResponse.json([newSnapshot]);
