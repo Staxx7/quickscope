@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { supabase } from '@/lib/supabaseClient';
 
+// Initialize Anthropic for analysis
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY || '',
+});
+
+// Keep OpenAI for Whisper transcription only
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -83,7 +90,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Analyze the transcript using AI
+    // Analyze the transcript using Claude AI
     const analysisPrompt = `Analyze this discovery call transcript for ${companyName} and extract key business intelligence:
 
 TRANSCRIPT:
@@ -100,28 +107,75 @@ Extract and structure the following information:
 Focus on actionable insights that would help a fractional CFO service provider close the deal.
 Be specific and quote relevant parts of the transcript to support your analysis.
 
-Return as structured JSON with clear categories and actionable insights.`;
+Return your response as valid JSON with the following structure:
+{
+  "painPoints": {
+    "operational": ["list of operational pain points"],
+    "financial": ["list of financial pain points"],
+    "strategic": ["list of strategic pain points"],
+    "technology": ["list of technology pain points"]
+  },
+  "businessObjectives": {
+    "shortTerm": ["list of short-term goals"],
+    "longTerm": ["list of long-term vision items"],
+    "growthTargets": ["list of growth targets"],
+    "efficiencyGoals": ["list of efficiency goals"]
+  },
+  "decisionMakers": [
+    {
+      "name": "Decision maker name",
+      "role": "Their role",
+      "influence": "high/medium/low",
+      "concerns": ["list of their concerns"],
+      "priorities": ["list of their priorities"]
+    }
+  ],
+  "urgencySignals": {
+    "timeline": "Specific timeline mentioned",
+    "pressurePoints": ["list of pressure points"],
+    "catalysts": ["list of catalysts"],
+    "budget": "Budget information if mentioned"
+  },
+  "competitiveContext": {
+    "alternatives": ["list of alternatives considered"],
+    "differentiators": ["needed differentiators"],
+    "threats": ["competitive threats"]
+  },
+  "salesIntelligence": {
+    "buyingSignals": ["list of buying signals"],
+    "objections": ["list of objections"],
+    "nextSteps": ["recommended next steps"],
+    "closeability": 85
+  }
+}`;
 
     try {
-      const analysis = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const analysisResponse = await anthropic.messages.create({
+        model: "claude-4-sonnet-20250514",
         messages: [
           {
-            role: "system",
-            content: "You are a senior business development analyst specializing in B2B sales for fractional CFO services. Extract actionable business intelligence from discovery call transcripts."
-          },
-          {
             role: "user",
-            content: analysisPrompt
+            content: [
+              {
+                type: "text",
+                text: analysisPrompt
+              }
+            ]
           }
         ],
-        response_format: { type: "json_object" },
+        system: "You are a senior business development analyst specializing in B2B sales for fractional CFO services. Extract actionable business intelligence from discovery call transcripts. Always respond with valid JSON.",
+        max_tokens: 4000,
         temperature: 0.3
       });
 
-      const transcriptAnalysis = JSON.parse(analysis.choices[0].message.content || '{}');
+      const analysisContent = analysisResponse.content[0];
+      if (analysisContent.type !== 'text') {
+        throw new Error('Unexpected response type from Claude');
+      }
 
-      // Generate specific talking points for this prospect
+      const transcriptAnalysis = JSON.parse(analysisContent.text);
+
+      // Generate specific talking points using Claude
       const talkingPointsPrompt = `Based on the transcript analysis for ${companyName}, generate specific talking points for the audit call presentation:
 
 ANALYSIS CONTEXT:
@@ -136,25 +190,42 @@ Generate:
 6. CLOSING STATEMENTS (compelling calls to action)
 
 Make each talking point specific to ${companyName} and reference specific points from their call.
-Focus on creating urgency and demonstrating expertise.`;
+Focus on creating urgency and demonstrating expertise.
 
-      const talkingPointsResponse = await openai.chat.completions.create({
-        model: "gpt-4o",
+Return as valid JSON with this structure:
+{
+  "openingStatements": ["list of opening statements"],
+  "problemAmplification": ["list of problem amplification statements"],
+  "solutionTransitions": ["list of solution transition statements"],
+  "valuePropositions": ["list of value propositions"],
+  "objectionResponses": ["list of objection responses"],
+  "closingStatements": ["list of closing statements"]
+}`;
+
+      const talkingPointsResponse = await anthropic.messages.create({
+        model: "claude-4-sonnet-20250514",
         messages: [
           {
-            role: "system",
-            content: "You are a master sales presenter and fractional CFO with extensive experience in closing high-value professional services engagements."
-          },
-          {
             role: "user",
-            content: talkingPointsPrompt
+            content: [
+              {
+                type: "text",
+                text: talkingPointsPrompt
+              }
+            ]
           }
         ],
-        response_format: { type: "json_object" },
+        system: "You are a master sales presenter and fractional CFO with extensive experience in closing high-value professional services engagements. Generate compelling, specific talking points. Always respond with valid JSON.",
+        max_tokens: 4000,
         temperature: 0.4
       });
 
-      const talkingPoints = JSON.parse(talkingPointsResponse.choices[0].message.content || '{}');
+      const talkingPointsContent = talkingPointsResponse.content[0];
+      if (talkingPointsContent.type !== 'text') {
+        throw new Error('Unexpected response type from Claude');
+      }
+
+      const talkingPoints = JSON.parse(talkingPointsContent.text);
 
       // Calculate engagement scores
       const closeabilityScore = Math.min(100, Math.max(0, 

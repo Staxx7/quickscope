@@ -198,56 +198,62 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
     });
 
     try {
-      const aiAnalysis = {
-        painPoints: [
-          'Manual financial reporting taking 40+ hours monthly',
-          'No real-time visibility into cash flow',
-          'Excel-based forecasting with high error rates',
-          'Disconnected systems between sales and finance'
-        ],
-        businessGoals: [
-          'Scale from $2M to $10M ARR in 18 months',
-          'Reduce month-end close from 10 days to 3 days',
-          'Implement automated financial reporting',
-          'Enable data-driven decision making'
-        ],
-        budgetIndications: [
-          '$8,000-12,000/month budget allocated',
-          'CFO has final approval',
-          'Q1 implementation target'
-        ],
-        decisionMakers: [
-          { name: 'Sarah Johnson', role: 'CFO', influence: 'high' },
-          { name: 'Mike Chen', role: 'VP Finance', influence: 'medium' },
-          { name: 'Lisa Park', role: 'Controller', influence: 'low' }
-        ],
-        competitiveThreats: ['Currently evaluating NetSuite', 'Had demo with Sage Intacct'],
-        urgency: 'high' as const,
-        nextSteps: [
-          'Schedule technical deep-dive session',
-          'Provide ROI analysis for CFO',
-          'Demo automation capabilities'
-        ],
-        salesScore: 85,
-        financialInsights: [
-          'Revenue recognition complexity due to multi-year contracts',
-          'Need for segment reporting across 3 business units',
-          'Critical requirement: ASC 606 compliance'
-        ],
-        riskFactors: [
-          'NetSuite offering aggressive pricing',
-          'Internal resource constraints for implementation',
-          'Board pressure for quick results'
-        ]
-      };
-
       setAiProcessing({
         stage: 'Analyzing Content',
-        progress: 60,
+        progress: 30,
         message: 'AI extracting insights from conversation...'
       });
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call the actual AI analysis API
+      const response = await fetch('/api/ai/process-transcript', {
+        method: 'POST',
+        body: (() => {
+          const formData = new FormData();
+          formData.append('prospectId', transcript.companyId || '');
+          formData.append('companyName', defaultCompanyName || 'Unknown Company');
+          if (fileContent) {
+            formData.append('transcriptText', fileContent);
+          }
+          return formData;
+        })()
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'AI analysis failed');
+      }
+
+      const analysisResult = await response.json();
+      
+      setAiProcessing({
+        stage: 'Processing Results',
+        progress: 70,
+        message: 'Structuring AI insights...'
+      });
+
+      // Transform the API response into our component format
+      const aiAnalysis = {
+        painPoints: analysisResult.results?.analysis?.painPoints?.map((p: any) => 
+          typeof p === 'string' ? p : p.description
+        ) || [],
+        businessGoals: analysisResult.results?.analysis?.businessObjectives?.shortTerm || [],
+        budgetIndications: analysisResult.results?.analysis?.urgencySignals?.budget ? 
+          [analysisResult.results.analysis.urgencySignals.budget] : [],
+        decisionMakers: analysisResult.results?.analysis?.decisionMakers?.map((dm: any) => ({
+          name: dm.name || 'Unknown',
+          role: dm.role || 'Unknown',
+          influence: dm.influence || 'medium'
+        })) || [],
+        competitiveThreats: analysisResult.results?.analysis?.competitiveContext?.alternatives || [],
+        urgency: analysisResult.results?.scores?.urgency || 'medium',
+        nextSteps: analysisResult.results?.analysis?.salesIntelligence?.nextSteps || 
+                   analysisResult.results?.nextSteps || [],
+        salesScore: analysisResult.results?.scores?.closeability || 50,
+        financialInsights: analysisResult.results?.analysis?.painPoints?.filter((p: any) => 
+          p.category === 'financial'
+        ).map((p: any) => p.description) || [],
+        riskFactors: analysisResult.results?.analysis?.competitiveContext?.threats || []
+      };
 
       setAiProcessing({
         stage: 'Finalizing Results',
@@ -255,14 +261,15 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
         message: 'Generating comprehensive analysis...'
       });
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       const processedTranscript = {
         ...transcript,
         status: 'completed' as const,
         aiAnalysis,
         sentiment: aiAnalysis.salesScore >= 70 ? 'positive' : aiAnalysis.salesScore >= 40 ? 'neutral' : 'negative',
-        confidence: 0.92
+        confidence: 0.92,
+        transcriptText: fileContent
       };
 
       // Save transcript to database
@@ -300,7 +307,29 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
     } catch (error) {
       console.error('AI processing error:', error);
       setAiProcessing(null);
-      throw error;
+      
+      // Return with basic mock data if AI fails
+      const fallbackAnalysis = {
+        painPoints: ['Unable to analyze - please check transcript format'],
+        businessGoals: ['Analysis pending'],
+        budgetIndications: ['Not available'],
+        decisionMakers: [{ name: 'Unknown', role: 'Unknown', influence: 'medium' as const }],
+        competitiveThreats: [],
+        urgency: 'medium' as const,
+        nextSteps: ['Retry transcript analysis'],
+        salesScore: 50,
+        financialInsights: ['Analysis incomplete'],
+        riskFactors: ['Unable to assess risks']
+      };
+      
+      return {
+        ...transcript,
+        status: 'completed' as const,
+        aiAnalysis: fallbackAnalysis,
+        sentiment: 'neutral' as const,
+        confidence: 0.3,
+        transcriptText: fileContent
+      };
     }
   };
 
@@ -1095,7 +1124,7 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
                   <button
                     onClick={() => {
                       handleSelectTranscript(null);
-                      router.push('/admin/dashboard/advanced-analysis');
+                      router.push(`/admin/dashboard/advanced-analysis?company=${encodeURIComponent(defaultCompanyName)}&companyId=${selectedTranscript.companyId}`);
                     }}
                     className="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 text-sm flex items-center space-x-1"
                   >
@@ -1358,10 +1387,10 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
                     <div className="mt-4 text-center">
                       <button 
                         onClick={() => {
-                                                  handleSelectTranscript(null);
-                        router.push('/admin/dashboard/advanced-analysis');
-                      }}
-                      className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:from-green-700 hover:to-blue-700 transition-all duration-200 flex items-center space-x-2 mx-auto"
+                          handleSelectTranscript(null);
+                          router.push(`/admin/dashboard/advanced-analysis?company=${encodeURIComponent(defaultCompanyName)}&companyId=${selectedTranscript.companyId}`);
+                        }}
+                        className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:from-green-700 hover:to-blue-700 transition-all duration-200 flex items-center space-x-2 mx-auto"
                       >
                         <BarChart3 className="w-4 h-4" />
                         <span>Generate Financial Analysis</span>

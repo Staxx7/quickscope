@@ -1,19 +1,46 @@
 'use client'
 
 import { useCompany } from '@/app/contexts/CompanyContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import EliteAdvancedFinancialAnalyzer from '@/app/components/EliteAdvancedFinancialAnalyzer'
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 
 function AdvancedAnalysisContent() {
-  const { selectedCompany, isLoading } = useCompany();
+  const { selectedCompany, isLoading, setSelectedCompany } = useCompany();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Get company details from URL params
+  const companyIdFromUrl = searchParams.get('companyId');
+  const companyNameFromUrl = searchParams.get('company');
+  
+  useEffect(() => {
+    // If no company is selected but we have URL params, set the company
+    if (!selectedCompany && companyIdFromUrl && companyNameFromUrl && !isLoading) {
+      setSelectedCompany({
+        id: companyIdFromUrl,
+        name: companyNameFromUrl,
+        realmId: companyIdFromUrl
+      });
+    }
+  }, [companyIdFromUrl, companyNameFromUrl, selectedCompany, setSelectedCompany, isLoading]);
 
   if (isLoading) {
-    return <div>Loading company data...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    );
   }
 
-  if (!selectedCompany) {
+  // Use either context company or URL params
+  const companyToUse = selectedCompany || (companyIdFromUrl && companyNameFromUrl ? {
+    id: companyIdFromUrl,
+    name: companyNameFromUrl,
+    realmId: companyIdFromUrl
+  } : null);
+
+  if (!companyToUse) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="text-center p-8 bg-slate-800/50 rounded-lg border border-slate-700">
@@ -32,8 +59,8 @@ function AdvancedAnalysisContent() {
 
   return (
     <EliteAdvancedFinancialAnalyzer 
-      companyId={selectedCompany.realmId || selectedCompany.id}
-      companyName={selectedCompany.name}
+      companyId={companyToUse.realmId || companyToUse.id}
+      companyName={companyToUse.name}
     />
   );
 }
