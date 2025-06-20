@@ -69,7 +69,7 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
   const [filterCallType, setFilterCallType] = useState('all');
   const [activeTab, setActiveTab] = useState('upload');
   const [aiProcessing, setAiProcessing] = useState<AIProcessingStage | null>(null);
-  const [selectedCompanyForUpload, setSelectedCompanyForUpload] = useState<string>(defaultCompanyId || '');
+  const [selectedCompanyForUpload, setSelectedCompanyForUpload] = useState<string>('');
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   const [completedAnalysis, setCompletedAnalysis] = useState<CallTranscript | null>(null);
   const [showPasteModal, setShowPasteModal] = useState(false);
@@ -1004,6 +1004,13 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
     return matchesSearch && matchesStatus && matchesCallType;
   });
 
+  // Add useEffect to set default company for upload
+  useEffect(() => {
+    if (!selectedCompanyForUpload && defaultCompanyId) {
+      setSelectedCompanyForUpload(defaultCompanyId);
+    }
+  }, [defaultCompanyId, selectedCompanyForUpload]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900 p-6" style={{ fontFamily: 'Poppins, sans-serif' }}>
       <ToastContainer />
@@ -1760,11 +1767,11 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
                     <div className="mt-4 text-center">
                       <button 
                         onClick={() => {
-                          handleSelectTranscript(null);
-                          // Find the actual company name from connected companies
                           const company = connectedCompanies.find(c => c.realm_id === selectedTranscript.companyId || c.id === selectedTranscript.companyId);
                           const actualCompanyName = company?.company_name || defaultCompanyName;
-                          router.push(`/admin/dashboard/advanced-analysis?company=${encodeURIComponent(actualCompanyName)}&companyId=${selectedTranscript.companyId}`);
+                          // Use defaultCompanyId as fallback if selectedTranscript.companyId is undefined
+                          const companyIdToUse = selectedTranscript.companyId || defaultCompanyId;
+                          router.push(`/admin/dashboard/advanced-analysis?company=${encodeURIComponent(actualCompanyName)}&companyId=${companyIdToUse}`);
                         }}
                         className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:from-green-700 hover:to-blue-700 transition-all duration-200 flex items-center space-x-2 mx-auto"
                       >
