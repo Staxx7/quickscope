@@ -96,7 +96,14 @@ export async function GET(request: NextRequest) {
       const twentyFourHours = 24 * 60 * 60 * 1000;
 
       if (snapshotAge < twentyFourHours) {
-        return NextResponse.json([latestSnapshot]);
+        // Map database column names to expected API response format
+        const mappedSnapshot = {
+          ...latestSnapshot,
+          net_income: latestSnapshot.profit,
+          assets: latestSnapshot.total_assets,
+          liabilities: latestSnapshot.total_liabilities
+        };
+        return NextResponse.json([mappedSnapshot]);
       }
     }
 
@@ -154,14 +161,26 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
+    // Calculate additional financial metrics
+    const equity = financialData.data.assets - financialData.data.liabilities;
+    const debtToEquity = equity > 0 ? financialData.data.liabilities / equity : 0;
+    const profitMargin = financialData.data.revenue > 0 
+      ? (financialData.data.net_income / financialData.data.revenue) * 100 
+      : 0;
+
     // Log the financial data for debugging
     console.log('Financial data to store:', {
       company_id: realm_id,
       revenue: financialData.data.revenue,
       expenses: financialData.data.expenses,
-      net_income: financialData.data.net_income,
-      assets: financialData.data.assets,
-      liabilities: financialData.data.liabilities
+      profit: financialData.data.net_income,
+      total_assets: financialData.data.assets,
+      total_liabilities: financialData.data.liabilities,
+      calculated_metrics: {
+        profit_margin: profitMargin.toFixed(2),
+        debt_to_equity: debtToEquity.toFixed(2),
+        equity: equity
+      }
     });
 
     // Check if all data is zero
@@ -174,14 +193,27 @@ export async function GET(request: NextRequest) {
       console.warn('QuickBooks returned all zero values - company may have no financial data');
     }
 
-    // Prepare data to insert
+    // Prepare data to insert - matching exact column names from database schema
     const dataToInsert = {
       company_id: realm_id,
       revenue: financialData.data.revenue || 0,
-      net_income: financialData.data.net_income || 0,
+      profit: financialData.data.net_income || 0,  // Column is 'profit' not 'net_income'
       expenses: financialData.data.expenses || 0,
-      assets: financialData.data.assets || 0,
-      liabilities: financialData.data.liabilities || 0,
+      total_assets: financialData.data.assets || 0,  // Column is 'total_assets' not 'assets'
+      total_liabilities: financialData.data.liabilities || 0,  // Column is 'total_liabilities' not 'liabilities'
+      profit_margin: profitMargin,
+      cash_flow: 0,  // Will be calculated in future updates
+      current_ratio: 0,  // Will be calculated when we have current assets/liabilities
+      debt_to_equity: debtToEquity,
+      gross_margin: 0,  // Will be calculated in future updates
+      operating_margin: 0,  // Will be calculated in future updates
+      revenue_growth_rate: 0,  // Will be calculated in future updates
+      snapshot_type: 'monthly',  // Required field with default
+      snapshot_data: JSON.stringify({
+        source: 'quickbooks',
+        period: new Date().getFullYear().toString(),
+        extracted_at: new Date().toISOString()
+      }),
       created_at: new Date().toISOString()
     };
 
@@ -204,7 +236,15 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    return NextResponse.json([newSnapshot]);
+    // Map database column names back to expected API response format
+    const responseData = newSnapshot ? [{
+      ...newSnapshot,
+      net_income: newSnapshot.profit,  // Map back for consistency
+      assets: newSnapshot.total_assets,
+      liabilities: newSnapshot.total_liabilities
+    }] : [];
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Unexpected error:', error);
@@ -226,10 +266,16 @@ export async function POST(request: NextRequest) {
       .insert({
         company_id,
         revenue: revenue || 0,
-        net_income: net_income || 0,
+        profit: net_income || 0,  // Map to correct column name
         expenses: expenses || 0,
-        assets: assets || 0,
-        liabilities: liabilities || 0,
+        total_assets: assets || 0,  // Map to correct column name
+        total_liabilities: liabilities || 0,  // Map to correct column name
+        profit_margin: revenue > 0 ? ((net_income / revenue) * 100) : 0,
+        snapshot_type: 'monthly',
+        snapshot_data: JSON.stringify({
+          source: 'api_post',
+          extracted_at: new Date().toISOString()
+        }),
         created_at: new Date().toISOString()
       })
       .select()
