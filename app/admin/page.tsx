@@ -1,5 +1,5 @@
-import AccountWorkflowDashboard from '../components/AccountWorkflowDashboard'
+import CorrectedAccountWorkflowDashboard from '@/components/dashboard/CorrectedAccountWorkflowDashboard'
 
 export default function AdminMainPage() {
-  return <AccountWorkflowDashboard />
+  return <CorrectedAccountWorkflowDashboard />
 }
