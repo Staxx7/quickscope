@@ -24,6 +24,7 @@ function CallTranscriptsContent() {
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
   const [loading, setLoading] = useState(true)
   const [savedTranscripts, setSavedTranscripts] = useState<any[]>([])
+  const [uploadSuccess, setUploadSuccess] = useState(false)
   
   // Get company from URL params or workflow state
   useEffect(() => {
@@ -91,19 +92,20 @@ function CallTranscriptsContent() {
     // Update workflow step data
     WorkflowManager.updateStep(selectedCompany.company_id, 'call-transcripts', transcriptData)
     
-    // Show success and prompt for next step
-    alert('Transcript uploaded and analyzed successfully!')
+    // Set success state
+    setUploadSuccess(true)
     
+    // Auto-navigate after a short delay
     setTimeout(() => {
-      if (confirm('Transcript analysis complete! Would you like to proceed to Financial Analysis?')) {
-        WorkflowManager.navigateToStep(router, 'financial-analysis', selectedCompany.company_id, selectedCompany.company_name)
-      }
-    }, 1000)
-  }, [selectedCompany, router])
+      const url = `/admin/dashboard/advanced-analysis?company_id=${selectedCompany.company_id}&company_name=${encodeURIComponent(selectedCompany.company_name)}&account=${selectedCompany.company_id}&company=${encodeURIComponent(selectedCompany.company_name)}`
+      window.location.href = url
+    }, 2000)
+  }, [selectedCompany])
 
   const handleNextStep = () => {
     if (!selectedCompany) return
-    WorkflowManager.navigateToStep(router, 'financial-analysis', selectedCompany.company_id, selectedCompany.company_name)
+    const url = `/admin/dashboard/advanced-analysis?company_id=${selectedCompany.company_id}&company_name=${encodeURIComponent(selectedCompany.company_name)}&account=${selectedCompany.company_id}&company=${encodeURIComponent(selectedCompany.company_name)}`
+    window.location.href = url
   }
 
   if (loading) {
@@ -215,6 +217,32 @@ function CallTranscriptsContent() {
           </div>
         </div>
       </div>
+
+      {/* Success Message */}
+      {uploadSuccess && (
+        <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-purple-400 font-medium">Transcript analysis complete!</p>
+                <p className="text-purple-400/80 text-sm">Redirecting to financial analysis...</p>
+              </div>
+            </div>
+            <button
+              onClick={handleNextStep}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+            >
+              <span>Continue Now</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Saved Transcripts */}
       {savedTranscripts.length > 0 && (

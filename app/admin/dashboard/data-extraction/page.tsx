@@ -23,6 +23,7 @@ function DataExtractionContent() {
   const router = useRouter()
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
   const [loading, setLoading] = useState(true)
+  const [extractionSuccess, setExtractionSuccess] = useState(false)
   
   // Get company from URL params or workflow state
   useEffect(() => {
@@ -79,20 +80,20 @@ function DataExtractionContent() {
     // Save extracted data to workflow
     WorkflowManager.updateStep(selectedCompany.company_id, 'data-extraction', data)
     
-    // Show success message
-    alert('Financial data extracted successfully!')
+    // Set success state
+    setExtractionSuccess(true)
     
-    // Prompt to continue
+    // Auto-navigate after a short delay
     setTimeout(() => {
-      if (confirm('Data extraction complete! Would you like to proceed to upload call transcripts?')) {
-        WorkflowManager.navigateToStep(router, 'call-transcripts', selectedCompany.company_id, selectedCompany.company_name)
-      }
-    }, 1000)
-  }, [selectedCompany, router])
+      const url = `/admin/dashboard/call-transcripts?company_id=${selectedCompany.company_id}&company_name=${encodeURIComponent(selectedCompany.company_name)}&account=${selectedCompany.company_id}&company=${encodeURIComponent(selectedCompany.company_name)}`
+      window.location.href = url
+    }, 2000)
+  }, [selectedCompany])
 
   const handleNextStep = () => {
     if (!selectedCompany) return
-    WorkflowManager.navigateToStep(router, 'call-transcripts', selectedCompany.company_id, selectedCompany.company_name)
+    const url = `/admin/dashboard/call-transcripts?company_id=${selectedCompany.company_id}&company_name=${encodeURIComponent(selectedCompany.company_name)}&account=${selectedCompany.company_id}&company=${encodeURIComponent(selectedCompany.company_name)}`
+    window.location.href = url
   }
 
   if (loading) {
@@ -199,6 +200,32 @@ function DataExtractionContent() {
           </div>
         </div>
       </div>
+
+      {/* Success Message */}
+      {extractionSuccess && (
+        <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-green-400 font-medium">Data extraction complete!</p>
+                <p className="text-green-400/80 text-sm">Redirecting to call transcripts...</p>
+              </div>
+            </div>
+            <button
+              onClick={handleNextStep}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+            >
+              <span>Continue Now</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       {selectedCompany ? (

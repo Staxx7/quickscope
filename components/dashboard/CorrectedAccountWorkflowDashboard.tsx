@@ -137,8 +137,11 @@ export default function CorrectedAccountWorkflowDashboard() {
     // Start or update workflow
     WorkflowManager.startWorkflow(companyId, companyName, prospect.email)
     
-    // Navigate to data extraction
-    WorkflowManager.navigateToStep(router, 'data-extraction', companyId, companyName)
+    // Use direct navigation to avoid any interference
+    const url = `/admin/dashboard/data-extraction?company_id=${companyId}&company_name=${encodeURIComponent(companyName)}&account=${companyId}&company=${encodeURIComponent(companyName)}`
+    
+    // Force navigation using window.location to bypass any interceptors
+    window.location.href = url
   }
 
   // Handle Upload Transcript button click
@@ -157,8 +160,9 @@ export default function CorrectedAccountWorkflowDashboard() {
       WorkflowManager.startWorkflow(companyId, companyName, prospect.email)
     }
     
-    // Navigate to call transcripts
-    WorkflowManager.navigateToStep(router, 'call-transcripts', companyId, companyName)
+    // Use direct navigation
+    const url = `/admin/dashboard/call-transcripts?company_id=${companyId}&company_name=${encodeURIComponent(companyName)}&account=${companyId}&company=${encodeURIComponent(companyName)}`
+    window.location.href = url
   }
 
   // Handle Generate Report button click
@@ -177,10 +181,9 @@ export default function CorrectedAccountWorkflowDashboard() {
       WorkflowManager.startWorkflow(companyId, companyName, prospect.email)
     }
     
-    // Navigate to report generation
-    WorkflowManager.navigateToStep(router, 'report-generation', companyId, companyName, {
-      prospect_id: prospect.id
-    })
+    // Use direct navigation
+    const url = `/admin/dashboard/report-generation?company_id=${companyId}&company_name=${encodeURIComponent(companyName)}&account=${companyId}&company=${encodeURIComponent(companyName)}&prospect_id=${prospect.id}`
+    window.location.href = url
   }
 
   // Handle Financial Analysis button click
@@ -199,8 +202,9 @@ export default function CorrectedAccountWorkflowDashboard() {
       WorkflowManager.startWorkflow(companyId, companyName, prospect.email)
     }
     
-    // Navigate to financial analysis
-    WorkflowManager.navigateToStep(router, 'financial-analysis', companyId, companyName)
+    // Use direct navigation
+    const url = `/admin/dashboard/advanced-analysis?company_id=${companyId}&company_name=${encodeURIComponent(companyName)}&account=${companyId}&company=${encodeURIComponent(companyName)}`
+    window.location.href = url
   }
 
   if (loading) {
@@ -365,26 +369,42 @@ export default function CorrectedAccountWorkflowDashboard() {
                     <td className="p-4">
                       <div className="flex space-x-2">
                         <button
-                          onClick={(e) => handleExtractData(e, prospect)}
-                          className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleExtractData(e, prospect)
+                          }}
+                          className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors cursor-pointer"
                         >
                           Extract Data
                         </button>
                         <button
-                          onClick={(e) => handleUploadTranscript(e, prospect)}
-                          className="px-3 py-1 bg-slate-600 text-white text-xs rounded hover:bg-slate-700 transition-colors"
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleUploadTranscript(e, prospect)
+                          }}
+                          className="px-3 py-1 bg-slate-600 text-white text-xs rounded hover:bg-slate-700 transition-colors cursor-pointer"
                         >
                           Transcript
                         </button>
                         <button
-                          onClick={(e) => handleGenerateReport(e, prospect)}
-                          className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleGenerateReport(e, prospect)
+                          }}
+                          className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors cursor-pointer"
                         >
                           Generate Report
                         </button>
                         <button
-                          onClick={(e) => handleFinancialAnalysis(e, prospect)}
-                          className="px-3 py-1 bg-slate-600 text-white text-xs rounded hover:bg-slate-700 transition-colors"
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleFinancialAnalysis(e, prospect)
+                          }}
+                          className="px-3 py-1 bg-slate-600 text-white text-xs rounded hover:bg-slate-700 transition-colors cursor-pointer"
                         >
                           Analysis
                         </button>
