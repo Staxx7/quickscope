@@ -1,21 +1,8 @@
 // app/api/financial-snapshots/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseServerClient } from '@/lib/supabaseClient';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase environment variables:', {
-    hasUrl: !!supabaseUrl,
-    hasKey: !!supabaseKey
-  });
-}
-
-const supabase = createClient(
-  supabaseUrl || '',
-  supabaseKey || ''
-);
+const supabase = getSupabaseServerClient();
 
 interface QBOToken {
   access_token: string;
@@ -83,14 +70,6 @@ interface EnhancedFinancialSnapshot {
 
 export async function GET(request: NextRequest) {
   try {
-    // Check if Supabase is properly initialized
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json({ 
-        error: 'Database configuration error',
-        details: 'Missing required environment variables'
-      }, { status: 500 });
-    }
-
     const { searchParams } = new URL(request.url);
     const realm_id = searchParams.get('realm_id');
 
