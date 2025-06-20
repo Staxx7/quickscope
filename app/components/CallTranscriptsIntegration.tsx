@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, FileText, AlertTriangle, Play, Pause, Download, MessageSquare, Brain, Clock, User, Phone, Calendar, Search, Filter, ChevronDown, ChevronRight, Star, AlertCircle, CheckCircle, TrendingUp, Zap, Eye, BarChart3, Target, DollarSign, Users, Shield, X } from 'lucide-react';
 import { useToast } from './Toast';
 import { useRouter } from 'next/navigation';
+import EnhancedCallTranscriptAnalysis from './EnhancedCallTranscriptAnalysis';
 
 interface CallTranscript {
   id: string;
