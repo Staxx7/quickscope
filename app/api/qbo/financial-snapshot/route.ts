@@ -134,10 +134,23 @@ export async function GET(request: NextRequest) {
       accessToken = refreshResult.access_token!;
     }
 
+    // Log the request attempt
+    console.log('Attempting to fetch financial data:', {
+      realm_id,
+      hasAccessToken: !!accessToken,
+      tokenLength: accessToken?.length,
+      environment: process.env.NODE_ENV
+    });
+
     // Fetch fresh financial data from QuickBooks
     const financialData: QBOFinancialResponse = await fetchQBOFinancialData(realm_id, accessToken);
 
     if (!financialData.success || !financialData.data) {
+      console.error('Failed to fetch financial data:', {
+        success: financialData.success,
+        error: financialData.error,
+        hasData: !!financialData.data
+      });
       return NextResponse.json({ 
         error: 'Failed to fetch financial data from QuickBooks',
         details: financialData.error
@@ -281,8 +294,8 @@ async function refreshQBOToken(refreshToken: string, companyId: string): Promise
 async function fetchQBOFinancialData(companyId: string, accessToken: string): Promise<QBOFinancialResponse> {
   try {
     const baseUrl = process.env.NODE_ENV === 'production'
-      ? 'https://api.intuit.com'
-      : 'https://sandbox.api.intuit.com';
+      ? 'https://quickbooks.api.intuit.com'
+      : 'https://sandbox-quickbooks.api.intuit.com';
 
     // Fetch Profit & Loss Report
     const plResponse = await fetch(
