@@ -3,26 +3,16 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { supabase } from '@/lib/supabaseClient';
 
-// Check if API keys are configured
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-
-if (!ANTHROPIC_API_KEY) {
-  console.warn('WARNING: ANTHROPIC_API_KEY is not set in environment variables');
-}
-
-// Initialize Anthropic for analysis
-const anthropic = new Anthropic({
-  apiKey: ANTHROPIC_API_KEY || 'dummy-key-for-initialization',
-});
-
-// Keep OpenAI for Whisper transcription only
-const openai = new OpenAI({
-  apiKey: OPENAI_API_KEY || '',
-});
-
 export async function POST(request: NextRequest) {
   try {
+    // Get API keys at request time
+    const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+    const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+    
+    // Log for debugging
+    console.log('Runtime env check - ANTHROPIC_API_KEY exists:', !!ANTHROPIC_API_KEY);
+    console.log('Runtime env check - API key starts with:', ANTHROPIC_API_KEY?.substring(0, 7));
+    
     const formData = await request.formData();
     const prospectId = formData.get('prospectId') as string;
     const companyName = formData.get('companyName') as string;
@@ -37,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if Anthropic API key is configured
-    if (!ANTHROPIC_API_KEY || ANTHROPIC_API_KEY === 'dummy-key-for-initialization') {
+    if (!ANTHROPIC_API_KEY) {
       console.error('Anthropic API key is not configured');
       return NextResponse.json(
         { 
@@ -48,6 +38,15 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       );
     }
+    
+    // Initialize clients with runtime API keys
+    const anthropic = new Anthropic({
+      apiKey: ANTHROPIC_API_KEY,
+    });
+    
+    const openai = new OpenAI({
+      apiKey: OPENAI_API_KEY || '',
+    });
 
     let finalTranscript = transcriptText;
 
