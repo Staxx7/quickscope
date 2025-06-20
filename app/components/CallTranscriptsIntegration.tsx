@@ -1011,6 +1011,18 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
         ));
 
         showToast(`${file.name} processed successfully with AI insights`, 'success');
+        
+        // Workflow navigation prompt
+        setTimeout(() => {
+          if (confirm('Transcript uploaded successfully! Would you like to proceed to Financial Analysis?')) {
+            const params = new URLSearchParams({
+              company_id: processedTranscript.companyId || selectedCompanyForUpload,
+              company_name: connectedCompanies.find(c => c.realm_id === (processedTranscript.companyId || selectedCompanyForUpload))?.company_name || 'Company',
+              transcript: processedTranscript.id
+            });
+            window.location.href = `/dashboard/advanced-analysis?${params.toString()}`;
+          }
+        }, 1000);
       } catch (error) {
         console.error('Processing error:', error);
         setTranscripts(prev => prev.map(t => 
@@ -1064,6 +1076,18 @@ const EnhancedCallTranscriptIntegration: React.FC<CallTranscriptsIntegrationProp
       setSelectedTranscript(processedTranscript);
       
       showToast('Transcript processed successfully!', 'success');
+      
+      // Workflow navigation prompt
+      setTimeout(() => {
+        if (confirm('Transcript uploaded successfully! Would you like to proceed to Financial Analysis?')) {
+          const params = new URLSearchParams({
+            company_id: processedTranscript.companyId || selectedCompanyForUpload,
+            company_name: connectedCompanies.find(c => c.realm_id === (processedTranscript.companyId || selectedCompanyForUpload))?.company_name || 'Company',
+            transcript: processedTranscript.id
+          });
+          window.location.href = `/dashboard/advanced-analysis?${params.toString()}`;
+        }
+      }, 1000);
       
       // Clear form
       setPastedTranscript('');

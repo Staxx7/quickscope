@@ -1247,492 +1247,554 @@ This analysis was generated using advanced AI financial modeling and industry be
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-slate-800 to-slate-900 p-6" style={{ fontFamily: 'Poppins, sans-serif' }}>
-      {/* Enhanced Header */}
-      <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-8 mb-8">
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex-1">
-            <div className="flex items-center space-x-4 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center">
-                <BarChart3 className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-white">Elite Financial Analysis</h1>
-                <p className="text-gray-300">Advanced AI-powered insights and strategic recommendations</p>
-              </div>
-            </div>
-
-            {/* Company Info */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-              <div className="bg-white/5 rounded-xl p-4">
-                <div className="text-gray-400 text-sm">Company</div>
-                <div className="text-white font-medium">{selectedCompany}</div>
-                <div className="text-gray-500 text-xs">SaaS Technology</div>
-              </div>
-              <div className="bg-white/5 rounded-xl p-4">
-                <div className="text-gray-400 text-sm">Annual Revenue</div>
-                <div className="text-white font-medium">{formatCurrency(11360000, true)}</div>
-                <div className="text-gray-500 text-xs">148 employees</div>
-              </div>
-              <div className="bg-white/5 rounded-xl p-4">
-                <div className="text-gray-400 text-sm">Data Quality</div>
-                <div className="text-green-400 font-medium">Excellent</div>
-                <div className="text-gray-500 text-xs">98% complete</div>
-              </div>
-              <div className="bg-white/5 rounded-xl p-4">
-                <div className="text-gray-400 text-sm">Last Analysis</div>
-                <div className="text-white font-medium">{new Date().toLocaleDateString()}</div>
-                <div className="text-green-400 text-xs">Active</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={runAdvancedAnalysis}
-              disabled={isAnalyzing}
-              className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 disabled:opacity-50 flex items-center space-x-2"
-            >
-              <RefreshCw className={`w-4 h-4 ${isAnalyzing ? 'animate-spin' : ''}`} />
-              <span>{isAnalyzing ? 'Analyzing...' : 'Run Analysis'}</span>
-            </button>
+      {/* Loading State */}
+      {loadingFinancialData && (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+            <p className="text-white text-lg">Loading financial data for {companyName}...</p>
+            <p className="text-gray-400 text-sm mt-2">Connecting to QuickBooks...</p>
           </div>
         </div>
+      )}
 
-        {/* Performance Alerts */}
-        {alerts.filter(alert => !alert.acknowledged).length > 0 && (
-          <div className="border-t border-white/10 pt-6">
-            <h3 className="text-lg font-medium text-white mb-4 flex items-center">
-              <Bell className="w-5 h-5 mr-2 text-yellow-400" />
-              Performance Alerts
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {alerts.filter(alert => !alert.acknowledged).slice(0, 2).map(alert => (
-                <div key={alert.id} className={`p-4 rounded-xl border ${
-                  alert.type === 'critical' ? 'bg-red-500/10 border-red-500/30' :
-                  alert.type === 'warning' ? 'bg-yellow-500/10 border-yellow-500/30' :
-                  alert.type === 'success' ? 'bg-green-500/10 border-green-500/30' :
-                  'bg-blue-500/10 border-blue-500/30'
-                }`}>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-medium text-white">{alert.title}</h4>
-                      <p className="text-sm text-gray-300 mt-1">{alert.message}</p>
-                    </div>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      alert.type === 'critical' ? 'bg-red-500 text-white' :
-                      alert.type === 'warning' ? 'bg-yellow-500 text-black' :
-                      alert.type === 'success' ? 'bg-green-500 text-white' :
-                      'bg-blue-500 text-white'
-                    }`}>
-                      {alert.change > 0 ? '+' : ''}{alert.change.toFixed(1)}%
-                    </span>
+      {/* Empty State - No Financial Data */}
+      {!loadingFinancialData && dataSource === 'real' && !realFinancialData && (
+        <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-12">
+          <div className="text-center max-w-2xl mx-auto">
+            <div className="bg-yellow-500/20 rounded-full p-6 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+              <AlertTriangle className="w-12 h-12 text-yellow-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-4">No Financial Data Available</h2>
+            <p className="text-gray-300 mb-6">
+              Financial data for <strong>{companyName}</strong> hasn't been synced yet. 
+              Please ensure QuickBooks is connected and data has been extracted.
+            </p>
+            <div className="space-y-4">
+              <button
+                onClick={() => {
+                  const params = new URLSearchParams({
+                    company_id: companyId,
+                    company_name: companyName
+                  });
+                  window.location.href = `/dashboard/data-extraction?${params.toString()}`;
+                }}
+                className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-700 hover:to-cyan-700 transition-all duration-200"
+              >
+                Go to Data Extraction
+              </button>
+              <button
+                onClick={fetchComprehensiveAnalysis}
+                className="block mx-auto text-gray-400 hover:text-white transition-colors"
+              >
+                Retry Loading Data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content - Only show when data is available */}
+      {!loadingFinancialData && (realFinancialData || dataSource !== 'real') && (
+        <>
+          {/* Enhanced Header */}
+          <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-8 mb-8">
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex-1">
+                <div className="flex items-center space-x-4 mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center">
+                    <BarChart3 className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-3xl font-bold text-white">Elite Financial Analysis</h1>
+                    <p className="text-gray-300">Advanced AI-powered insights and strategic recommendations</p>
                   </div>
                 </div>
+
+                {/* Company Info */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                  <div className="bg-white/5 rounded-xl p-4">
+                    <div className="text-gray-400 text-sm">Company</div>
+                    <div className="text-white font-medium">{companyName}</div>
+                    <div className="text-gray-500 text-xs">{comprehensiveAnalysis?.company?.industry || 'Technology'}</div>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-4">
+                    <div className="text-gray-400 text-sm">Annual Revenue</div>
+                    <div className="text-white font-medium">
+                      {realFinancialData?.revenue ? formatCurrency(realFinancialData.revenue * 4, true) : 'Loading...'}
+                    </div>
+                    <div className="text-gray-500 text-xs">
+                      {comprehensiveAnalysis?.company?.employeeCount ? `${comprehensiveAnalysis.company.employeeCount} employees` : ''}
+                    </div>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-4">
+                    <div className="text-gray-400 text-sm">Data Quality</div>
+                    <div className={`font-medium ${dataSource === 'real' ? 'text-green-400' : 'text-yellow-400'}`}>
+                      {dataSource === 'real' ? 'Live QuickBooks' : 'Demo Data'}
+                    </div>
+                    <div className="text-gray-500 text-xs">
+                      {dataSource === 'real' ? 'Real-time sync' : 'Sample data'}
+                    </div>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-4">
+                    <div className="text-gray-400 text-sm">Last Analysis</div>
+                    <div className="text-white font-medium">{new Date().toLocaleDateString()}</div>
+                    <div className={`text-xs ${loadingFinancialData ? 'text-yellow-400' : 'text-green-400'}`}>
+                      {loadingFinancialData ? 'Loading...' : 'Active'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={runAdvancedAnalysis}
+                  disabled={isAnalyzing}
+                  className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 disabled:opacity-50 flex items-center space-x-2"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isAnalyzing ? 'animate-spin' : ''}`} />
+                  <span>{isAnalyzing ? 'Analyzing...' : 'Run Analysis'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Performance Alerts */}
+            {alerts.filter(alert => !alert.acknowledged).length > 0 && (
+              <div className="border-t border-white/10 pt-6">
+                <h3 className="text-lg font-medium text-white mb-4 flex items-center">
+                  <Bell className="w-5 h-5 mr-2 text-yellow-400" />
+                  Performance Alerts
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {alerts.filter(alert => !alert.acknowledged).slice(0, 2).map(alert => (
+                    <div key={alert.id} className={`p-4 rounded-xl border ${
+                      alert.type === 'critical' ? 'bg-red-500/10 border-red-500/30' :
+                      alert.type === 'warning' ? 'bg-yellow-500/10 border-yellow-500/30' :
+                      alert.type === 'success' ? 'bg-green-500/10 border-green-500/30' :
+                      'bg-blue-500/10 border-blue-500/30'
+                    }`}>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="font-medium text-white">{alert.title}</h4>
+                          <p className="text-sm text-gray-300 mt-1">{alert.message}</p>
+                        </div>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          alert.type === 'critical' ? 'bg-red-500 text-white' :
+                          alert.type === 'warning' ? 'bg-yellow-500 text-black' :
+                          alert.type === 'success' ? 'bg-green-500 text-white' :
+                          'bg-blue-500 text-white'
+                        }`}>
+                          {alert.change > 0 ? '+' : ''}{alert.change.toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Transcript Insights Alert - Show when transcript data is included */}
+          {transcriptInsights && (
+            <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 backdrop-blur-xl rounded-3xl border border-purple-500/20 p-6 mb-8">
+              <div className="flex items-start space-x-4">
+                <div className="p-3 bg-purple-500/20 rounded-xl">
+                  <MessageSquare className="w-6 h-6 text-purple-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-white mb-2">Call Transcript Insights Integrated</h3>
+                  <p className="text-gray-300 mb-4">This analysis includes insights from your recent call transcript</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white/10 rounded-xl p-4">
+                      <div className="text-sm text-gray-400 mb-1">Urgency Level</div>
+                      <div className={`text-lg font-bold ${
+                        transcriptInsights.urgency === 'high' ? 'text-red-400' :
+                        transcriptInsights.urgency === 'medium' ? 'text-yellow-400' :
+                        'text-green-400'
+                      }`}>
+                        {transcriptInsights.urgency.toUpperCase()}
+                      </div>
+                    </div>
+                    <div className="bg-white/10 rounded-xl p-4">
+                      <div className="text-sm text-gray-400 mb-1">Sales Score</div>
+                      <div className="text-lg font-bold text-cyan-400">
+                        {transcriptInsights.salesScore}/100
+                      </div>
+                    </div>
+                    <div className="bg-white/10 rounded-xl p-4">
+                      <div className="text-sm text-gray-400 mb-1">Pain Points</div>
+                      <div className="text-lg font-bold text-orange-400">
+                        {transcriptInsights.painPoints?.length || 0} Identified
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {transcriptInsights.painPoints && transcriptInsights.painPoints.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium text-gray-300 mb-2">Key Pain Points from Call:</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {transcriptInsights.painPoints.slice(0, 3).map((pain: string, index: number) => (
+                          <span key={index} className="px-3 py-1 bg-red-500/20 text-red-300 rounded-full text-sm">
+                            {pain}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Market Context Alert - Show when external data is available */}
+          {marketContext && marketContext.economicIndicators && (
+            <div className="bg-gradient-to-r from-cyan-500/10 to-green-500/10 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-6 mb-8">
+              <div className="flex items-start space-x-4">
+                <div className="p-3 bg-cyan-500/20 rounded-xl">
+                  <Globe className="w-6 h-6 text-cyan-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-white mb-2">Live Market & Economic Data</h3>
+                  <p className="text-gray-300 mb-4">Analysis enhanced with real-time Federal Reserve and market data</p>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {marketContext.economicIndicators.gdpGrowth && (
+                      <div className="bg-white/10 rounded-xl p-3">
+                        <div className="text-xs text-gray-400 mb-1">GDP Growth</div>
+                        <div className="text-lg font-bold text-green-400">
+                          {marketContext.economicIndicators.gdpGrowth.toFixed(1)}%
+                        </div>
+                      </div>
+                    )}
+                    {marketContext.economicIndicators.unemploymentRate && (
+                      <div className="bg-white/10 rounded-xl p-3">
+                        <div className="text-xs text-gray-400 mb-1">Unemployment</div>
+                        <div className="text-lg font-bold text-yellow-400">
+                          {marketContext.economicIndicators.unemploymentRate.toFixed(1)}%
+                        </div>
+                      </div>
+                    )}
+                    {marketContext.economicIndicators.inflationRate && (
+                      <div className="bg-white/10 rounded-xl p-3">
+                        <div className="text-xs text-gray-400 mb-1">Inflation</div>
+                        <div className="text-lg font-bold text-orange-400">
+                          {marketContext.economicIndicators.inflationRate.toFixed(1)}%
+                        </div>
+                      </div>
+                    )}
+                    {marketContext.economicIndicators.interestRate && (
+                      <div className="bg-white/10 rounded-xl p-3">
+                        <div className="text-xs text-gray-400 mb-1">Fed Rate</div>
+                        <div className="text-lg font-bold text-blue-400">
+                          {marketContext.economicIndicators.interestRate.toFixed(2)}%
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Financial Health Score Dashboard */}
+          <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-8 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+              <div className="lg:col-span-1">
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold text-white mb-6">Financial Health Score</h2>
+                  <div className="relative">
+                    <div className={`text-7xl font-bold mb-4 ${getHealthScoreColor(advancedMetrics?.healthScore || 0)}`}>
+                      {advancedMetrics?.healthScore || 0}
+                    </div>
+                    <div className="text-gray-300 text-lg">out of 100</div>
+                    <div className="mt-6 relative">
+                      <div className="w-full bg-white/10 rounded-full h-4">
+                        <div
+                          className={`h-4 rounded-full transition-all duration-1000 ${
+                            (advancedMetrics?.healthScore || 0) >= 85 ? 'bg-gradient-to-r from-emerald-500 to-green-400' :
+                            (advancedMetrics?.healthScore || 0) >= 75 ? 'bg-gradient-to-r from-green-500 to-lime-400' :
+                            (advancedMetrics?.healthScore || 0) >= 65 ? 'bg-gradient-to-r from-yellow-500 to-orange-400' :
+                            'bg-gradient-to-r from-red-500 to-pink-400'
+                          }`}
+                          style={{ width: `${advancedMetrics?.healthScore || 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Health Score Breakdown */}
+                  <div className="mt-8 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300 text-sm">Liquidity</span>
+                      <span className="text-green-400 font-medium">Excellent</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300 text-sm">Profitability</span>
+                      <span className="text-green-400 font-medium">Outstanding</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300 text-sm">Leverage</span>
+                      <span className="text-blue-400 font-medium">Conservative</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300 text-sm">Efficiency</span>
+                      <span className="text-green-400 font-medium">Excellent</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-3">
+                <h3 className="text-xl font-bold text-white mb-6">Key Performance Indicators</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                  <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-gray-300">Revenue Growth</span>
+                      <TrendingUp className="w-5 h-5 text-green-400" />
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-2">
+                      {growthMetrics ? `+${formatPercent(growthMetrics.revenueGrowth, true)}` : 'N/A'}
+                    </div>
+                    <div className="text-sm text-green-400">QoQ Growth</div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-gray-300">Gross Margin</span>
+                      <Target className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-2">
+                      {formatPercent(advancedMetrics?.grossMargin || 0)}
+                    </div>
+                    <div className="text-sm text-blue-400">Industry Leading</div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-gray-300">Free Cash Flow</span>
+                      <DollarSign className="w-5 h-5 text-cyan-400" />
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-2">
+                      {formatCurrency(advancedMetrics?.freeCashFlow || 0, true)}
+                    </div>
+                    <div className="text-sm text-cyan-400">Strong Generation</div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-gray-300">Current Ratio</span>
+                      <Shield className="w-5 h-5 text-green-400" />
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-2">
+                      {(advancedMetrics?.currentRatio || 0).toFixed(1)}
+                    </div>
+                    <div className="text-sm text-green-400">Well Capitalized</div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-gray-300">ROA</span>
+                      <Award className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-2">
+                      {formatPercent(advancedMetrics?.returnOnAssets || 0)}
+                    </div>
+                    <div className="text-sm text-purple-400">Top Quartile</div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-gray-300">Debt/Equity</span>
+                      <Activity className="w-5 h-5 text-yellow-400" />
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-2">
+                      {(advancedMetrics?.debtToEquity || 0).toFixed(1)}
+                    </div>
+                    <div className="text-sm text-yellow-400">Conservative</div>
+                  </div>
+                </div>
+
+                {/* Quick Growth Metrics */}
+                {growthMetrics && (
+                  <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-400">
+                        +{formatPercent(growthMetrics.revenueGrowth, false)}
+                      </div>
+                      <div className="text-sm text-gray-400">Revenue Growth</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-400">
+                        +{formatPercent(growthMetrics.profitGrowth, false)}
+                      </div>
+                      <div className="text-sm text-gray-400">Profit Growth</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-cyan-400">
+                        +{formatPercent(growthMetrics.customerGrowth, false)}
+                      </div>
+                      <div className="text-sm text-gray-400">Customer Growth</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-400">
+                        +{formatPercent(growthMetrics.employeeGrowth, false)}
+                      </div>
+                      <div className="text-sm text-gray-400">Team Growth</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced Tab Navigation */}
+          <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 mb-8">
+            <div className="flex flex-wrap gap-2 p-3">
+              {[
+                { id: 'executive-summary', label: 'Executive Summary', icon: Briefcase },
+                { id: 'financial-analysis', label: 'Financial Deep Dive', icon: Calculator },
+                { id: 'growth-trends', label: 'Growth & Trends', icon: TrendingUp },
+                { id: 'benchmarking', label: 'Industry Benchmarks', icon: Award },
+                { id: 'risk-assessment', label: 'Risk Assessment', icon: Shield },
+                { id: 'ai-insights', label: 'AI Strategic Insights', icon: Brain },
+                { id: 'recommendations', label: 'Action Plan', icon: Target }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center space-x-2 px-6 py-3 rounded-xl transition-all duration-200 font-medium ${
+                    activeTab === tab.id
+                      ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-white border border-cyan-500/30 shadow-lg'
+                      : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
               ))}
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Transcript Insights Alert - Show when transcript data is included */}
-      {transcriptInsights && (
-        <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 backdrop-blur-xl rounded-3xl border border-purple-500/20 p-6 mb-8">
-          <div className="flex items-start space-x-4">
-            <div className="p-3 bg-purple-500/20 rounded-xl">
-              <MessageSquare className="w-6 h-6 text-purple-400" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-white mb-2">Call Transcript Insights Integrated</h3>
-              <p className="text-gray-300 mb-4">This analysis includes insights from your recent call transcript</p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white/10 rounded-xl p-4">
-                  <div className="text-sm text-gray-400 mb-1">Urgency Level</div>
-                  <div className={`text-lg font-bold ${
-                    transcriptInsights.urgency === 'high' ? 'text-red-400' :
-                    transcriptInsights.urgency === 'medium' ? 'text-yellow-400' :
-                    'text-green-400'
-                  }`}>
-                    {transcriptInsights.urgency.toUpperCase()}
-                  </div>
-                </div>
-                <div className="bg-white/10 rounded-xl p-4">
-                  <div className="text-sm text-gray-400 mb-1">Sales Score</div>
-                  <div className="text-lg font-bold text-cyan-400">
-                    {transcriptInsights.salesScore}/100
-                  </div>
-                </div>
-                <div className="bg-white/10 rounded-xl p-4">
-                  <div className="text-sm text-gray-400 mb-1">Pain Points</div>
-                  <div className="text-lg font-bold text-orange-400">
-                    {transcriptInsights.painPoints?.length || 0} Identified
-                  </div>
+          {/* Tab Content */}
+          {activeTab === 'executive-summary' && (
+            <div className="space-y-8">
+              {/* Priority Insights */}
+              <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-8">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                  <Star className="w-6 h-6 mr-3 text-yellow-400" />
+                  Priority Strategic Insights
+                </h2>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {priorityInsights.map((insight) => (
+                    <div key={insight.id} className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className={`p-3 rounded-xl ${
+                          insight.impact === 'transformational' ? 'bg-purple-500/20 border border-purple-500/30' :
+                          insight.impact === 'high' ? 'bg-red-500/20 border border-red-500/30' :
+                          insight.impact === 'medium' ? 'bg-yellow-500/20 border border-yellow-500/30' :
+                          'bg-green-500/20 border border-green-500/30'
+                        }`}>
+                          {getInsightIcon(insight.type)}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm text-gray-400">ROI</div>
+                          <div className="text-lg font-bold text-green-400">{insight.roi.toFixed(1)}x</div>
+                        </div>
+                      </div>
+
+                      <h3 className="text-lg font-bold text-white mb-3">{insight.title}</h3>
+                      <p className="text-gray-300 text-sm mb-4 line-clamp-3">{insight.description}</p>
+
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-400">Investment Required</span>
+                          <span className="text-white font-medium">{formatCurrency(insight.investmentRequired, true)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-400">Timeline</span>
+                          <span className="text-cyan-400">{insight.timeline}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-400">Confidence</span>
+                          <span className="text-green-400">{insight.confidence}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-              
-              {transcriptInsights.painPoints && transcriptInsights.painPoints.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-300 mb-2">Key Pain Points from Call:</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {transcriptInsights.painPoints.slice(0, 3).map((pain: string, index: number) => (
-                      <span key={index} className="px-3 py-1 bg-red-500/20 text-red-300 rounded-full text-sm">
-                        {pain}
-                      </span>
+
+              {/* Critical Risks Overview */}
+              {criticalRisks.length > 0 && (
+                <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-8">
+                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                    <AlertTriangle className="w-6 h-6 mr-3 text-red-400" />
+                    Critical Risk Factors
+                  </h2>
+                  <div className="space-y-4">
+                    {criticalRisks.map((risk) => (
+                      <div key={risk.id} className="bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-2xl p-6 border border-red-500/20">
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <h3 className="text-lg font-bold text-white mb-2">{risk.risk}</h3>
+                            <div className="flex items-center space-x-4">
+                              <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getRiskSeverityColor(risk.severity)}`}>
+                                {risk.severity} risk
+                              </span>
+                              <span className="text-gray-400 text-sm">{risk.probability}% probability</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-gray-400">Financial Impact</div>
+                            <div className="text-xl font-bold text-red-400">{formatCurrency(risk.financialImpact, true)}</div>
+                          </div>
+                        </div>
+
+                        <p className="text-gray-300 mb-4">{risk.impact}</p>
+
+                        <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-4">
+                          <h4 className="text-cyan-300 font-medium mb-2">Immediate Action Required:</h4>
+                          <p className="text-cyan-200 text-sm">{risk.recommendation}</p>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Market Context Alert - Show when external data is available */}
-      {marketContext && marketContext.economicIndicators && (
-        <div className="bg-gradient-to-r from-cyan-500/10 to-green-500/10 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-6 mb-8">
-          <div className="flex items-start space-x-4">
-            <div className="p-3 bg-cyan-500/20 rounded-xl">
-              <Globe className="w-6 h-6 text-cyan-400" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-white mb-2">Live Market & Economic Data</h3>
-              <p className="text-gray-300 mb-4">Analysis enhanced with real-time Federal Reserve and market data</p>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {marketContext.economicIndicators.gdpGrowth && (
-                  <div className="bg-white/10 rounded-xl p-3">
-                    <div className="text-xs text-gray-400 mb-1">GDP Growth</div>
-                    <div className="text-lg font-bold text-green-400">
-                      {marketContext.economicIndicators.gdpGrowth.toFixed(1)}%
-                    </div>
-                  </div>
-                )}
-                {marketContext.economicIndicators.unemploymentRate && (
-                  <div className="bg-white/10 rounded-xl p-3">
-                    <div className="text-xs text-gray-400 mb-1">Unemployment</div>
-                    <div className="text-lg font-bold text-yellow-400">
-                      {marketContext.economicIndicators.unemploymentRate.toFixed(1)}%
-                    </div>
-                  </div>
-                )}
-                {marketContext.economicIndicators.inflationRate && (
-                  <div className="bg-white/10 rounded-xl p-3">
-                    <div className="text-xs text-gray-400 mb-1">Inflation</div>
-                    <div className="text-lg font-bold text-orange-400">
-                      {marketContext.economicIndicators.inflationRate.toFixed(1)}%
-                    </div>
-                  </div>
-                )}
-                {marketContext.economicIndicators.interestRate && (
-                  <div className="bg-white/10 rounded-xl p-3">
-                    <div className="text-xs text-gray-400 mb-1">Fed Rate</div>
-                    <div className="text-lg font-bold text-blue-400">
-                      {marketContext.economicIndicators.interestRate.toFixed(2)}%
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Financial Health Score Dashboard */}
-      <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-8 mb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-1">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-white mb-6">Financial Health Score</h2>
-              <div className="relative">
-                <div className={`text-7xl font-bold mb-4 ${getHealthScoreColor(advancedMetrics?.healthScore || 0)}`}>
-                  {advancedMetrics?.healthScore || 0}
-                </div>
-                <div className="text-gray-300 text-lg">out of 100</div>
-                <div className="mt-6 relative">
-                  <div className="w-full bg-white/10 rounded-full h-4">
-                    <div
-                      className={`h-4 rounded-full transition-all duration-1000 ${
-                        (advancedMetrics?.healthScore || 0) >= 85 ? 'bg-gradient-to-r from-emerald-500 to-green-400' :
-                        (advancedMetrics?.healthScore || 0) >= 75 ? 'bg-gradient-to-r from-green-500 to-lime-400' :
-                        (advancedMetrics?.healthScore || 0) >= 65 ? 'bg-gradient-to-r from-yellow-500 to-orange-400' :
-                        'bg-gradient-to-r from-red-500 to-pink-400'
-                      }`}
-                      style={{ width: `${advancedMetrics?.healthScore || 0}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Health Score Breakdown */}
-              <div className="mt-8 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300 text-sm">Liquidity</span>
-                  <span className="text-green-400 font-medium">Excellent</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300 text-sm">Profitability</span>
-                  <span className="text-green-400 font-medium">Outstanding</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300 text-sm">Leverage</span>
-                  <span className="text-blue-400 font-medium">Conservative</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300 text-sm">Efficiency</span>
-                  <span className="text-green-400 font-medium">Excellent</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-3">
-            <h3 className="text-xl font-bold text-white mb-6">Key Performance Indicators</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-300">Revenue Growth</span>
-                  <TrendingUp className="w-5 h-5 text-green-400" />
-                </div>
-                <div className="text-3xl font-bold text-white mb-2">
-                  {growthMetrics ? `+${formatPercent(growthMetrics.revenueGrowth, true)}` : 'N/A'}
-                </div>
-                <div className="text-sm text-green-400">QoQ Growth</div>
-              </div>
-
-              <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-300">Gross Margin</span>
-                  <Target className="w-5 h-5 text-blue-400" />
-                </div>
-                <div className="text-3xl font-bold text-white mb-2">
-                  {formatPercent(advancedMetrics?.grossMargin || 0)}
-                </div>
-                <div className="text-sm text-blue-400">Industry Leading</div>
-              </div>
-
-              <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-300">Free Cash Flow</span>
-                  <DollarSign className="w-5 h-5 text-cyan-400" />
-                </div>
-                <div className="text-3xl font-bold text-white mb-2">
-                  {formatCurrency(advancedMetrics?.freeCashFlow || 0, true)}
-                </div>
-                <div className="text-sm text-cyan-400">Strong Generation</div>
-              </div>
-
-              <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-300">Current Ratio</span>
-                  <Shield className="w-5 h-5 text-green-400" />
-                </div>
-                <div className="text-3xl font-bold text-white mb-2">
-                  {(advancedMetrics?.currentRatio || 0).toFixed(1)}
-                </div>
-                <div className="text-sm text-green-400">Well Capitalized</div>
-              </div>
-
-              <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-300">ROA</span>
-                  <Award className="w-5 h-5 text-purple-400" />
-                </div>
-                <div className="text-3xl font-bold text-white mb-2">
-                  {formatPercent(advancedMetrics?.returnOnAssets || 0)}
-                </div>
-                <div className="text-sm text-purple-400">Top Quartile</div>
-              </div>
-
-              <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-300">Debt/Equity</span>
-                  <Activity className="w-5 h-5 text-yellow-400" />
-                </div>
-                <div className="text-3xl font-bold text-white mb-2">
-                  {(advancedMetrics?.debtToEquity || 0).toFixed(1)}
-                </div>
-                <div className="text-sm text-yellow-400">Conservative</div>
-              </div>
-            </div>
-
-            {/* Quick Growth Metrics */}
-            {growthMetrics && (
-              <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-400">
-                    +{formatPercent(growthMetrics.revenueGrowth, false)}
-                  </div>
-                  <div className="text-sm text-gray-400">Revenue Growth</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-400">
-                    +{formatPercent(growthMetrics.profitGrowth, false)}
-                  </div>
-                  <div className="text-sm text-gray-400">Profit Growth</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-cyan-400">
-                    +{formatPercent(growthMetrics.customerGrowth, false)}
-                  </div>
-                  <div className="text-sm text-gray-400">Customer Growth</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-400">
-                    +{formatPercent(growthMetrics.employeeGrowth, false)}
-                  </div>
-                  <div className="text-sm text-gray-400">Team Growth</div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Enhanced Tab Navigation */}
-      <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 mb-8">
-        <div className="flex flex-wrap gap-2 p-3">
-          {[
-            { id: 'executive-summary', label: 'Executive Summary', icon: Briefcase },
-            { id: 'financial-analysis', label: 'Financial Deep Dive', icon: Calculator },
-            { id: 'growth-trends', label: 'Growth & Trends', icon: TrendingUp },
-            { id: 'benchmarking', label: 'Industry Benchmarks', icon: Award },
-            { id: 'risk-assessment', label: 'Risk Assessment', icon: Shield },
-            { id: 'ai-insights', label: 'AI Strategic Insights', icon: Brain },
-            { id: 'recommendations', label: 'Action Plan', icon: Target }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 px-6 py-3 rounded-xl transition-all duration-200 font-medium ${
-                activeTab === tab.id
-                  ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-white border border-cyan-500/30 shadow-lg'
-                  : 'text-gray-300 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              <tab.icon className="w-4 h-4" />
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tab Content */}
-      {activeTab === 'executive-summary' && (
-        <div className="space-y-8">
-          {/* Priority Insights */}
-          <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-8">
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
-              <Star className="w-6 h-6 mr-3 text-yellow-400" />
-              Priority Strategic Insights
-            </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {priorityInsights.map((insight) => (
-                <div key={insight.id} className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`p-3 rounded-xl ${
-                      insight.impact === 'transformational' ? 'bg-purple-500/20 border border-purple-500/30' :
-                      insight.impact === 'high' ? 'bg-red-500/20 border border-red-500/30' :
-                      insight.impact === 'medium' ? 'bg-yellow-500/20 border border-yellow-500/30' :
-                      'bg-green-500/20 border border-green-500/30'
-                    }`}>
-                      {getInsightIcon(insight.type)}
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm text-gray-400">ROI</div>
-                      <div className="text-lg font-bold text-green-400">{insight.roi.toFixed(1)}x</div>
-                    </div>
-                  </div>
-
-                  <h3 className="text-lg font-bold text-white mb-3">{insight.title}</h3>
-                  <p className="text-gray-300 text-sm mb-4 line-clamp-3">{insight.description}</p>
-
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Investment Required</span>
-                      <span className="text-white font-medium">{formatCurrency(insight.investmentRequired, true)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Timeline</span>
-                      <span className="text-cyan-400">{insight.timeline}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Confidence</span>
-                      <span className="text-green-400">{insight.confidence}%</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Critical Risks Overview */}
-          {criticalRisks.length > 0 && (
-            <div className="bg-white/8 backdrop-blur-xl rounded-3xl border border-white/20 p-8">
-              <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
-                <AlertTriangle className="w-6 h-6 mr-3 text-red-400" />
-                Critical Risk Factors
-              </h2>
-              <div className="space-y-4">
-                {criticalRisks.map((risk) => (
-                  <div key={risk.id} className="bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-2xl p-6 border border-red-500/20">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-lg font-bold text-white mb-2">{risk.risk}</h3>
-                        <div className="flex items-center space-x-4">
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getRiskSeverityColor(risk.severity)}`}>
-                            {risk.severity} risk
-                          </span>
-                          <span className="text-gray-400 text-sm">{risk.probability}% probability</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm text-gray-400">Financial Impact</div>
-                        <div className="text-xl font-bold text-red-400">{formatCurrency(risk.financialImpact, true)}</div>
-                      </div>
-                    </div>
-
-                    <p className="text-gray-300 mb-4">{risk.impact}</p>
-
-                    <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-4">
-                      <h4 className="text-cyan-300 font-medium mb-2">Immediate Action Required:</h4>
-                      <p className="text-cyan-200 text-sm">{risk.recommendation}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           )}
-        </div>
-      )}
 
-      {/* Other tab content would continue here with similar enhanced styling... */}
-      
-      {/* Controls and Report Generation */}
-      <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-4 mt-8">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center space-x-4">
-            <select
-              value={selectedTimeframe}
-              onChange={(e) => setSelectedTimeframe(e.target.value)}
-              className="px-4 py-2 bg-white/10 border border-white/25 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-            >
-              <option value="1Q" className="bg-slate-800 text-white">Last Quarter</option>
-              <option value="4Q" className="bg-slate-800 text-white">Last 4 Quarters</option>
-              <option value="1Y" className="bg-slate-800 text-white">Last Year</option>
-              <option value="3Y" className="bg-slate-800 text-white">Last 3 Years</option>
-            </select>
-          </div>
+          {/* Other tab content would continue here with similar enhanced styling... */}
           
-          <button
-            onClick={handleGenerateReport}
-            disabled={isGeneratingReport}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 transition-all duration-200 disabled:opacity-50 flex items-center space-x-2"
-          >
-            <Download className={`w-4 h-4 ${isGeneratingReport ? 'animate-bounce' : ''}`} />
-            <span>{isGeneratingReport ? 'Generating...' : 'Generate Elite Report'}</span>
-          </button>
-        </div>
-      </div>
+          {/* Controls and Report Generation */}
+          <div className="bg-white/8 backdrop-blur-xl rounded-2xl border border-white/20 p-4 mt-8">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center space-x-4">
+                <select
+                  value={selectedTimeframe}
+                  onChange={(e) => setSelectedTimeframe(e.target.value)}
+                  className="px-4 py-2 bg-white/10 border border-white/25 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                >
+                  <option value="1Q" className="bg-slate-800 text-white">Last Quarter</option>
+                  <option value="4Q" className="bg-slate-800 text-white">Last 4 Quarters</option>
+                  <option value="1Y" className="bg-slate-800 text-white">Last Year</option>
+                  <option value="3Y" className="bg-slate-800 text-white">Last 3 Years</option>
+                </select>
+              </div>
+              
+              <button
+                onClick={handleGenerateReport}
+                disabled={isGeneratingReport}
+                className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 transition-all duration-200 disabled:opacity-50 flex items-center space-x-2"
+              >
+                <Download className={`w-4 h-4 ${isGeneratingReport ? 'animate-bounce' : ''}`} />
+                <span>{isGeneratingReport ? 'Generating...' : 'Generate Elite Report'}</span>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
